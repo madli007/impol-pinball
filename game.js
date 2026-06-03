@@ -385,7 +385,7 @@
 
     const wallOptions = {
       isStatic: true,
-      restitution: 0.58,
+      restitution: 0.48,
       friction: 0.02,
       render: { visible: true }
     };
@@ -454,7 +454,7 @@
 
     const ball = Bodies.circle(TABLE.ballStart.x, TABLE.ballStart.y, 26, {
       label: "pinball",
-      restitution: 0.86,
+      restitution: 0.82,
       friction: 0.005,
       frictionAir: 0.002,
       density: 0.0011
@@ -526,8 +526,8 @@
     const power = Math.max(0.34, gameState.plungerPower);
     MatterLib.Body.setStatic(physics.ball, false);
     MatterLib.Body.setVelocity(physics.ball, {
-      x: -0.2 - power * 0.7,
-      y: -18 - power * 16
+      x: -0.25 - power * 0.65,
+      y: -14 - power * 8.5
     });
     gameState.status = "playing";
     gameState.plungerPower = 0;
