@@ -410,7 +410,7 @@ Use small phases that produce visible progress as quickly as possible. Each phas
 
 ### Phase 2: First Moving Ball
 
-- [ ] Phase 2.1 - Matter.js world - Status: pending
+- [x] Phase 2.1 - Matter.js world - Status: complete
   - Initialize Matter.js engine, fixed table coordinates, canvas scaling, and static walls.
   - Visible result: physics world exists and renders simple bodies.
 

@@ -1,6 +1,12 @@
 (function () {
   const canvas = document.getElementById("game-canvas");
   const context = canvas.getContext("2d");
+  const MatterLib = window.Matter;
+  const TABLE = {
+    width: canvas.width,
+    height: canvas.height,
+    wall: 60
+  };
 
   function roundedRect(x, y, width, height, radius) {
     context.beginPath();
@@ -68,6 +74,40 @@
     fillRoundedRect(x, y, width, height, 12, "#102736");
     strokeRoundedRect(x, y, width, height, 12, accent, 5);
     drawLabel(label, x + width / 2, y + height / 2 + 1, "#edf7fb", 20);
+  }
+
+  function drawMatterBody(body) {
+    const vertices = body.vertices;
+    if (!vertices.length) {
+      return;
+    }
+
+    context.beginPath();
+    context.moveTo(vertices[0].x, vertices[0].y);
+
+    for (let index = 1; index < vertices.length; index += 1) {
+      context.lineTo(vertices[index].x, vertices[index].y);
+    }
+
+    context.closePath();
+    context.fillStyle = body.isSensor ? "rgba(255, 79, 61, 0.18)" : "rgba(49, 168, 255, 0.16)";
+    context.strokeStyle = body.isSensor ? "rgba(255, 117, 103, 0.9)" : "rgba(49, 168, 255, 0.72)";
+    context.lineWidth = body.isSensor ? 4 : 3;
+    context.fill();
+    context.stroke();
+  }
+
+  function drawPhysicsOverlay(bodies) {
+    context.save();
+    bodies.forEach(drawMatterBody);
+    context.restore();
+
+    fillRoundedRect(100, 100, 208, 42, 6, "rgba(5, 11, 16, 0.72)");
+    context.fillStyle = "#7bdc6c";
+    context.font = "800 18px Arial, Helvetica, sans-serif";
+    context.textAlign = "left";
+    context.textBaseline = "middle";
+    context.fillText("MATTER STATIC BODIES", 116, 121);
   }
 
   function drawPlayfieldFrame() {
@@ -203,10 +243,92 @@
     drawLabel("INNOVATION", 450, 1086, "#31a8ff", 28);
   }
 
-  drawPlayfieldFrame();
+  function createMatterWorld() {
+    if (!MatterLib) {
+      return null;
+    }
+
+    const { Bodies, Body, Composite, Engine } = MatterLib;
+    const engine = Engine.create();
+    engine.gravity.y = 0.9;
+
+    const wallOptions = {
+      isStatic: true,
+      restitution: 0.72,
+      friction: 0.02,
+      render: { visible: true }
+    };
+
+    const staticBodies = [
+      Bodies.rectangle(TABLE.width / 2, 44, TABLE.width - 150, 42, {
+        ...wallOptions,
+        label: "top-wall"
+      }),
+      Bodies.rectangle(74, TABLE.height / 2, 42, TABLE.height - 210, {
+        ...wallOptions,
+        label: "left-wall"
+      }),
+      Bodies.rectangle(TABLE.width - 74, TABLE.height / 2, 42, TABLE.height - 210, {
+        ...wallOptions,
+        label: "right-wall"
+      }),
+      Bodies.rectangle(225, 1225, 260, 32, {
+        ...wallOptions,
+        label: "left-outlane-guide",
+        angle: 0.58
+      }),
+      Bodies.rectangle(675, 1225, 260, 32, {
+        ...wallOptions,
+        label: "right-outlane-guide",
+        angle: -0.58
+      }),
+      Bodies.rectangle(768, 670, 30, 980, {
+        ...wallOptions,
+        label: "launch-lane-divider"
+      }),
+      Bodies.rectangle(450, 1354, 150, 40, {
+        isStatic: true,
+        isSensor: true,
+        label: "drain-sensor"
+      })
+    ];
+
+    Composite.add(engine.world, staticBodies);
+
+    staticBodies.forEach((body) => {
+      Body.setStatic(body, true);
+    });
+
+    return {
+      engine,
+      staticBodies
+    };
+  }
+
+  const physics = createMatterWorld();
+
+  function update() {
+    if (physics) {
+      MatterLib.Engine.update(physics.engine, 1000 / 60);
+    }
+
+    drawPlayfieldFrame();
+
+    if (physics) {
+      drawPhysicsOverlay(physics.staticBodies);
+    } else {
+      fillRoundedRect(104, 100, 210, 44, 6, "rgba(120, 36, 28, 0.76)");
+      drawLabel("MATTER.JS NOT LOADED", 209, 123, "#ff7567", 16);
+    }
+
+    window.requestAnimationFrame(update);
+  }
+
+  update();
 
   window.ImpolPinball = {
-    phase: "1.3",
-    matterLoaded: Boolean(window.Matter)
+    phase: "2.1",
+    matterLoaded: Boolean(MatterLib),
+    staticBodyCount: physics ? physics.staticBodies.length : 0
   };
 })();
