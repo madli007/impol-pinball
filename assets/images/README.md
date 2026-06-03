@@ -25,3 +25,7 @@ Supporting files:
 - Blue, green, and orange accent lighting.
 - Transparent PNG output for individual assets.
 - Intended as visual layers over the current Canvas playfield; physics bodies should remain unchanged for first integration.
+
+## Integration Status
+
+Phase 7.3 integrates these images as Canvas visual layers with fallback drawing if an image has not loaded yet. Matter.js collision bodies remain unchanged.

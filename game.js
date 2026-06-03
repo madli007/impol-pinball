@@ -15,6 +15,17 @@
   };
   const DEBUG_PHYSICS = false;
   const HIGH_SCORE_KEY = "impol-pinball.high-score";
+  const ASSET_CONFIG = {
+    furnace: { src: "assets/images/furnace-target.png", width: 154, height: 132, yOffset: -8 },
+    coil: { src: "assets/images/coil-collector.png", width: 184, height: 120, yOffset: -8 },
+    mes: { src: "assets/images/mes-bumper.png", width: 124, height: 118, yOffset: -4 },
+    erp: { src: "assets/images/erp-core-bumper.png", width: 126, height: 126, yOffset: -6 },
+    co2: { src: "assets/images/green-aluminium-bumper.png", width: 124, height: 110, yOffset: -4 },
+    "measurement-left": { src: "assets/images/measurement-target.png", width: 116, height: 116, yOffset: -12 },
+    "measurement-right": { src: "assets/images/measurement-target.png", width: 116, height: 116, yOffset: -12 },
+    "e-odprema": { src: "assets/images/e-odprema-truck.png", width: 138, height: 116, yOffset: -10 },
+    alcad: { src: "assets/images/alcad-marker.png", width: 132, height: 116, yOffset: -10 }
+  };
   const TABLE_CONFIG = {
     bumpers: [
       { id: "mes", label: "MES", x: 300, y: 392, radius: 56, accent: "#31a8ff", event: "hit:MES", points: 1000 },
@@ -107,6 +118,7 @@
     space: false,
     chargingSince: 0
   };
+  const assets = loadAssets(ASSET_CONFIG);
 
   function createMissionState() {
     return MISSION_CONFIG.reduce((missions, mission) => {
@@ -116,6 +128,22 @@
         lastProgressAt: 0
       };
       return missions;
+    }, {});
+  }
+
+  function loadAssets(config) {
+    return Object.entries(config).reduce((loadedAssets, [id, asset]) => {
+      const image = new Image();
+      image.src = asset.src;
+      loadedAssets[id] = {
+        ...asset,
+        image,
+        loaded: false
+      };
+      image.addEventListener("load", () => {
+        loadedAssets[id].loaded = true;
+      });
+      return loadedAssets;
     }, {});
   }
 
@@ -214,23 +242,75 @@
     drawLabel(label, x + width / 2, y + height / 2 + 1, "#edf7fb", label.length > 10 ? 18 : 20);
   }
 
+  function drawAsset(id, x, y, fallbackWidth, fallbackHeight) {
+    const asset = assets[id];
+
+    if (!asset || !asset.loaded) {
+      return false;
+    }
+
+    const width = asset.width || fallbackWidth;
+    const height = asset.height || fallbackHeight;
+    const drawX = x - width / 2;
+    const drawY = y - height / 2 + (asset.yOffset || 0);
+
+    context.save();
+    context.shadowColor = "rgba(0, 0, 0, 0.38)";
+    context.shadowBlur = 18;
+    context.shadowOffsetY = 10;
+    context.drawImage(asset.image, drawX, drawY, width, height);
+    context.restore();
+
+    return true;
+  }
+
   function drawConfiguredBumpers() {
     TABLE_CONFIG.bumpers.forEach((bumper) => {
-      drawBumper(bumper.x, bumper.y, bumper.radius, bumper.label, bumper.accent, wasRecentlyHit(bumper.id));
+      const isLit = wasRecentlyHit(bumper.id);
+      const drewAsset = drawAsset(bumper.id, bumper.x, bumper.y, bumper.radius * 2.2, bumper.radius * 2.2);
+
+      if (!drewAsset) {
+        drawBumper(bumper.x, bumper.y, bumper.radius, bumper.label, bumper.accent, isLit);
+      }
+
+      if (isLit) {
+        context.strokeStyle = "#edf7fb";
+        context.lineWidth = 5;
+        context.beginPath();
+        context.arc(bumper.x, bumper.y, bumper.radius + 8, 0, Math.PI * 2);
+        context.stroke();
+      }
     });
   }
 
   function drawConfiguredTargets() {
     TABLE_CONFIG.targets.forEach((target) => {
-      drawTarget(
-        target.x - target.width / 2,
-        target.y - target.height / 2,
-        target.width,
-        target.height,
-        target.label,
-        target.accent,
-        wasRecentlyHit(target.id)
-      );
+      const isLit = wasRecentlyHit(target.id);
+      const drewAsset = drawAsset(target.id, target.x, target.y, target.width, target.height);
+
+      if (!drewAsset) {
+        drawTarget(
+          target.x - target.width / 2,
+          target.y - target.height / 2,
+          target.width,
+          target.height,
+          target.label,
+          target.accent,
+          isLit
+        );
+      }
+
+      if (isLit) {
+        strokeRoundedRect(
+          target.x - target.width / 2 - 4,
+          target.y - target.height / 2 - 4,
+          target.width + 8,
+          target.height + 8,
+          14,
+          "#edf7fb",
+          4
+        );
+      }
     });
   }
 
@@ -417,6 +497,7 @@
       matterLoaded: Boolean(MatterLib),
       staticBodyCount: physics ? physics.staticBodies.length : 0,
       tableObjectCount: physics ? physics.bumperBodies.length + physics.targetBodies.length : 0,
+      assetLoadedCount: Object.values(assets).filter((asset) => asset.loaded).length,
       ballSpawned: Boolean(physics && physics.ball),
       ballsLeft: gameState.ballsLeft,
       ballNumber: gameState.ballNumber,

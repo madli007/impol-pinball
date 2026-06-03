@@ -496,7 +496,7 @@ Use small phases that produce visible progress as quickly as possible. Each phas
   - Generate or create assets for furnace, coil collector, ERP core, MES terminal, e-Odprema truck, green aluminium target, and measurement target.
   - Visible result: the table starts moving closer to the mockup art direction.
 
-- [ ] Phase 7.3 - Asset integration pass - Status: pending
+- [x] Phase 7.3 - Asset integration pass - Status: complete
   - Add generated assets as visual layers without changing the core physics contracts.
   - Visible result: visual polish improves without breaking gameplay.
 
