@@ -533,6 +533,13 @@ Priority order:
   - Avoid changing collision bodies unless an object visibly no longer matches its hit zone.
   - Visible result: the table looks more intentional and less like separate stickers on a canvas.
 
+- [ ] Phase 8.3b - Secondary visual asset pack - Status: planned
+  - Add or generate visual-only assets for the playfield background, aluminium frame/rail trim, flippers, small lamps, pipe/ramp decorations, and low-profile industrial decals.
+  - Use `docs/mock.png` as the style reference: physical aluminium machine, bolted rails, small lights, factory-floor texture, and industrial labels.
+  - Keep all new pieces decorative unless a later phase explicitly adds gameplay.
+  - Prioritize the highest screenshot impact: background/frame first, then flippers, then small lights/decals.
+  - Visible result: the table reads more like a finished physical pinball machine, while the current gameplay remains stable.
+
 - [ ] Phase 8.4 - Rail, lane, and drain polish - Status: planned
   - Strengthen the aluminium rail look around the outer table and bottom drain.
   - Make side lanes and outlanes clearer with guide lines, lane labels, and small indicator lights.

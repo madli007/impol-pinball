@@ -17,6 +17,8 @@ Supporting files:
 
 - `asset-sheet-source.png` - generated 4x2 source sheet.
 - `asset-pack-preview.png` - dark-background preview contact sheet.
+- `secondary-visual-asset-sheet.png` - generated chroma-key source sheet for Phase 8.3b decorative assets.
+- `secondary-visual-asset-sheet-transparent.png` - transparent working sheet with flippers, rail trim, lamps, pipe/rail decor, bolts, and label plates.
 
 ## Style Notes
 
@@ -29,3 +31,5 @@ Supporting files:
 ## Integration Status
 
 Phase 7.3 integrates these images as Canvas visual layers with fallback drawing if an image has not loaded yet. Matter.js collision bodies remain unchanged.
+
+Phase 8.3b prepares additional visual-only assets for later integration. These are not wired into gameplay yet.
