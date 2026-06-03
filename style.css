@@ -221,18 +221,21 @@ h1 {
   gap: 8px;
 }
 
-.controls-hint span {
+.controls-hint button {
   padding: 10px 12px;
   border: 1px solid rgba(109, 135, 148, 0.24);
   border-radius: 6px;
   color: var(--muted);
   background: rgba(8, 18, 25, 0.72);
+  font: inherit;
   font-size: 0.8rem;
   font-weight: 700;
   text-align: center;
+  cursor: pointer;
+  touch-action: manipulation;
 }
 
-.controls-hint span.is-active {
+.controls-hint button.is-active {
   border-color: rgba(49, 168, 255, 0.8);
   color: var(--text);
   background: rgba(49, 168, 255, 0.26);

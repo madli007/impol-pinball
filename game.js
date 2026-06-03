@@ -490,6 +490,17 @@
     MatterLib.Body.setAngularVelocity(ball, 0);
   }
 
+  function holdBallInLaunchLane() {
+    if (!physics || !["ready", "charging", "between-balls", "game-over"].includes(gameState.status)) {
+      return;
+    }
+
+    MatterLib.Body.setStatic(physics.ball, true);
+    MatterLib.Body.setPosition(physics.ball, TABLE.ballStart);
+    MatterLib.Body.setVelocity(physics.ball, { x: 0, y: 0 });
+    MatterLib.Body.setAngularVelocity(physics.ball, 0);
+  }
+
   function launchBall() {
     if (!physics || gameState.status !== "charging") {
       return;
@@ -627,6 +638,79 @@
     syncInspectableState(physics);
   }
 
+  function beginControl(control) {
+    if (control === "left") {
+      inputState.left = true;
+    }
+
+    if (control === "right") {
+      inputState.right = true;
+    }
+
+    if (control === "space") {
+      if (gameState.status === "game-over") {
+        restartGame();
+      } else if (gameState.status === "ready") {
+        gameState.status = "charging";
+        inputState.chargingSince = performance.now();
+      }
+
+      inputState.space = true;
+    }
+
+    updateControlsUi();
+    syncInspectableState(physics);
+  }
+
+  function endControl(control) {
+    if (control === "left") {
+      inputState.left = false;
+    }
+
+    if (control === "right") {
+      inputState.right = false;
+    }
+
+    if (control === "space") {
+      inputState.space = false;
+      launchBall();
+    }
+
+    updateControlsUi();
+    syncInspectableState(physics);
+  }
+
+  function wireHoldButton(element, control) {
+    element.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
+      element.setPointerCapture(event.pointerId);
+      beginControl(control);
+    });
+
+    element.addEventListener("pointerup", (event) => {
+      event.preventDefault();
+      endControl(control);
+    });
+
+    element.addEventListener("pointercancel", () => {
+      endControl(control);
+    });
+
+    element.addEventListener("lostpointercapture", () => {
+      if (control === "left" && inputState.left) {
+        endControl(control);
+      }
+
+      if (control === "right" && inputState.right) {
+        endControl(control);
+      }
+
+      if (control === "space" && inputState.space) {
+        endControl(control);
+      }
+    });
+  }
+
   function updatePlungerPower() {
     if (gameState.status !== "charging") {
       return;
@@ -684,6 +768,9 @@
 
   window.addEventListener("keydown", handleKeyDown);
   window.addEventListener("keyup", handleKeyUp);
+  wireHoldButton(ui.leftControl, "left");
+  wireHoldButton(ui.rightControl, "right");
+  wireHoldButton(ui.spaceControl, "space");
   ui.restartButton.addEventListener("click", restartGame);
   if (physics) {
     resetBall(physics.ball, true);
@@ -696,6 +783,7 @@
     if (physics) {
       updatePlungerPower();
       updateFlippers();
+      holdBallInLaunchLane();
       MatterLib.Engine.update(physics.engine, 1000 / 60);
       maybeCatchLostBall();
       maybeFinishBetweenBalls();
