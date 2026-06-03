@@ -492,7 +492,7 @@ Use small phases that produce visible progress as quickly as possible. Each phas
   - Play the MVP and identify which playfield elements most need generated art.
   - Visible result: asset generation is based on real gameplay needs.
 
-- [ ] Phase 7.2 - First playfield asset pack - Status: pending
+- [x] Phase 7.2 - First playfield asset pack - Status: complete
   - Generate or create assets for furnace, coil collector, ERP core, MES terminal, e-Odprema truck, green aluminium target, and measurement target.
   - Visible result: the table starts moving closer to the mockup art direction.
 
