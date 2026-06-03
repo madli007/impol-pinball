@@ -6,7 +6,14 @@
     width: canvas.width,
     height: canvas.height,
     wall: 60,
-    ballStart: { x: 748, y: 1066 },
+    ballStart: { x: 806, y: 1066 },
+    shooterLane: {
+      innerX: 756,
+      outerX: 842,
+      bottomY: 1190,
+      topY: 160,
+      exitY: 184
+    },
     totalBalls: 3,
     flippers: {
       left: { pivotX: 244, pivotY: 1218, length: 166, height: 32, restAngle: 0.22, activeAngle: -0.58 },
@@ -481,6 +488,65 @@
     strokeRoundedRect(820, 1020, 26, barHeight, 10, "#7e939c", 3);
   }
 
+  function drawShooterChannel() {
+    const lane = TABLE.shooterLane;
+    const laneWidth = lane.outerX - lane.innerX;
+    const laneX = lane.innerX;
+    const laneHeight = lane.bottomY - lane.topY;
+
+    context.save();
+
+    const laneGradient = context.createLinearGradient(laneX, 0, lane.outerX, 0);
+    laneGradient.addColorStop(0, "rgba(4, 11, 16, 0.86)");
+    laneGradient.addColorStop(0.45, "rgba(15, 42, 55, 0.92)");
+    laneGradient.addColorStop(1, "rgba(120, 148, 158, 0.32)");
+    fillRoundedRect(laneX, lane.topY, laneWidth, laneHeight, 28, laneGradient);
+
+    context.strokeStyle = "rgba(237, 247, 251, 0.5)";
+    context.lineWidth = 7;
+    context.beginPath();
+    context.moveTo(lane.innerX, lane.bottomY);
+    context.lineTo(lane.innerX, lane.topY + 88);
+    context.quadraticCurveTo(lane.innerX + 16, lane.exitY, lane.innerX + 68, lane.exitY - 42);
+    context.stroke();
+
+    context.strokeStyle = "rgba(49, 168, 255, 0.92)";
+    context.lineWidth = 4;
+    context.beginPath();
+    context.moveTo(lane.innerX + 17, lane.bottomY - 24);
+    context.lineTo(lane.innerX + 17, lane.topY + 40);
+    context.stroke();
+
+    context.strokeStyle = "rgba(126, 147, 156, 0.9)";
+    context.lineWidth = 12;
+    context.beginPath();
+    context.moveTo(lane.outerX, lane.bottomY);
+    context.lineTo(lane.outerX, lane.topY);
+    context.stroke();
+
+    context.strokeStyle = "rgba(237, 247, 251, 0.34)";
+    context.lineWidth = 3;
+    context.beginPath();
+    context.moveTo(lane.outerX - 18, lane.bottomY - 30);
+    context.lineTo(lane.outerX - 18, lane.topY + 40);
+    context.stroke();
+
+    context.fillStyle = "rgba(49, 168, 255, 0.18)";
+    context.beginPath();
+    context.moveTo(lane.innerX - 2, lane.topY + 72);
+    context.quadraticCurveTo(lane.innerX + 46, lane.exitY - 62, lane.innerX + 116, lane.exitY - 72);
+    context.lineTo(lane.innerX + 92, lane.exitY + 22);
+    context.quadraticCurveTo(lane.innerX + 42, lane.exitY + 34, lane.innerX - 2, lane.exitY + 96);
+    context.closePath();
+    context.fill();
+
+    fillRoundedRect(lane.innerX - 4, lane.bottomY - 70, laneWidth + 18, 76, 14, "#0a1820");
+    strokeRoundedRect(lane.innerX - 4, lane.bottomY - 70, laneWidth + 18, 76, 14, "#ff9b3d", 4);
+    drawLabel("LAUNCH", lane.innerX + laneWidth / 2 + 5, lane.bottomY - 32, "#ff9b3d", 18);
+
+    context.restore();
+  }
+
   function updateHud() {
     ui.score.textContent = gameState.score.toLocaleString("sl-SI");
     ui.ball.textContent = String(gameState.ballNumber);
@@ -502,7 +568,7 @@
 
   function syncInspectableState(physics) {
     window.ImpolPinball = {
-      phase: "6.4",
+      phase: "8.1",
       matterLoaded: Boolean(MatterLib),
       staticBodyCount: physics ? physics.staticBodies.length : 0,
       tableObjectCount: physics ? physics.bumperBodies.length + physics.targetBodies.length : 0,
@@ -593,23 +659,7 @@
 
     drawConfiguredTargets();
 
-    context.strokeStyle = "#2f5260";
-    context.lineWidth = 14;
-    context.beginPath();
-    context.moveTo(768, 150);
-    context.lineTo(768, 1130);
-    context.stroke();
-
-    context.strokeStyle = "#31a8ff";
-    context.lineWidth = 4;
-    context.beginPath();
-    context.moveTo(742, 170);
-    context.lineTo(742, 1120);
-    context.stroke();
-
-    fillRoundedRect(713, 1120, 104, 74, 14, "#0a1820");
-    strokeRoundedRect(713, 1120, 104, 74, 14, "#ff9b3d", 4);
-    drawLabel("LAUNCH", 765, 1158, "#ff9b3d", 18);
+    drawShooterChannel();
 
     context.fillStyle = "#071018";
     context.beginPath();
@@ -658,7 +708,7 @@
         ...wallOptions,
         label: "left-wall"
       }),
-      Bodies.rectangle(TABLE.width - 74, TABLE.height / 2, 42, TABLE.height - 210, {
+      Bodies.rectangle(TABLE.shooterLane.outerX + 34, TABLE.height / 2, 42, TABLE.height - 210, {
         ...wallOptions,
         label: "right-wall"
       }),
@@ -672,9 +722,14 @@
         label: "right-outlane-guide",
         angle: -0.58
       }),
-      Bodies.rectangle(768, 670, 30, 980, {
+      Bodies.rectangle(TABLE.shooterLane.innerX, 720, 18, 1050, {
         ...wallOptions,
         label: "launch-lane-divider"
+      }),
+      Bodies.rectangle(TABLE.shooterLane.innerX + 60, 174, 152, 22, {
+        ...wallOptions,
+        label: "launch-lane-top-exit",
+        angle: -0.42
       }),
       Bodies.rectangle(450, 1354, 270, 54, {
         isStatic: true,
@@ -754,6 +809,10 @@
           drainBall(ball);
         }
 
+        if (labels.includes("launch-lane-top-exit") && labels.includes("pinball")) {
+          guideBallOutOfShooterLane(ball);
+        }
+
         const hitObject = getHitObject(pair);
         if (hitObject) {
           handleTableHit(hitObject, ball);
@@ -811,13 +870,26 @@
     const power = Math.max(0.34, gameState.plungerPower);
     MatterLib.Body.setStatic(physics.ball, false);
     MatterLib.Body.setVelocity(physics.ball, {
-      x: -0.25 - power * 0.65,
+      x: -0.06 - power * 0.2,
       y: -14 - power * 8.5
     });
     gameState.status = "playing";
     gameState.plungerPower = 0;
     inputState.chargingSince = 0;
     syncInspectableState(physics);
+  }
+
+  function guideBallOutOfShooterLane(ball) {
+    const lane = TABLE.shooterLane;
+
+    if (ball.position.x < lane.innerX - 8 || ball.position.y > lane.exitY + 95) {
+      return;
+    }
+
+    MatterLib.Body.setVelocity(ball, {
+      x: Math.min(ball.velocity.x, -6.6),
+      y: Math.max(ball.velocity.y, 1.8)
+    });
   }
 
   function getHitObject(pair) {

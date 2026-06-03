@@ -511,7 +511,7 @@ Priority order:
 3. Add small, visible, low-risk feedback features.
 4. Defer complex systems that could destabilize physics or controls.
 
-- [ ] Phase 8.1 - Proper shooter channel - Status: planned
+- [x] Phase 8.1 - Proper shooter channel - Status: complete
   - Add a clear right-side shooter channel that continues from the plunger pocket up to the top of the table.
   - Add a curved or angled top exit so the ball leaves the channel into the upper playfield instead of appearing to travel only vertically beside the table.
   - Keep the current plunger input contract: hold/release `Space`, with no new controls.
