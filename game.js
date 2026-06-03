@@ -5,7 +5,27 @@
   const TABLE = {
     width: canvas.width,
     height: canvas.height,
-    wall: 60
+    wall: 60,
+    ballStart: { x: 450, y: 276 },
+    totalBalls: 3
+  };
+  const ui = {
+    score: document.getElementById("score-value"),
+    ball: document.getElementById("ball-value"),
+    ballsLeft: document.getElementById("balls-left-value"),
+    multiplier: document.getElementById("multiplier-value"),
+    highScore: document.getElementById("high-score-value"),
+    restartButton: document.getElementById("restart-button")
+  };
+  const gameState = {
+    score: 0,
+    ballNumber: 1,
+    ballsLeft: TABLE.totalBalls,
+    multiplier: 1,
+    highScore: 0,
+    status: "playing",
+    resetAt: 0,
+    drainCount: 0
   };
 
   function roundedRect(x, y, width, height, radius) {
@@ -110,7 +130,23 @@
     context.fillText("MATTER STATIC BODIES", 116, 121);
   }
 
+  function drawStatusBadge() {
+    const label = gameState.status === "game-over" ? "GAME OVER" : "BALL IN PLAY";
+    const color = gameState.status === "game-over" ? "#ff7567" : "#7bdc6c";
+
+    fillRoundedRect(590, 100, 210, 42, 6, "rgba(5, 11, 16, 0.72)");
+    context.fillStyle = color;
+    context.font = "800 18px Arial, Helvetica, sans-serif";
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillText(label, 695, 121);
+  }
+
   function drawBall(ball) {
+    if (!ball || gameState.status === "between-balls") {
+      return;
+    }
+
     const { x, y } = ball.position;
     const radius = ball.circleRadius || 26;
     const shadow = context.createRadialGradient(x + 10, y + 14, 4, x + 10, y + 14, radius + 20);
@@ -139,6 +175,27 @@
     context.beginPath();
     context.arc(x - radius * 0.34, y - radius * 0.38, radius * 0.22, 0, Math.PI * 2);
     context.fill();
+  }
+
+  function updateHud() {
+    ui.score.textContent = gameState.score.toLocaleString("sl-SI");
+    ui.ball.textContent = String(gameState.ballNumber);
+    ui.ballsLeft.textContent = String(gameState.ballsLeft);
+    ui.multiplier.textContent = `${gameState.multiplier}x`;
+    ui.highScore.textContent = gameState.highScore.toLocaleString("sl-SI");
+  }
+
+  function syncInspectableState(physics) {
+    window.ImpolPinball = {
+      phase: "2.3",
+      matterLoaded: Boolean(MatterLib),
+      staticBodyCount: physics ? physics.staticBodies.length : 0,
+      ballSpawned: Boolean(physics && physics.ball),
+      ballsLeft: gameState.ballsLeft,
+      ballNumber: gameState.ballNumber,
+      status: gameState.status,
+      drainCount: gameState.drainCount
+    };
   }
 
   function drawPlayfieldFrame() {
@@ -279,7 +336,7 @@
       return null;
     }
 
-    const { Bodies, Body, Composite, Engine } = MatterLib;
+    const { Bodies, Body, Composite, Engine, Events } = MatterLib;
     const engine = Engine.create();
     engine.gravity.y = 0.9;
 
@@ -317,14 +374,14 @@
         ...wallOptions,
         label: "launch-lane-divider"
       }),
-      Bodies.rectangle(450, 1354, 150, 40, {
+      Bodies.rectangle(450, 1354, 270, 54, {
         isStatic: true,
         isSensor: true,
         label: "drain-sensor"
       })
     ];
 
-    const ball = Bodies.circle(744, 1040, 26, {
+    const ball = Bodies.circle(TABLE.ballStart.x, TABLE.ballStart.y, 26, {
       label: "pinball",
       restitution: 0.88,
       friction: 0.005,
@@ -338,6 +395,15 @@
       Body.setStatic(body, true);
     });
 
+    Events.on(engine, "collisionStart", (event) => {
+      event.pairs.forEach((pair) => {
+        const labels = [pair.bodyA.label, pair.bodyB.label];
+        if (labels.includes("drain-sensor") && labels.includes("pinball")) {
+          drainBall(ball);
+        }
+      });
+    });
+
     return {
       engine,
       staticBodies,
@@ -347,9 +413,82 @@
 
   const physics = createMatterWorld();
 
+  function resetBall(ball) {
+    if (!MatterLib || !ball) {
+      return;
+    }
+
+    MatterLib.Body.setPosition(ball, TABLE.ballStart);
+    MatterLib.Body.setVelocity(ball, { x: 3.4, y: 0 });
+    MatterLib.Body.setAngularVelocity(ball, 0);
+  }
+
+  function drainBall(ball) {
+    if (gameState.status !== "playing") {
+      return;
+    }
+
+    gameState.drainCount += 1;
+    gameState.ballsLeft = Math.max(0, gameState.ballsLeft - 1);
+    gameState.highScore = Math.max(gameState.highScore, gameState.score);
+
+    if (gameState.ballsLeft === 0) {
+      gameState.status = "game-over";
+    } else {
+      gameState.status = "between-balls";
+      gameState.ballNumber += 1;
+      gameState.resetAt = performance.now() + 900;
+      resetBall(ball);
+    }
+
+    updateHud();
+    syncInspectableState(physics);
+  }
+
+  function restartGame() {
+    gameState.score = 0;
+    gameState.ballNumber = 1;
+    gameState.ballsLeft = TABLE.totalBalls;
+    gameState.multiplier = 1;
+    gameState.status = "playing";
+    gameState.resetAt = 0;
+    gameState.drainCount = 0;
+
+    if (physics) {
+      resetBall(physics.ball);
+    }
+
+    updateHud();
+    syncInspectableState(physics);
+  }
+
+  function maybeFinishBetweenBalls() {
+    if (gameState.status === "between-balls" && performance.now() >= gameState.resetAt) {
+      resetBall(physics.ball);
+      gameState.status = "playing";
+      syncInspectableState(physics);
+    }
+  }
+
+  function maybeCatchLostBall() {
+    if (!physics || gameState.status !== "playing") {
+      return;
+    }
+
+    if (physics.ball.position.y > TABLE.height + 80) {
+      drainBall(physics.ball);
+    }
+  }
+
+  ui.restartButton.addEventListener("click", restartGame);
+  updateHud();
+  syncInspectableState(physics);
+
   function update() {
     if (physics) {
       MatterLib.Engine.update(physics.engine, 1000 / 60);
+      maybeCatchLostBall();
+      maybeFinishBetweenBalls();
     }
 
     drawPlayfieldFrame();
@@ -357,6 +496,7 @@
     if (physics) {
       drawPhysicsOverlay(physics.staticBodies);
       drawBall(physics.ball);
+      drawStatusBadge();
     } else {
       fillRoundedRect(104, 100, 210, 44, 6, "rgba(120, 36, 28, 0.76)");
       drawLabel("MATTER.JS NOT LOADED", 209, 123, "#ff7567", 16);
@@ -366,11 +506,4 @@
   }
 
   update();
-
-  window.ImpolPinball = {
-    phase: "2.2",
-    matterLoaded: Boolean(MatterLib),
-    staticBodyCount: physics ? physics.staticBodies.length : 0,
-    ballSpawned: Boolean(physics && physics.ball)
-  };
 })();

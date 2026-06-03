@@ -418,7 +418,7 @@ Use small phases that produce visible progress as quickly as possible. Each phas
   - Add one ball with tuned restitution/friction and visible rendering.
   - Visible result: the ball appears and falls/bounces in the table.
 
-- [ ] Phase 2.3 - Drain and reset - Status: pending
+- [x] Phase 2.3 - Drain and reset - Status: complete
   - Add drain sensor, ball removal/reset, balls remaining decrement, and game-over state.
   - Visible result: losing the ball changes the HUD and restart/next-ball flow.
 
