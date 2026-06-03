@@ -525,7 +525,7 @@ Priority order:
   - Keep the timing generous for demo fun.
   - Visible result: launching is no longer only a start action; it has a small arcade reward.
 
-- [ ] Phase 8.3 - Playfield art depth pass - Status: planned
+- [x] Phase 8.3 - Playfield art depth pass - Status: complete
   - Tighten asset placement so the PNGs feel anchored to the table rather than floating over it.
   - Add simple shadows under major playfield assets.
   - Add small metal bases, bolts, glow rings, or status lights around bumpers and targets.

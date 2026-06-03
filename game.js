@@ -251,6 +251,51 @@
     drawLabel(label, x + width / 2, y + height / 2 + 1, "#edf7fb", label.length > 10 ? 18 : 20);
   }
 
+  function drawAssetMount(x, y, width, height, accent, isLit) {
+    const baseY = y + height * 0.28;
+    const baseWidth = Math.max(width * 0.72, 88);
+    const baseHeight = Math.max(height * 0.26, 26);
+
+    context.save();
+    context.fillStyle = "rgba(0, 0, 0, 0.34)";
+    context.beginPath();
+    context.ellipse(x, baseY + 12, baseWidth * 0.58, baseHeight * 0.58, 0, 0, Math.PI * 2);
+    context.fill();
+
+    const baseGradient = context.createLinearGradient(x, baseY - baseHeight / 2, x, baseY + baseHeight / 2);
+    baseGradient.addColorStop(0, "rgba(126, 147, 156, 0.42)");
+    baseGradient.addColorStop(0.5, "rgba(16, 39, 54, 0.92)");
+    baseGradient.addColorStop(1, "rgba(5, 11, 16, 0.9)");
+    context.fillStyle = baseGradient;
+    context.beginPath();
+    context.ellipse(x, baseY, baseWidth / 2, baseHeight / 2, 0, 0, Math.PI * 2);
+    context.fill();
+
+    context.strokeStyle = isLit ? "#edf7fb" : "rgba(126, 147, 156, 0.86)";
+    context.lineWidth = isLit ? 4 : 3;
+    context.stroke();
+
+    context.strokeStyle = isLit ? accent : `${accent}99`;
+    context.lineWidth = 4;
+    context.beginPath();
+    context.ellipse(x, baseY - 1, baseWidth * 0.42, baseHeight * 0.28, 0, 0, Math.PI);
+    context.stroke();
+
+    const boltY = baseY + baseHeight * 0.08;
+    [-0.36, 0.36].forEach((offset) => {
+      context.fillStyle = "#9ab3bf";
+      context.beginPath();
+      context.arc(x + baseWidth * offset, boltY, 4, 0, Math.PI * 2);
+      context.fill();
+      context.fillStyle = isLit ? accent : "rgba(49, 168, 255, 0.72)";
+      context.beginPath();
+      context.arc(x + baseWidth * offset, boltY, 2, 0, Math.PI * 2);
+      context.fill();
+    });
+
+    context.restore();
+  }
+
   function drawAsset(id, x, y, fallbackWidth, fallbackHeight) {
     const asset = assets[id];
 
@@ -264,9 +309,9 @@
     const drawY = y - height / 2 + (asset.yOffset || 0);
 
     context.save();
-    context.shadowColor = "rgba(0, 0, 0, 0.38)";
-    context.shadowBlur = 18;
-    context.shadowOffsetY = 10;
+    context.shadowColor = "rgba(0, 0, 0, 0.46)";
+    context.shadowBlur = 14;
+    context.shadowOffsetY = 8;
     context.drawImage(asset.image, drawX, drawY, width, height);
     context.restore();
 
@@ -291,6 +336,20 @@
   function drawConfiguredBumpers() {
     TABLE_CONFIG.bumpers.forEach((bumper) => {
       const isLit = wasRecentlyHit(bumper.id);
+      const asset = assets[bumper.id];
+      const assetReady = asset?.loaded;
+
+      if (assetReady) {
+        drawAssetMount(
+          bumper.x,
+          bumper.y + (asset.yOffset || 0),
+          asset.width || bumper.radius * 2.2,
+          asset.height || bumper.radius * 2.2,
+          bumper.accent,
+          isLit
+        );
+      }
+
       const drewAsset = drawAsset(bumper.id, bumper.x, bumper.y, bumper.radius * 2.2, bumper.radius * 2.2);
 
       if (!drewAsset) {
@@ -310,7 +369,19 @@
   function drawConfiguredTargets() {
     TABLE_CONFIG.targets.forEach((target) => {
       const isLit = wasRecentlyHit(target.id);
-      const assetReady = assets[target.id]?.loaded;
+      const asset = assets[target.id];
+      const assetReady = asset?.loaded;
+
+      if (assetReady) {
+        drawAssetMount(
+          target.x,
+          target.y + (asset.yOffset || 0),
+          asset.width || target.width,
+          asset.height || target.height,
+          target.accent,
+          isLit
+        );
+      }
 
       if (isLit && assetReady) {
         drawHitHalo(target.x, target.y, target.width, target.height, target.accent);
@@ -599,7 +670,7 @@
 
   function syncInspectableState(physics) {
     window.ImpolPinball = {
-      phase: "8.2",
+      phase: "8.3",
       matterLoaded: Boolean(MatterLib),
       staticBodyCount: physics ? physics.staticBodies.length : 0,
       tableObjectCount: physics ? physics.bumperBodies.length + physics.targetBodies.length : 0,
