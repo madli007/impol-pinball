@@ -209,8 +209,8 @@
   }
 
   function drawTarget(x, y, width, height, label, accent, isLit) {
-    fillRoundedRect(x, y, width, height, 12, isLit ? "#173d4f" : "#102736");
-    strokeRoundedRect(x, y, width, height, 12, accent, isLit ? 7 : 5);
+    fillRoundedRect(x, y, width, height, 12, isLit ? "rgba(23, 61, 79, 0.96)" : "#102736");
+    strokeRoundedRect(x, y, width, height, 12, isLit ? "#edf7fb" : accent, isLit ? 5 : 4);
     drawLabel(label, x + width / 2, y + height / 2 + 1, "#edf7fb", label.length > 10 ? 18 : 20);
   }
 
@@ -446,13 +446,13 @@
     strokeRoundedRect(86, 88, canvas.width - 172, canvas.height - 176, 24, "#183541", 6);
 
     context.save();
-    context.strokeStyle = "#304f5d";
-    context.lineWidth = 16;
+    context.strokeStyle = "rgba(49, 168, 255, 0.28)";
+    context.lineWidth = 10;
     context.beginPath();
-    context.moveTo(116, 1160);
-    context.lineTo(310, 1292);
-    context.moveTo(784, 1160);
-    context.lineTo(590, 1292);
+    context.moveTo(128, 1168);
+    context.lineTo(306, 1282);
+    context.moveTo(772, 1168);
+    context.lineTo(594, 1282);
     context.stroke();
     context.restore();
 
@@ -479,10 +479,9 @@
     drawLabel("ALUMINIUM INDUSTRY", canvas.width / 2, 230, "#9ab3bf", 24);
 
     drawConfiguredBumpers();
-    drawConfiguredTargets();
 
     context.fillStyle = "#1b3541";
-    context.strokeStyle = "#7e939c";
+    context.strokeStyle = "rgba(126, 147, 156, 0.72)";
     context.lineWidth = 6;
     context.beginPath();
     context.moveTo(190, 775);
@@ -492,7 +491,6 @@
     context.closePath();
     context.fill();
     context.stroke();
-    drawLabel("ALCAD", 254, 784, "#edf7fb", 23);
 
     context.beginPath();
     context.moveTo(710, 775);
@@ -502,7 +500,8 @@
     context.closePath();
     context.fill();
     context.stroke();
-    drawLabel("E-ODPREMA", 646, 784, "#edf7fb", 21);
+
+    drawConfiguredTargets();
 
     context.strokeStyle = "#2f5260";
     context.lineWidth = 14;
