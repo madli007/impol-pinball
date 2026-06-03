@@ -264,6 +264,21 @@
     return true;
   }
 
+  function drawHitHalo(x, y, width, height, accent) {
+    const radius = Math.max(width, height) * 0.42;
+    const gradient = context.createRadialGradient(x, y, 8, x, y, radius);
+    gradient.addColorStop(0, `${accent}88`);
+    gradient.addColorStop(0.46, `${accent}36`);
+    gradient.addColorStop(1, "rgba(0, 0, 0, 0)");
+
+    context.save();
+    context.fillStyle = gradient;
+    context.beginPath();
+    context.ellipse(x, y, Math.max(width * 0.58, 48), Math.max(height * 0.78, 34), 0, 0, Math.PI * 2);
+    context.fill();
+    context.restore();
+  }
+
   function drawConfiguredBumpers() {
     TABLE_CONFIG.bumpers.forEach((bumper) => {
       const isLit = wasRecentlyHit(bumper.id);
@@ -286,6 +301,12 @@
   function drawConfiguredTargets() {
     TABLE_CONFIG.targets.forEach((target) => {
       const isLit = wasRecentlyHit(target.id);
+      const assetReady = assets[target.id]?.loaded;
+
+      if (isLit && assetReady) {
+        drawHitHalo(target.x, target.y, target.width, target.height, target.accent);
+      }
+
       const drewAsset = drawAsset(target.id, target.x, target.y, target.width, target.height);
 
       if (!drewAsset) {
@@ -297,18 +318,6 @@
           target.label,
           target.accent,
           isLit
-        );
-      }
-
-      if (isLit) {
-        strokeRoundedRect(
-          target.x - target.width / 2 - 4,
-          target.y - target.height / 2 - 4,
-          target.width + 8,
-          target.height + 8,
-          14,
-          "#edf7fb",
-          4
         );
       }
     });
@@ -380,12 +389,12 @@
       return;
     }
 
-    fillRoundedRect(314, 1000, 272, 48, 8, "rgba(5, 11, 16, 0.72)");
+    fillRoundedRect(300, 1048, 300, 44, 8, "rgba(5, 11, 16, 0.72)");
     context.fillStyle = "#ff9b3d";
-    context.font = "800 22px Arial, Helvetica, sans-serif";
+    context.font = "800 20px Arial, Helvetica, sans-serif";
     context.textAlign = "center";
     context.textBaseline = "middle";
-    context.fillText(gameState.feedback, 450, 1024);
+    context.fillText(gameState.feedback, 450, 1070);
   }
 
   function drawMissionLights() {
