@@ -19,6 +19,9 @@ Supporting files:
 - `asset-pack-preview.png` - dark-background preview contact sheet.
 - `secondary-visual-asset-sheet.png` - generated chroma-key source sheet for Phase 8.3b decorative assets.
 - `secondary-visual-asset-sheet-transparent.png` - transparent working sheet with flippers, rail trim, lamps, pipe/rail decor, bolts, and label plates.
+- `flipper-left.png` - cropped left flipper sprite from the secondary visual sheet.
+- `flipper-right.png` - cropped right flipper sprite from the secondary visual sheet.
+- `lamp-post-red.png`, `lamp-post-orange.png`, `lamp-post-blue.png`, `lamp-post-green.png` - cropped decorative lamp sprites.
 
 ## Style Notes
 
@@ -32,4 +35,4 @@ Supporting files:
 
 Phase 7.3 integrates these images as Canvas visual layers with fallback drawing if an image has not loaded yet. Matter.js collision bodies remain unchanged.
 
-Phase 8.3b prepares additional visual-only assets for later integration. These are not wired into gameplay yet.
+Phase 8.3b prepares additional visual-only assets for later integration. The first integration pass uses the flipper and lamp sprites while keeping Matter.js physics bodies unchanged.

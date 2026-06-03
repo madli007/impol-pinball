@@ -31,7 +31,13 @@
     "measurement-left": { src: "assets/images/measurement-target.png", width: 116, height: 116, yOffset: -12 },
     "measurement-right": { src: "assets/images/measurement-target.png", width: 116, height: 116, yOffset: -12 },
     "e-odprema": { src: "assets/images/e-odprema-truck.png", width: 138, height: 116, yOffset: -10 },
-    alcad: { src: "assets/images/alcad-marker.png", width: 132, height: 116, yOffset: -10 }
+    alcad: { src: "assets/images/alcad-marker.png", width: 132, height: 116, yOffset: -10 },
+    "flipper-left": { src: "assets/images/flipper-left.png", width: 214, height: 102 },
+    "flipper-right": { src: "assets/images/flipper-right.png", width: 214, height: 106 },
+    "lamp-post-red": { src: "assets/images/lamp-post-red.png", width: 34, height: 68 },
+    "lamp-post-orange": { src: "assets/images/lamp-post-orange.png", width: 34, height: 67 },
+    "lamp-post-blue": { src: "assets/images/lamp-post-blue.png", width: 34, height: 67 },
+    "lamp-post-green": { src: "assets/images/lamp-post-green.png", width: 34, height: 67 }
   };
   const TABLE_CONFIG = {
     bumpers: [
@@ -318,6 +324,31 @@
     return true;
   }
 
+  function drawDecorAsset(id, x, y, width, height, options = {}) {
+    const asset = assets[id];
+
+    if (!asset || !asset.loaded) {
+      return false;
+    }
+
+    context.save();
+    context.globalAlpha = options.alpha ?? 1;
+    context.shadowColor = options.shadowColor || "rgba(0, 0, 0, 0.38)";
+    context.shadowBlur = options.shadowBlur ?? 12;
+    context.shadowOffsetY = options.shadowOffsetY ?? 6;
+
+    if (options.flipX) {
+      context.translate(x, y);
+      context.scale(-1, 1);
+      context.drawImage(asset.image, -width / 2, -height / 2, width, height);
+    } else {
+      context.drawImage(asset.image, x - width / 2, y - height / 2, width, height);
+    }
+
+    context.restore();
+    return true;
+  }
+
   function drawHitHalo(x, y, width, height, accent) {
     const radius = Math.max(width, height) * 0.42;
     const gradient = context.createRadialGradient(x, y, 8, x, y, radius);
@@ -531,8 +562,34 @@
 
   function drawFlipper(body, isActive) {
     const config = body.label === "left-flipper" ? TABLE.flippers.left : TABLE.flippers.right;
+    const isRight = body.label === "right-flipper";
+    const assetId = isRight ? "flipper-right" : "flipper-left";
+    const flipperAsset = assets[assetId];
     const pivotX = config.pivotX;
     const pivotY = config.pivotY;
+
+    if (flipperAsset?.loaded) {
+      context.save();
+      context.translate(body.position.x, body.position.y);
+      context.rotate(body.angle);
+      context.shadowColor = isActive ? "rgba(49, 168, 255, 0.58)" : "rgba(0, 0, 0, 0.42)";
+      context.shadowBlur = isActive ? 18 : 12;
+      context.shadowOffsetY = 7;
+
+      if (isRight) {
+        context.scale(-1, 1);
+      }
+
+      context.drawImage(
+        flipperAsset.image,
+        -flipperAsset.width / 2,
+        -flipperAsset.height / 2,
+        flipperAsset.width,
+        flipperAsset.height
+      );
+      context.restore();
+      return;
+    }
 
     context.save();
     context.translate(body.position.x, body.position.y);
@@ -547,6 +604,26 @@
     context.beginPath();
     context.arc(pivotX, pivotY, 12, 0, Math.PI * 2);
     context.fill();
+  }
+
+  function drawDecorativeLamps() {
+    [
+      { id: "lamp-post-red", x: 146, y: 1126 },
+      { id: "lamp-post-orange", x: 244, y: 1098 },
+      { id: "lamp-post-blue", x: 656, y: 1098 },
+      { id: "lamp-post-green", x: 754, y: 1126 }
+    ].forEach((lamp) => {
+      const asset = assets[lamp.id];
+      const width = asset?.width || 34;
+      const height = asset?.height || 68;
+
+      if (!drawDecorAsset(lamp.id, lamp.x, lamp.y, width, height, { alpha: 0.92, shadowBlur: 10 })) {
+        context.fillStyle = "#ff9b3d";
+        context.beginPath();
+        context.arc(lamp.x, lamp.y, 8, 0, Math.PI * 2);
+        context.fill();
+      }
+    });
   }
 
   function drawPlungerCharge() {
@@ -761,6 +838,7 @@
     context.stroke();
 
     drawConfiguredTargets();
+    drawDecorativeLamps();
 
     drawShooterChannel();
     drawSkillShotMarker();

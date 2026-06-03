@@ -540,6 +540,12 @@ Priority order:
   - Prioritize the highest screenshot impact: background/frame first, then flippers, then small lights/decals.
   - Visible result: the table reads more like a finished physical pinball machine, while the current gameplay remains stable.
 
+- [x] Phase 8.3c - Flipper and lamp sprite integration - Status: complete
+  - Crop flipper and lamp sprites from the secondary visual asset sheet.
+  - Render flippers from PNG sprites while keeping the existing Matter.js flipper bodies.
+  - Add decorative lamp posts around the lower playfield as visual-only pieces.
+  - Visible result: the bottom playfield looks closer to the mockup without changing controls or physics.
+
 - [ ] Phase 8.4 - Rail, lane, and drain polish - Status: planned
   - Strengthen the aluminium rail look around the outer table and bottom drain.
   - Make side lanes and outlanes clearer with guide lines, lane labels, and small indicator lights.
