@@ -12,7 +12,7 @@
       outerX: 842,
       bottomY: 1190,
       topY: 160,
-      exitY: 184
+      exitY: 214
     },
     totalBalls: 3,
     flippers: {
@@ -481,11 +481,15 @@
       return;
     }
 
-    const barHeight = 154;
+    const lane = TABLE.shooterLane;
+    const barX = lane.outerX + 18;
+    const barY = 1014;
+    const barWidth = 18;
+    const barHeight = 168;
     const filled = barHeight * gameState.plungerPower;
-    fillRoundedRect(820, 1020, 26, barHeight, 10, "rgba(5, 11, 16, 0.78)");
-    fillRoundedRect(820, 1020 + barHeight - filled, 26, filled, 10, "#ff9b3d");
-    strokeRoundedRect(820, 1020, 26, barHeight, 10, "#7e939c", 3);
+    fillRoundedRect(barX, barY, barWidth, barHeight, 8, "rgba(5, 11, 16, 0.78)");
+    fillRoundedRect(barX, barY + barHeight - filled, barWidth, filled, 8, "#ff9b3d");
+    strokeRoundedRect(barX, barY, barWidth, barHeight, 8, "#7e939c", 3);
   }
 
   function drawShooterChannel() {
@@ -507,7 +511,7 @@
     context.beginPath();
     context.moveTo(lane.innerX, lane.bottomY);
     context.lineTo(lane.innerX, lane.topY + 88);
-    context.quadraticCurveTo(lane.innerX + 16, lane.exitY, lane.innerX + 68, lane.exitY - 42);
+    context.quadraticCurveTo(lane.innerX - 12, lane.exitY + 2, lane.innerX - 78, lane.exitY + 8);
     context.stroke();
 
     context.strokeStyle = "rgba(49, 168, 255, 0.92)";
@@ -531,18 +535,23 @@
     context.lineTo(lane.outerX - 18, lane.topY + 40);
     context.stroke();
 
-    context.fillStyle = "rgba(49, 168, 255, 0.18)";
+    context.strokeStyle = "rgba(49, 168, 255, 0.72)";
+    context.lineWidth = 6;
     context.beginPath();
-    context.moveTo(lane.innerX - 2, lane.topY + 72);
-    context.quadraticCurveTo(lane.innerX + 46, lane.exitY - 62, lane.innerX + 116, lane.exitY - 72);
-    context.lineTo(lane.innerX + 92, lane.exitY + 22);
-    context.quadraticCurveTo(lane.innerX + 42, lane.exitY + 34, lane.innerX - 2, lane.exitY + 96);
-    context.closePath();
-    context.fill();
+    context.moveTo(lane.innerX + 16, lane.topY + 42);
+    context.quadraticCurveTo(lane.innerX - 12, lane.exitY - 6, lane.innerX - 94, lane.exitY + 14);
+    context.stroke();
 
-    fillRoundedRect(lane.innerX - 4, lane.bottomY - 70, laneWidth + 18, 76, 14, "#0a1820");
-    strokeRoundedRect(lane.innerX - 4, lane.bottomY - 70, laneWidth + 18, 76, 14, "#ff9b3d", 4);
-    drawLabel("LAUNCH", lane.innerX + laneWidth / 2 + 5, lane.bottomY - 32, "#ff9b3d", 18);
+    context.strokeStyle = "rgba(126, 147, 156, 0.64)";
+    context.lineWidth = 5;
+    context.beginPath();
+    context.moveTo(lane.innerX + 48, lane.topY + 22);
+    context.quadraticCurveTo(lane.innerX + 4, lane.exitY + 46, lane.innerX - 78, lane.exitY + 54);
+    context.stroke();
+
+    fillRoundedRect(lane.innerX - 96, lane.bottomY - 62, 82, 52, 12, "#0a1820");
+    strokeRoundedRect(lane.innerX - 96, lane.bottomY - 62, 82, 52, 12, "#ff9b3d", 4);
+    drawLabel("LAUNCH", lane.innerX - 55, lane.bottomY - 36, "#ff9b3d", 16);
 
     context.restore();
   }
@@ -722,14 +731,18 @@
         label: "right-outlane-guide",
         angle: -0.58
       }),
-      Bodies.rectangle(TABLE.shooterLane.innerX, 720, 18, 1050, {
+      Bodies.rectangle(TABLE.shooterLane.innerX, 760, 18, 920, {
         ...wallOptions,
         label: "launch-lane-divider"
       }),
-      Bodies.rectangle(TABLE.shooterLane.innerX + 60, 174, 152, 22, {
+      Bodies.rectangle(TABLE.shooterLane.outerX - 36, TABLE.shooterLane.bottomY + 26, 112, 24, {
+        ...wallOptions,
+        label: "launch-lane-plunger-stop"
+      }),
+      Bodies.rectangle(TABLE.shooterLane.innerX + 78, 212, 168, 18, {
         ...wallOptions,
         label: "launch-lane-top-exit",
-        angle: -0.42
+        angle: -0.72
       }),
       Bodies.rectangle(450, 1354, 270, 54, {
         isStatic: true,
@@ -867,11 +880,11 @@
       return;
     }
 
-    const power = Math.max(0.34, gameState.plungerPower);
+    const power = Math.max(0.58, gameState.plungerPower);
     MatterLib.Body.setStatic(physics.ball, false);
     MatterLib.Body.setVelocity(physics.ball, {
-      x: -0.06 - power * 0.2,
-      y: -14 - power * 8.5
+      x: 0,
+      y: -20 - power * 11
     });
     gameState.status = "playing";
     gameState.plungerPower = 0;
@@ -882,13 +895,17 @@
   function guideBallOutOfShooterLane(ball) {
     const lane = TABLE.shooterLane;
 
-    if (ball.position.x < lane.innerX - 8 || ball.position.y > lane.exitY + 95) {
+    if (ball.position.x < lane.innerX - 24 || ball.position.y > lane.exitY + 100) {
       return;
     }
 
+    MatterLib.Body.setPosition(ball, {
+      x: lane.innerX - 22,
+      y: Math.max(ball.position.y, lane.exitY + 30)
+    });
     MatterLib.Body.setVelocity(ball, {
-      x: Math.min(ball.velocity.x, -6.6),
-      y: Math.max(ball.velocity.y, 1.8)
+      x: -8.4,
+      y: 3.2
     });
   }
 
@@ -1039,6 +1056,21 @@
 
     if (physics.ball.position.y > TABLE.height + 80) {
       drainBall(physics.ball);
+    }
+  }
+
+  function maybeGuideShooterLaneExit() {
+    if (!physics || gameState.status !== "playing") {
+      return;
+    }
+
+    const lane = TABLE.shooterLane;
+    const ball = physics.ball;
+    const isInShooterLane = ball.position.x > lane.innerX + 8 && ball.position.x < lane.outerX + 12;
+    const reachedExit = ball.position.y < lane.exitY + 98;
+
+    if (isInShooterLane && reachedExit && ball.velocity.y < 0) {
+      guideBallOutOfShooterLane(ball);
     }
   }
 
@@ -1273,6 +1305,7 @@
       updateFlippers();
       holdBallInLaunchLane();
       MatterLib.Engine.update(physics.engine, 1000 / 60);
+      maybeGuideShooterLaneExit();
       maybeCatchLostBall();
       maybeFinishBetweenBalls();
     }
