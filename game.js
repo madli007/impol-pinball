@@ -32,8 +32,8 @@
     "measurement-right": { src: "assets/images/measurement-target.png", width: 116, height: 116, yOffset: -12 },
     "e-odprema": { src: "assets/images/e-odprema-truck.png", width: 138, height: 116, yOffset: -10 },
     alcad: { src: "assets/images/alcad-marker.png", width: 132, height: 116, yOffset: -10 },
-    "flipper-left": { src: "assets/images/flipper-left.png", width: 214, height: 102 },
-    "flipper-right": { src: "assets/images/flipper-right.png", width: 214, height: 106 },
+    "flipper-left": { src: "assets/images/flipper-left.png", width: 178, height: 83 },
+    "flipper-right": { src: "assets/images/flipper-right.png", width: 178, height: 83 },
     "lamp-post-red": { src: "assets/images/lamp-post-red.png", width: 34, height: 68 },
     "lamp-post-orange": { src: "assets/images/lamp-post-orange.png", width: 34, height: 67 },
     "lamp-post-blue": { src: "assets/images/lamp-post-blue.png", width: 34, height: 67 },
@@ -568,37 +568,58 @@
     const pivotX = config.pivotX;
     const pivotY = config.pivotY;
 
-    if (flipperAsset?.loaded) {
-      context.save();
-      context.translate(body.position.x, body.position.y);
-      context.rotate(body.angle);
-      context.shadowColor = isActive ? "rgba(49, 168, 255, 0.58)" : "rgba(0, 0, 0, 0.42)";
-      context.shadowBlur = isActive ? 18 : 12;
-      context.shadowOffsetY = 7;
-
-      if (isRight) {
-        context.scale(-1, 1);
-      }
-
-      context.drawImage(
-        flipperAsset.image,
-        -flipperAsset.width / 2,
-        -flipperAsset.height / 2,
-        flipperAsset.width,
-        flipperAsset.height
-      );
-      context.restore();
-      return;
-    }
-
     context.save();
     context.translate(body.position.x, body.position.y);
     context.rotate(body.angle);
 
-    fillRoundedRect(-config.length / 2, -config.height / 2, config.length, config.height, 16, isActive ? "#f7fbff" : "#dbe5e7");
-    strokeRoundedRect(-config.length / 2, -config.height / 2, config.length, config.height, 16, isActive ? "#31a8ff" : "#738891", 5);
+    const drewAsset = Boolean(flipperAsset?.loaded);
+
+    if (drewAsset) {
+      context.shadowColor = isActive ? "rgba(49, 168, 255, 0.58)" : "rgba(0, 0, 0, 0.42)";
+      context.shadowBlur = isActive ? 18 : 12;
+      context.shadowOffsetY = 7;
+
+      const pivotInset = 16;
+      const drawX = -config.length / 2 - pivotInset;
+      const drawY = -flipperAsset.height / 2 + 1;
+
+      if (isRight) {
+        context.scale(1, -1);
+      }
+
+      context.drawImage(
+        flipperAsset.image,
+        drawX,
+        drawY,
+        flipperAsset.width,
+        flipperAsset.height
+      );
+    } else {
+      context.shadowColor = isActive ? "rgba(49, 168, 255, 0.54)" : "rgba(0, 0, 0, 0.38)";
+      context.shadowBlur = isActive ? 18 : 10;
+      context.shadowOffsetY = 7;
+
+      const bodyGradient = context.createLinearGradient(0, -config.height / 2, 0, config.height / 2);
+      bodyGradient.addColorStop(0, "#f8fbfc");
+      bodyGradient.addColorStop(0.48, "#dfe8eb");
+      bodyGradient.addColorStop(1, "#8aa0a8");
+      fillRoundedRect(-config.length / 2, -config.height / 2, config.length, config.height, 16, bodyGradient);
+      strokeRoundedRect(-config.length / 2, -config.height / 2, config.length, config.height, 16, isActive ? "#31a8ff" : "#738891", 5);
+
+      context.shadowColor = "transparent";
+      fillRoundedRect(-config.length / 2 + 12, config.height / 2 - 8, config.length - 24, 7, 5, isActive ? "#52bcff" : "#176baf");
+
+      context.fillStyle = "#ff9b3d";
+      context.beginPath();
+      context.arc(-config.length / 2 + 10, 0, 9, 0, Math.PI * 2);
+      context.fill();
+    }
 
     context.restore();
+
+    if (drewAsset) {
+      return;
+    }
 
     context.fillStyle = isActive ? "#31a8ff" : "#ff9b3d";
     context.beginPath();
