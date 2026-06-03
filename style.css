@@ -232,6 +232,13 @@ h1 {
   text-align: center;
 }
 
+.controls-hint span.is-active {
+  border-color: rgba(49, 168, 255, 0.8);
+  color: var(--text);
+  background: rgba(49, 168, 255, 0.26);
+  box-shadow: 0 0 18px rgba(49, 168, 255, 0.18);
+}
+
 .game-stage {
   position: relative;
   min-height: calc(100vh - 36px);

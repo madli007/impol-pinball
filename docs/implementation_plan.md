@@ -424,15 +424,15 @@ Use small phases that produce visible progress as quickly as possible. Each phas
 
 ### Phase 3: Basic Player Control
 
-- [ ] Phase 3.1 - Keyboard input - Status: pending
+- [x] Phase 3.1 - Keyboard input - Status: complete
   - Add `A`/`ArrowLeft`, `D`/`ArrowRight`, and `Space` input handling.
   - Visible result: key presses are reflected in simple debug/HUD state or flipper movement.
 
-- [ ] Phase 3.2 - Kinematic flippers - Status: pending
+- [x] Phase 3.2 - Kinematic flippers - Status: complete
   - Add manually angled left/right flippers with rest and active positions.
   - Visible result: player can flip both flippers and hit the ball.
 
-- [ ] Phase 3.3 - Simple plunger - Status: pending
+- [x] Phase 3.3 - Simple plunger - Status: complete
   - Add hold/release `Space` charge for the right-side launch lane.
   - Visible result: player launches the ball instead of relying on automatic spawn.
 
