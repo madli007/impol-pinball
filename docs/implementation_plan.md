@@ -500,12 +500,69 @@ Use small phases that produce visible progress as quickly as possible. Each phas
   - Add generated assets as visual layers without changing the core physics contracts.
   - Visible result: visual polish improves without breaking gameplay.
 
+### Phase 8: Next-Day Demo Polish
+
+Goal: make the already playable MVP feel more like a real pinball table for a light internal demo, without taking on risky systems before the game is shown to coworkers.
+
+Priority order:
+
+1. Make the launch experience read like standard pinball.
+2. Improve visual depth and table polish using the existing assets.
+3. Add small, visible, low-risk feedback features.
+4. Defer complex systems that could destabilize physics or controls.
+
+- [ ] Phase 8.1 - Proper shooter channel - Status: planned
+  - Add a clear right-side shooter channel that continues from the plunger pocket up to the top of the table.
+  - Add a curved or angled top exit so the ball leaves the channel into the upper playfield instead of appearing to travel only vertically beside the table.
+  - Keep the current plunger input contract: hold/release `Space`, with no new controls.
+  - Use static Matter.js rail bodies for the channel walls and exit guide.
+  - Draw the channel as an obvious lane: metal rails, inner shadow, plunger pocket, launch guide, and a visible top feed into the playfield.
+  - Visible result: when the ball is launched, players immediately understand where it goes and why it enters the table from the upper right.
+
+- [ ] Phase 8.2 - Launch skill shot marker - Status: planned
+  - Add one simple target or rollover near the shooter-channel exit.
+  - Award a small `SKILL SHOT` bonus if the launched ball reaches or hits it shortly after launch.
+  - Keep the timing generous for demo fun.
+  - Visible result: launching is no longer only a start action; it has a small arcade reward.
+
+- [ ] Phase 8.3 - Playfield art depth pass - Status: planned
+  - Tighten asset placement so the PNGs feel anchored to the table rather than floating over it.
+  - Add simple shadows under major playfield assets.
+  - Add small metal bases, bolts, glow rings, or status lights around bumpers and targets.
+  - Keep labels where readability still benefits from them.
+  - Avoid changing collision bodies unless an object visibly no longer matches its hit zone.
+  - Visible result: the table looks more intentional and less like separate stickers on a canvas.
+
+- [ ] Phase 8.4 - Rail, lane, and drain polish - Status: planned
+  - Strengthen the aluminium rail look around the outer table and bottom drain.
+  - Make side lanes and outlanes clearer with guide lines, lane labels, and small indicator lights.
+  - Improve the drain warning area visually, but do not make it busier than the flippers.
+  - Visible result: players can read the table structure quickly from the screenshot or first play.
+
+- [ ] Phase 8.5 - Hit feedback and combo feel - Status: planned
+  - Add short-lived visual pulses on hit targets and bumpers.
+  - Add a compact floating score text near the hit location.
+  - Add a simple combo counter if the player hits multiple scoring elements within a short window.
+  - Keep combo scoring modest and easy to remove if it makes balancing weird.
+  - Visible result: hits feel more satisfying even without sound.
+
+- [ ] Phase 8.6 - Demo stability and reset pass - Status: planned
+  - Play several full games and watch for stuck balls, unfair drains, or weak launches.
+  - Add a simple ball rescue only if the ball can reliably get stuck in a known area.
+  - Confirm `Restart`, next-ball launch, high score, and mission progress still behave correctly.
+  - Visible result: the game can be handed to coworkers without needing developer supervision.
+
+- [ ] Phase 8.7 - Screenshot-ready presentation pass - Status: planned
+  - Tune the first viewport composition for the current desktop layout.
+  - Make sure the Impol identity, score HUD, mission panel, company panel, and full table are all readable.
+  - Update README current status from "Playable MVP in progress" to a demo-ready status when this phase is complete.
+  - Visible result: the game looks good enough in a quick screen share or screenshot.
+
 ## 15. Post-MVP Backlog
 
 - Touch/mobile controls.
 - Sound effects via Web Audio API.
 - Ball save.
-- Skill shot.
 - Combo shots.
 - Multiball.
 - Jackpot.
