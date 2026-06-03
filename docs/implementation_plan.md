@@ -404,7 +404,7 @@ Use small phases that produce visible progress as quickly as possible. Each phas
   - Add score, balls left, multiplier, high score, mission panel, company/context panel, and restart button as static UI.
   - Visible result: page already resembles a simplified version of the mockup structure.
 
-- [ ] Phase 1.3 - Canvas playfield frame - Status: pending
+- [x] Phase 1.3 - Canvas playfield frame - Status: complete
   - Add a centered canvas with a dark metallic table background, rails, drain area, and launch lane drawn as static shapes.
   - Visible result: user can see the pinball table skeleton before physics is active.
 

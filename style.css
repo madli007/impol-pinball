@@ -254,10 +254,11 @@ h1 {
 .stage-placeholder {
   position: absolute;
   inset: auto 24px 24px;
-  padding: 14px 16px;
+  padding: 10px 12px;
   border: 1px solid rgba(49, 168, 255, 0.4);
   border-radius: 8px;
-  background: rgba(5, 11, 16, 0.78);
+  background: rgba(5, 11, 16, 0.68);
+  pointer-events: none;
 }
 
 .stage-placeholder span,
@@ -267,14 +268,15 @@ h1 {
 
 .stage-placeholder span {
   color: var(--green);
-  font-size: 0.78rem;
+  font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
 }
 
 .stage-placeholder strong {
-  margin-top: 4px;
+  margin-top: 3px;
   color: var(--text);
+  font-size: 0.84rem;
 }
 
 @media (max-width: 760px) {
