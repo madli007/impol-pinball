@@ -400,7 +400,7 @@ Use small phases that produce visible progress as quickly as possible. Each phas
   - Create `index.html`, link `style.css` and `game.js`, add Matter.js CDN.
   - Visible result: opening `index.html` shows an Impol Pinball page, even before gameplay exists.
 
-- [ ] Phase 1.2 - Industrial HUD layout - Status: pending
+- [x] Phase 1.2 - Industrial HUD layout - Status: complete
   - Add score, balls left, multiplier, high score, mission panel, company/context panel, and restart button as static UI.
   - Visible result: page already resembles a simplified version of the mockup structure.
 

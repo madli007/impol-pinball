@@ -26,7 +26,7 @@
 
     context.fillStyle = "#7bdc6c";
     context.font = "700 28px Arial, Helvetica, sans-serif";
-    context.fillText("PAGE SHELL READY", canvas.width / 2, canvas.height / 2);
+    context.fillText("HUD LAYOUT READY", canvas.width / 2, canvas.height / 2);
 
     context.fillStyle = "#ff9b3d";
     context.beginPath();
@@ -37,7 +37,7 @@
   drawShellPreview();
 
   window.ImpolPinball = {
-    phase: "1.1",
+    phase: "1.2",
     matterLoaded: Boolean(window.Matter)
   };
 })();

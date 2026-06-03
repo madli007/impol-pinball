@@ -8,19 +8,97 @@
   </head>
   <body>
     <main class="app-shell">
-      <section class="intro-panel" aria-labelledby="game-title">
-        <p class="eyebrow">Impol Aluminium Industry</p>
-        <h1 id="game-title">Impol Pinball</h1>
-        <p class="subtitle">Digital transformation multiball starts with a stable playable MVP.</p>
+      <section class="hud-panel hud-panel-left" aria-labelledby="game-title">
+        <div class="brand-lockup">
+          <div class="brand-bars" aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <div>
+            <p class="eyebrow">Impol Aluminium Industry</p>
+            <h1 id="game-title">Impol Pinball</h1>
+          </div>
+        </div>
+
+        <dl class="score-board" aria-label="Game status">
+          <div>
+            <dt>Score</dt>
+            <dd id="score-value">0</dd>
+          </div>
+          <div>
+            <dt>Ball</dt>
+            <dd id="ball-value">1</dd>
+          </div>
+          <div>
+            <dt>Balls left</dt>
+            <dd id="balls-left-value">3</dd>
+          </div>
+          <div>
+            <dt>Multiplier</dt>
+            <dd id="multiplier-value">1x</dd>
+          </div>
+          <div>
+            <dt>High score</dt>
+            <dd id="high-score-value">0</dd>
+          </div>
+        </dl>
+
+        <div class="panel-block">
+          <h2>Missions</h2>
+          <ul class="mission-list" aria-label="Mission progress">
+            <li>
+              <span>MERILNI PROTOKOL</span>
+              <strong>0/3</strong>
+            </li>
+            <li>
+              <span>MES ONLINE</span>
+              <strong>0/5</strong>
+            </li>
+            <li>
+              <span>ERP GO-LIVE</span>
+              <strong>0/3</strong>
+            </li>
+          </ul>
+        </div>
+
+        <button class="control-button" type="button">Restart</button>
       </section>
 
       <section class="game-stage" aria-label="Pinball playfield preview">
         <canvas id="game-canvas" width="900" height="1400"></canvas>
         <div class="stage-placeholder">
-          <span>Phase 1.1</span>
-          <strong>Page shell ready</strong>
+          <span>Phase 1.2</span>
+          <strong>HUD layout ready</strong>
         </div>
       </section>
+
+      <aside class="hud-panel hud-panel-right" aria-label="Company context">
+        <div class="panel-block">
+          <h2>Companies</h2>
+          <ul class="company-list">
+            <li class="is-active"><span>IMPOL</span><strong>Core</strong></li>
+            <li><span>SEVAL</span><strong>Lane</strong></li>
+            <li><span>ALCAD</span><strong>Target</strong></li>
+            <li><span>TLM</span><strong>Zone</strong></li>
+            <li><span>IMPOL-PC</span><strong>Ramp</strong></li>
+            <li><span>RONDAL</span><strong>Bonus</strong></li>
+            <li><span>IMPOL FINAL</span><strong>Ready</strong></li>
+          </ul>
+        </div>
+
+        <div class="panel-block">
+          <h2>Current focus</h2>
+          <p class="status-copy">Keep the ball in play. Activate MES, ERP, and Merilni protokol targets.</p>
+        </div>
+
+        <div class="controls-hint" aria-label="Controls">
+          <span>A / Left</span>
+          <span>D / Right</span>
+          <span>Space</span>
+        </div>
+      </aside>
     </main>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.20.0/matter.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
