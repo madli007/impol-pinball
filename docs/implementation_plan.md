@@ -396,7 +396,7 @@ Use small phases that produce visible progress as quickly as possible. Each phas
 
 ### Phase 1: Visible Static Shell
 
-- [ ] Phase 1.1 - Page shell - Status: pending
+- [x] Phase 1.1 - Page shell - Status: complete
   - Create `index.html`, link `style.css` and `game.js`, add Matter.js CDN.
   - Visible result: opening `index.html` shows an Impol Pinball page, even before gameplay exists.
 

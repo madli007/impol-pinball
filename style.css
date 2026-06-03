@@ -1,0 +1,129 @@
+:root {
+  color-scheme: dark;
+  --bg: #071018;
+  --panel: #0d1d27;
+  --panel-border: #24475a;
+  --text: #edf7fb;
+  --muted: #9ab3bf;
+  --blue: #31a8ff;
+  --green: #7bdc6c;
+  --orange: #ff9b3d;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: Arial, Helvetica, sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 50% 0%, rgba(49, 168, 255, 0.18), transparent 34rem),
+    linear-gradient(135deg, #050b10 0%, var(--bg) 55%, #11170f 100%);
+}
+
+.app-shell {
+  width: min(1180px, calc(100vw - 32px));
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 32px 0;
+  display: grid;
+  grid-template-columns: 320px minmax(320px, 1fr);
+  gap: 24px;
+  align-items: center;
+}
+
+.intro-panel,
+.game-stage {
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: rgba(13, 29, 39, 0.82);
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.35);
+}
+
+.intro-panel {
+  padding: 28px;
+}
+
+.eyebrow {
+  margin: 0 0 12px;
+  color: var(--blue);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(2.25rem, 6vw, 4.25rem);
+  line-height: 0.95;
+}
+
+.subtitle {
+  margin: 18px 0 0;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.game-stage {
+  position: relative;
+  min-height: min(78vh, 760px);
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+
+#game-canvas {
+  width: min(100%, 520px);
+  max-height: 72vh;
+  aspect-ratio: 9 / 14;
+  display: block;
+  border: 2px solid #395f70;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #122f3d 0%, #0a1820 100%);
+}
+
+.stage-placeholder {
+  position: absolute;
+  inset: auto 24px 24px;
+  padding: 14px 16px;
+  border: 1px solid rgba(49, 168, 255, 0.4);
+  border-radius: 8px;
+  background: rgba(5, 11, 16, 0.78);
+}
+
+.stage-placeholder span,
+.stage-placeholder strong {
+  display: block;
+}
+
+.stage-placeholder span {
+  color: var(--green);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.stage-placeholder strong {
+  margin-top: 4px;
+  color: var(--text);
+}
+
+@media (max-width: 760px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .intro-panel {
+    padding: 22px;
+  }
+
+  .game-stage {
+    min-height: 560px;
+  }
+}
