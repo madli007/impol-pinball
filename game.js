@@ -114,6 +114,8 @@
     feedback: "",
     feedbackUntil: 0,
     hitCounts: {},
+    skillShotAvailableUntil: 0,
+    skillShotAwarded: false,
     activeMissionId: "measurement",
     missions: createMissionState()
   };
@@ -556,6 +558,26 @@
     context.restore();
   }
 
+  function drawSkillShotMarker() {
+    const isLit = wasRecentlyHit("skill-shot");
+    const x = 686;
+    const y = 278;
+
+    context.save();
+    context.globalAlpha = isLit ? 1 : 0.86;
+    fillRoundedRect(x - 52, y - 22, 104, 44, 12, isLit ? "rgba(255, 155, 61, 0.34)" : "rgba(5, 11, 16, 0.58)");
+    strokeRoundedRect(x - 52, y - 22, 104, 44, 12, isLit ? "#ffb967" : "rgba(255, 155, 61, 0.76)", isLit ? 5 : 3);
+    drawLabel("SKILL", x, y - 4, "#ffb967", 16);
+
+    context.fillStyle = isLit ? "#ffb967" : "#31a8ff";
+    context.beginPath();
+    context.arc(x - 34, y + 16, 7, 0, Math.PI * 2);
+    context.arc(x, y + 16, 7, 0, Math.PI * 2);
+    context.arc(x + 34, y + 16, 7, 0, Math.PI * 2);
+    context.fill();
+    context.restore();
+  }
+
   function updateHud() {
     ui.score.textContent = gameState.score.toLocaleString("sl-SI");
     ui.ball.textContent = String(gameState.ballNumber);
@@ -577,7 +599,7 @@
 
   function syncInspectableState(physics) {
     window.ImpolPinball = {
-      phase: "8.1",
+      phase: "8.2",
       matterLoaded: Boolean(MatterLib),
       staticBodyCount: physics ? physics.staticBodies.length : 0,
       tableObjectCount: physics ? physics.bumperBodies.length + physics.targetBodies.length : 0,
@@ -590,6 +612,7 @@
       plungerPower: Number(gameState.plungerPower.toFixed(2)),
       score: gameState.score,
       lastEvent: gameState.lastEvent,
+      skillShotAwarded: gameState.skillShotAwarded,
       activeMissionId: gameState.activeMissionId,
       missions: gameState.missions,
       input: { ...inputState }
@@ -669,6 +692,7 @@
     drawConfiguredTargets();
 
     drawShooterChannel();
+    drawSkillShotMarker();
 
     context.fillStyle = "#071018";
     context.beginPath();
@@ -743,6 +767,11 @@
         ...wallOptions,
         label: "launch-lane-top-exit",
         angle: -0.72
+      }),
+      Bodies.rectangle(686, 278, 104, 44, {
+        isStatic: true,
+        isSensor: true,
+        label: "skill-shot-sensor"
       }),
       Bodies.rectangle(450, 1354, 270, 54, {
         isStatic: true,
@@ -826,6 +855,10 @@
           guideBallOutOfShooterLane(ball);
         }
 
+        if (labels.includes("skill-shot-sensor") && labels.includes("pinball")) {
+          awardSkillShot();
+        }
+
         const hitObject = getHitObject(pair);
         if (hitObject) {
           handleTableHit(hitObject, ball);
@@ -887,6 +920,8 @@
       y: -20 - power * 11
     });
     gameState.status = "playing";
+    gameState.skillShotAvailableUntil = performance.now() + 2600;
+    gameState.skillShotAwarded = false;
     gameState.plungerPower = 0;
     inputState.chargingSince = 0;
     syncInspectableState(physics);
@@ -907,6 +942,24 @@
       x: -8.4,
       y: 3.2
     });
+    awardSkillShot();
+  }
+
+  function awardSkillShot() {
+    if (gameState.status !== "playing" || gameState.skillShotAwarded || performance.now() > gameState.skillShotAvailableUntil) {
+      return;
+    }
+
+    const points = 3500 * gameState.multiplier;
+    gameState.skillShotAwarded = true;
+    gameState.score += points;
+    setHighScore(gameState.score);
+    gameState.lastEvent = "hit:SKILL_SHOT";
+    gameState.feedback = `SKILL SHOT +${points.toLocaleString("sl-SI")}`;
+    gameState.feedbackUntil = performance.now() + 1100;
+    gameState.hitCounts["skill-shot"] = performance.now();
+    updateHud();
+    syncInspectableState(physics);
   }
 
   function getHitObject(pair) {
@@ -1030,6 +1083,8 @@
     gameState.feedback = "";
     gameState.feedbackUntil = 0;
     gameState.hitCounts = {};
+    gameState.skillShotAvailableUntil = 0;
+    gameState.skillShotAwarded = false;
     gameState.activeMissionId = "measurement";
     gameState.missions = createMissionState();
 

@@ -519,7 +519,7 @@ Priority order:
   - Draw the channel as an obvious lane: metal rails, inner shadow, plunger pocket, launch guide, and a visible top feed into the playfield.
   - Visible result: when the ball is launched, players immediately understand where it goes and why it enters the table from the upper right.
 
-- [ ] Phase 8.2 - Launch skill shot marker - Status: planned
+- [x] Phase 8.2 - Launch skill shot marker - Status: complete
   - Add one simple target or rollover near the shooter-channel exit.
   - Award a small `SKILL SHOT` bonus if the launched ball reaches or hits it shortly after launch.
   - Keep the timing generous for demo fun.
