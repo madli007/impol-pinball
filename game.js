@@ -13,6 +13,8 @@
       right: { pivotX: 656, pivotY: 1218, length: 166, height: 32, restAngle: Math.PI - 0.22, activeAngle: Math.PI + 0.58 }
     }
   };
+  const DEBUG_PHYSICS = false;
+  const HIGH_SCORE_KEY = "impol-pinball.high-score";
   const TABLE_CONFIG = {
     bumpers: [
       { id: "mes", label: "MES", x: 300, y: 392, radius: 56, accent: "#31a8ff", event: "hit:MES", points: 1000 },
@@ -85,7 +87,7 @@
     ballNumber: 1,
     ballsLeft: TABLE.totalBalls,
     multiplier: 1,
-    highScore: 0,
+    highScore: loadHighScore(),
     status: "ready",
     resetAt: 0,
     drainCount: 0,
@@ -115,6 +117,33 @@
       };
       return missions;
     }, {});
+  }
+
+  function loadHighScore() {
+    try {
+      const stored = window.localStorage.getItem(HIGH_SCORE_KEY);
+      const parsed = Number.parseInt(stored || "0", 10);
+      return Number.isFinite(parsed) ? parsed : 0;
+    } catch (_error) {
+      return 0;
+    }
+  }
+
+  function saveHighScore() {
+    try {
+      window.localStorage.setItem(HIGH_SCORE_KEY, String(gameState.highScore));
+    } catch (_error) {
+      // Keep the game playable if browser storage is unavailable.
+    }
+  }
+
+  function setHighScore(candidate) {
+    if (candidate <= gameState.highScore) {
+      return;
+    }
+
+    gameState.highScore = candidate;
+    saveHighScore();
   }
 
   function roundedRect(x, y, width, height, radius) {
@@ -231,6 +260,10 @@
   }
 
   function drawPhysicsOverlay(bodies) {
+    if (!DEBUG_PHYSICS) {
+      return;
+    }
+
     context.save();
     bodies.forEach(drawMatterBody);
     context.restore();
@@ -279,7 +312,7 @@
     MISSION_CONFIG.forEach((mission, index) => {
       const state = gameState.missions[mission.id];
       const x = 316 + index * 134;
-      const y = 972;
+      const y = 964;
       const isActive = gameState.activeMissionId === mission.id;
 
       context.fillStyle = state.completed ? "#7bdc6c" : isActive ? "#ff9b3d" : "#304f5d";
@@ -352,11 +385,11 @@
       return;
     }
 
-    const barHeight = 170;
+    const barHeight = 154;
     const filled = barHeight * gameState.plungerPower;
-    fillRoundedRect(820, 1010, 26, barHeight, 10, "rgba(5, 11, 16, 0.78)");
-    fillRoundedRect(820, 1010 + barHeight - filled, 26, filled, 10, "#ff9b3d");
-    strokeRoundedRect(820, 1010, 26, barHeight, 10, "#7e939c", 3);
+    fillRoundedRect(820, 1020, 26, barHeight, 10, "rgba(5, 11, 16, 0.78)");
+    fillRoundedRect(820, 1020 + barHeight - filled, 26, filled, 10, "#ff9b3d");
+    strokeRoundedRect(820, 1020, 26, barHeight, 10, "#7e939c", 3);
   }
 
   function updateHud() {
@@ -380,7 +413,7 @@
 
   function syncInspectableState(physics) {
     window.ImpolPinball = {
-      phase: "5.3",
+      phase: "6.4",
       matterLoaded: Boolean(MatterLib),
       staticBodyCount: physics ? physics.staticBodies.length : 0,
       tableObjectCount: physics ? physics.bumperBodies.length + physics.targetBodies.length : 0,
@@ -508,7 +541,7 @@
     context.arc(450, 1026, 18, 0, Math.PI * 2);
     context.fill();
 
-    drawLabel("INNOVATION", 450, 1086, "#31a8ff", 28);
+    drawLabel("INNOVATION", 450, 1084, "#31a8ff", 28);
   }
 
   function createMatterWorld() {
@@ -717,7 +750,7 @@
 
     const points = object.points * gameState.multiplier;
     gameState.score += points;
-    gameState.highScore = Math.max(gameState.highScore, gameState.score);
+    setHighScore(gameState.score);
     gameState.lastEvent = object.event;
     gameState.feedback = `+${points.toLocaleString("sl-SI")} ${object.label}`;
     gameState.feedbackUntil = performance.now() + 700;
@@ -761,7 +794,7 @@
   function completeMission(mission, state) {
     state.completed = true;
     gameState.score += mission.bonus;
-    gameState.highScore = Math.max(gameState.highScore, gameState.score);
+    setHighScore(gameState.score);
 
     if (mission.multiplierReward) {
       gameState.multiplier = Math.max(gameState.multiplier, mission.multiplierReward);
@@ -775,7 +808,7 @@
     const dx = ball.position.x - object.x;
     const dy = ball.position.y - object.y;
     const length = Math.max(1, Math.hypot(dx, dy));
-    const kick = 7.2;
+    const kick = 5.8;
 
     MatterLib.Body.setVelocity(ball, {
       x: ball.velocity.x + (dx / length) * kick,
@@ -790,7 +823,7 @@
 
     gameState.drainCount += 1;
     gameState.ballsLeft = Math.max(0, gameState.ballsLeft - 1);
-    gameState.highScore = Math.max(gameState.highScore, gameState.score);
+    setHighScore(gameState.score);
 
     if (gameState.ballsLeft === 0) {
       gameState.status = "game-over";

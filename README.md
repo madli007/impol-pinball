@@ -14,37 +14,44 @@ No npm, backend, database, login, or build step is planned for the first playabl
 
 ## Current Status
 
-Planning phase.
+Playable MVP in progress.
 
-The first milestone is a stable playable MVP with:
+The current version includes:
 
 - classic pinball table skeleton
 - one ball
 - two flippers
 - basic plunger
 - score and balls remaining
+- scoring bumpers and targets
 - simple missions
 - local high score
+- keyboard and on-screen controls
 
 The visual mockup in `docs/mock.png` is used as art direction, not as the first implementation target.
 
 ## Controls
 
-Planned MVP controls:
+Controls:
 
 - `A` or `ArrowLeft`: left flipper
 - `D` or `ArrowRight`: right flipper
-- `Space`: charge/release plunger or launch/restart
+- hold/release `Space`: charge and launch the ball
+- `Restart`: start a new game
+
+The right-side control buttons can also be clicked or held with a pointer.
 
 ## Local Run
 
-Once the MVP files exist, the game should run by opening:
+The game runs by opening:
 
 ```text
 index.html
 ```
 
 No install step should be required.
+
+Matter.js is loaded from CDN, so internet access is currently required for physics.
 
 ## Documentation
 
@@ -55,3 +62,5 @@ No install step should be required.
 ## Deployment
 
 Target deployment is GitHub Pages from static files in the repository.
+
+Push static files to the repository and enable GitHub Pages from the repository settings.

@@ -470,19 +470,19 @@ Use small phases that produce visible progress as quickly as possible. Each phas
 
 ### Phase 6: Persistence and Polish Pass
 
-- [ ] Phase 6.1 - Local high score - Status: pending
+- [x] Phase 6.1 - Local high score - Status: complete
   - Store and load high score with `localStorage`.
   - Visible result: high score survives page refresh.
 
-- [ ] Phase 6.2 - Playability tuning - Status: pending
+- [x] Phase 6.2 - Playability tuning - Status: complete
   - Tune gravity, ball speed, flipper angles, bumper impulse, drain fairness, and plunger power.
   - Visible result: the game feels playable for repeated attempts.
 
-- [ ] Phase 6.3 - Visual readability pass - Status: pending
+- [x] Phase 6.3 - Visual readability pass - Status: complete
   - Tighten labels, colors, table contrast, HUD spacing, and responsive fit.
   - Visible result: the game is readable on common desktop viewport sizes.
 
-- [ ] Phase 6.4 - README update - Status: pending
+- [x] Phase 6.4 - README update - Status: complete
   - Document run instructions, controls, current MVP scope, and GitHub Pages deployment.
   - Visible result: another agent or developer can run the project without extra context.
 

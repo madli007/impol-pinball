@@ -273,11 +273,11 @@ h1 {
 
 .stage-placeholder {
   position: absolute;
-  inset: auto 24px 24px;
+  inset: 24px auto auto 24px;
   padding: 10px 12px;
   border: 1px solid rgba(49, 168, 255, 0.4);
   border-radius: 8px;
-  background: rgba(5, 11, 16, 0.68);
+  background: rgba(5, 11, 16, 0.74);
   pointer-events: none;
 }
 
