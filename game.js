@@ -6,7 +6,7 @@
     width: canvas.width,
     height: canvas.height,
     wall: 60,
-    ballStart: { x: 450, y: 276 },
+    ballStart: { x: 225, y: 290 },
     totalBalls: 3
   };
   const ui = {
@@ -25,6 +25,7 @@
     highScore: 0,
     status: "playing",
     resetAt: 0,
+    autoRestartAt: 0,
     drainCount: 0
   };
 
@@ -131,8 +132,8 @@
   }
 
   function drawStatusBadge() {
-    const label = gameState.status === "game-over" ? "GAME OVER" : "BALL IN PLAY";
-    const color = gameState.status === "game-over" ? "#ff7567" : "#7bdc6c";
+    const label = gameState.status === "game-over" ? "DEMO RESET" : "BALL IN PLAY";
+    const color = gameState.status === "game-over" ? "#ff9b3d" : "#7bdc6c";
 
     fillRoundedRect(590, 100, 210, 42, 6, "rgba(5, 11, 16, 0.72)");
     context.fillStyle = color;
@@ -434,6 +435,7 @@
 
     if (gameState.ballsLeft === 0) {
       gameState.status = "game-over";
+      gameState.autoRestartAt = performance.now() + 1400;
     } else {
       gameState.status = "between-balls";
       gameState.ballNumber += 1;
@@ -452,6 +454,7 @@
     gameState.multiplier = 1;
     gameState.status = "playing";
     gameState.resetAt = 0;
+    gameState.autoRestartAt = 0;
     gameState.drainCount = 0;
 
     if (physics) {
@@ -470,6 +473,12 @@
     }
   }
 
+  function maybeAutoRestartDemo() {
+    if (gameState.status === "game-over" && performance.now() >= gameState.autoRestartAt) {
+      restartGame();
+    }
+  }
+
   function maybeCatchLostBall() {
     if (!physics || gameState.status !== "playing") {
       return;
@@ -481,6 +490,9 @@
   }
 
   ui.restartButton.addEventListener("click", restartGame);
+  if (physics) {
+    resetBall(physics.ball);
+  }
   updateHud();
   syncInspectableState(physics);
 
@@ -489,6 +501,7 @@
       MatterLib.Engine.update(physics.engine, 1000 / 60);
       maybeCatchLostBall();
       maybeFinishBetweenBalls();
+      maybeAutoRestartDemo();
     }
 
     drawPlayfieldFrame();
