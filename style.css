@@ -180,6 +180,16 @@ h1 {
   font-variant-numeric: tabular-nums;
 }
 
+.mission-list li.is-complete {
+  border-color: rgba(123, 220, 108, 0.72);
+  background: rgba(22, 84, 54, 0.46);
+}
+
+.mission-list li.is-active {
+  border-color: rgba(255, 155, 61, 0.7);
+  box-shadow: 0 0 18px rgba(255, 155, 61, 0.12);
+}
+
 .company-list li {
   border-color: rgba(49, 168, 255, 0.2);
 }

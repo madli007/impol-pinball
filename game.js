@@ -28,6 +28,33 @@
       { id: "e-odprema", label: "E-ODPREMA", x: 646, y: 784, width: 156, height: 48, accent: "#9ab3bf", event: "hit:EODPREMA", points: 500 }
     ]
   };
+  const MISSION_CONFIG = [
+    {
+      id: "measurement",
+      label: "MERILNI PROTOKOL",
+      event: "hit:MEASUREMENT",
+      required: 3,
+      bonus: 5000,
+      reward: "Quality bonus"
+    },
+    {
+      id: "mes",
+      label: "MES ONLINE",
+      event: "hit:MES",
+      required: 5,
+      bonus: 8000,
+      reward: "Real-time bonus"
+    },
+    {
+      id: "erp",
+      label: "ERP GO-LIVE",
+      event: "hit:ERP",
+      required: 3,
+      bonus: 10000,
+      multiplierReward: 2,
+      reward: "2x multiplier"
+    }
+  ];
   const ui = {
     score: document.getElementById("score-value"),
     ball: document.getElementById("ball-value"),
@@ -37,7 +64,21 @@
     restartButton: document.getElementById("restart-button"),
     leftControl: document.getElementById("left-control"),
     rightControl: document.getElementById("right-control"),
-    spaceControl: document.getElementById("space-control")
+    spaceControl: document.getElementById("space-control"),
+    missions: {
+      measurement: {
+        row: document.getElementById("mission-measurement"),
+        progress: document.getElementById("mission-measurement-progress")
+      },
+      mes: {
+        row: document.getElementById("mission-mes"),
+        progress: document.getElementById("mission-mes-progress")
+      },
+      erp: {
+        row: document.getElementById("mission-erp"),
+        progress: document.getElementById("mission-erp-progress")
+      }
+    }
   };
   const gameState = {
     score: 0,
@@ -52,7 +93,9 @@
     lastEvent: "",
     feedback: "",
     feedbackUntil: 0,
-    hitCounts: {}
+    hitCounts: {},
+    activeMissionId: "measurement",
+    missions: createMissionState()
   };
   const inputState = {
     left: false,
@@ -62,6 +105,17 @@
     space: false,
     chargingSince: 0
   };
+
+  function createMissionState() {
+    return MISSION_CONFIG.reduce((missions, mission) => {
+      missions[mission.id] = {
+        progress: 0,
+        completed: false,
+        lastProgressAt: 0
+      };
+      return missions;
+    }, {});
+  }
 
   function roundedRect(x, y, width, height, radius) {
     context.beginPath();
@@ -221,6 +275,23 @@
     context.fillText(gameState.feedback, 450, 1024);
   }
 
+  function drawMissionLights() {
+    MISSION_CONFIG.forEach((mission, index) => {
+      const state = gameState.missions[mission.id];
+      const x = 316 + index * 134;
+      const y = 972;
+      const isActive = gameState.activeMissionId === mission.id;
+
+      context.fillStyle = state.completed ? "#7bdc6c" : isActive ? "#ff9b3d" : "#304f5d";
+      context.beginPath();
+      context.arc(x, y, isActive ? 15 : 11, 0, Math.PI * 2);
+      context.fill();
+      context.strokeStyle = "rgba(237, 247, 251, 0.62)";
+      context.lineWidth = 3;
+      context.stroke();
+    });
+  }
+
   function drawBall(ball) {
     if (!ball || gameState.status === "between-balls") {
       return;
@@ -294,11 +365,22 @@
     ui.ballsLeft.textContent = String(gameState.ballsLeft);
     ui.multiplier.textContent = `${gameState.multiplier}x`;
     ui.highScore.textContent = gameState.highScore.toLocaleString("sl-SI");
+    updateMissionUi();
+  }
+
+  function updateMissionUi() {
+    MISSION_CONFIG.forEach((mission) => {
+      const state = gameState.missions[mission.id];
+      const missionUi = ui.missions[mission.id];
+      missionUi.progress.textContent = state.completed ? "DONE" : `${state.progress}/${mission.required}`;
+      missionUi.row.classList.toggle("is-complete", state.completed);
+      missionUi.row.classList.toggle("is-active", gameState.activeMissionId === mission.id && !state.completed);
+    });
   }
 
   function syncInspectableState(physics) {
     window.ImpolPinball = {
-      phase: "4.4",
+      phase: "5.3",
       matterLoaded: Boolean(MatterLib),
       staticBodyCount: physics ? physics.staticBodies.length : 0,
       tableObjectCount: physics ? physics.bumperBodies.length + physics.targetBodies.length : 0,
@@ -310,6 +392,8 @@
       plungerPower: Number(gameState.plungerPower.toFixed(2)),
       score: gameState.score,
       lastEvent: gameState.lastEvent,
+      activeMissionId: gameState.activeMissionId,
+      missions: gameState.missions,
       input: { ...inputState }
     };
   }
@@ -643,8 +727,48 @@
       kickBallFromObject(ball, object);
     }
 
+    advanceMissions(object.event);
     updateHud();
     syncInspectableState(physics);
+  }
+
+  function advanceMissions(eventName) {
+    MISSION_CONFIG.forEach((mission) => {
+      const state = gameState.missions[mission.id];
+
+      if (state.completed || mission.event !== eventName) {
+        return;
+      }
+
+      state.progress = Math.min(mission.required, state.progress + 1);
+      state.lastProgressAt = performance.now();
+      gameState.activeMissionId = mission.id;
+
+      if (state.progress >= mission.required) {
+        completeMission(mission, state);
+      } else {
+        gameState.feedback = `${mission.label} ${state.progress}/${mission.required}`;
+        gameState.feedbackUntil = performance.now() + 850;
+      }
+    });
+
+    const nextMission = MISSION_CONFIG.find((mission) => !gameState.missions[mission.id].completed);
+    if (nextMission) {
+      gameState.activeMissionId = nextMission.id;
+    }
+  }
+
+  function completeMission(mission, state) {
+    state.completed = true;
+    gameState.score += mission.bonus;
+    gameState.highScore = Math.max(gameState.highScore, gameState.score);
+
+    if (mission.multiplierReward) {
+      gameState.multiplier = Math.max(gameState.multiplier, mission.multiplierReward);
+    }
+
+    gameState.feedback = `${mission.label} COMPLETE +${mission.bonus.toLocaleString("sl-SI")}`;
+    gameState.feedbackUntil = performance.now() + 1300;
   }
 
   function kickBallFromObject(ball, object) {
@@ -695,6 +819,8 @@
     gameState.feedback = "";
     gameState.feedbackUntil = 0;
     gameState.hitCounts = {};
+    gameState.activeMissionId = "measurement";
+    gameState.missions = createMissionState();
 
     if (physics) {
       resetBall(physics.ball, true);
@@ -967,6 +1093,7 @@
       drawBall(physics.ball);
       drawStatusBadge();
       drawScoreFeedback();
+      drawMissionLights();
     } else {
       fillRoundedRect(104, 100, 210, 44, 6, "rgba(120, 36, 28, 0.76)");
       drawLabel("MATTER.JS NOT LOADED", 209, 123, "#ff7567", 16);

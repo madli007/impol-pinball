@@ -456,15 +456,15 @@ Use small phases that produce visible progress as quickly as possible. Each phas
 
 ### Phase 5: MVP Missions
 
-- [ ] Phase 5.1 - Mission model - Status: pending
+- [x] Phase 5.1 - Mission model - Status: complete
   - Add event-driven mission definitions for `MERILNI PROTOKOL`, `MES ONLINE`, and `ERP GO-LIVE`.
   - Visible result: mission panel shows real progress counters.
 
-- [ ] Phase 5.2 - Mission completion - Status: pending
+- [x] Phase 5.2 - Mission completion - Status: complete
   - Add completion state, bonus points, and one simple multiplier reward.
   - Visible result: player can complete at least one mission during normal play.
 
-- [ ] Phase 5.3 - Mission feedback - Status: pending
+- [x] Phase 5.3 - Mission feedback - Status: complete
   - Add simple lights, highlight states, or short text feedback for mission progress/completion.
   - Visible result: mission hits feel intentional instead of invisible.
 
