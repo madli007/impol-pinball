@@ -392,26 +392,113 @@ Simplification:
 
 ## 14. First Coding Task Checklist
 
-1. Create `index.html`.
-2. Add Matter.js CDN script.
-3. Create `style.css` with full-page game layout.
-4. Create `game.js`.
-5. Initialize Matter.js engine and canvas renderer.
-6. Create fixed-size table coordinate system.
-7. Add outer walls and drain sensor.
-8. Add launch lane.
-9. Add one ball and basic launch.
-10. Add two kinematic flippers.
-11. Add keyboard input.
-12. Add bumpers and targets from `TABLE_CONFIG`.
-13. Add collision event routing.
-14. Add score updates.
-15. Add balls remaining and restart behavior.
-16. Add localStorage high score.
-17. Add mission progress for MES, ERP, and Merilni protokol.
-18. Add basic HUD updates.
-19. Tune physics until the game is playable.
-20. Update `README.md` with run/deploy instructions.
+Use small phases that produce visible progress as quickly as possible. Each phase should leave the project in a runnable state.
+
+### Phase 1: Visible Static Shell
+
+- [ ] Phase 1.1 - Page shell - Status: pending
+  - Create `index.html`, link `style.css` and `game.js`, add Matter.js CDN.
+  - Visible result: opening `index.html` shows an Impol Pinball page, even before gameplay exists.
+
+- [ ] Phase 1.2 - Industrial HUD layout - Status: pending
+  - Add score, balls left, multiplier, high score, mission panel, company/context panel, and restart button as static UI.
+  - Visible result: page already resembles a simplified version of the mockup structure.
+
+- [ ] Phase 1.3 - Canvas playfield frame - Status: pending
+  - Add a centered canvas with a dark metallic table background, rails, drain area, and launch lane drawn as static shapes.
+  - Visible result: user can see the pinball table skeleton before physics is active.
+
+### Phase 2: First Moving Ball
+
+- [ ] Phase 2.1 - Matter.js world - Status: pending
+  - Initialize Matter.js engine, fixed table coordinates, canvas scaling, and static walls.
+  - Visible result: physics world exists and renders simple bodies.
+
+- [ ] Phase 2.2 - Ball spawn - Status: pending
+  - Add one ball with tuned restitution/friction and visible rendering.
+  - Visible result: the ball appears and falls/bounces in the table.
+
+- [ ] Phase 2.3 - Drain and reset - Status: pending
+  - Add drain sensor, ball removal/reset, balls remaining decrement, and game-over state.
+  - Visible result: losing the ball changes the HUD and restart/next-ball flow.
+
+### Phase 3: Basic Player Control
+
+- [ ] Phase 3.1 - Keyboard input - Status: pending
+  - Add `A`/`ArrowLeft`, `D`/`ArrowRight`, and `Space` input handling.
+  - Visible result: key presses are reflected in simple debug/HUD state or flipper movement.
+
+- [ ] Phase 3.2 - Kinematic flippers - Status: pending
+  - Add manually angled left/right flippers with rest and active positions.
+  - Visible result: player can flip both flippers and hit the ball.
+
+- [ ] Phase 3.3 - Simple plunger - Status: pending
+  - Add hold/release `Space` charge for the right-side launch lane.
+  - Visible result: player launches the ball instead of relying on automatic spawn.
+
+### Phase 4: First Scoring Fun
+
+- [ ] Phase 4.1 - Table config - Status: pending
+  - Introduce `TABLE_CONFIG` for bumpers, targets, labels, events, and points.
+  - Visible result: table elements come from data instead of hardcoded one-offs.
+
+- [ ] Phase 4.2 - Bumpers and targets - Status: pending
+  - Add MES bumper, Furnace bumper, ERP core target, measurement targets, and coil target.
+  - Visible result: playfield has themed objects to aim at.
+
+- [ ] Phase 4.3 - Collision events - Status: pending
+  - Route physics collisions into named gameplay events such as `hit:MES`, `hit:ERP`, and `hit:MEASUREMENT`.
+  - Visible result: hitting objects can trigger UI feedback.
+
+- [ ] Phase 4.4 - Score manager - Status: pending
+  - Add score updates, object point values, bonus text, and multiplier display.
+  - Visible result: hitting objects increases score immediately.
+
+### Phase 5: MVP Missions
+
+- [ ] Phase 5.1 - Mission model - Status: pending
+  - Add event-driven mission definitions for `MERILNI PROTOKOL`, `MES ONLINE`, and `ERP GO-LIVE`.
+  - Visible result: mission panel shows real progress counters.
+
+- [ ] Phase 5.2 - Mission completion - Status: pending
+  - Add completion state, bonus points, and one simple multiplier reward.
+  - Visible result: player can complete at least one mission during normal play.
+
+- [ ] Phase 5.3 - Mission feedback - Status: pending
+  - Add simple lights, highlight states, or short text feedback for mission progress/completion.
+  - Visible result: mission hits feel intentional instead of invisible.
+
+### Phase 6: Persistence and Polish Pass
+
+- [ ] Phase 6.1 - Local high score - Status: pending
+  - Store and load high score with `localStorage`.
+  - Visible result: high score survives page refresh.
+
+- [ ] Phase 6.2 - Playability tuning - Status: pending
+  - Tune gravity, ball speed, flipper angles, bumper impulse, drain fairness, and plunger power.
+  - Visible result: the game feels playable for repeated attempts.
+
+- [ ] Phase 6.3 - Visual readability pass - Status: pending
+  - Tighten labels, colors, table contrast, HUD spacing, and responsive fit.
+  - Visible result: the game is readable on common desktop viewport sizes.
+
+- [ ] Phase 6.4 - README update - Status: pending
+  - Document run instructions, controls, current MVP scope, and GitHub Pages deployment.
+  - Visible result: another agent or developer can run the project without extra context.
+
+### Phase 7: Post-MVP Asset Pack Preparation
+
+- [ ] Phase 7.1 - Asset needs audit - Status: pending
+  - Play the MVP and identify which playfield elements most need generated art.
+  - Visible result: asset generation is based on real gameplay needs.
+
+- [ ] Phase 7.2 - First playfield asset pack - Status: pending
+  - Generate or create assets for furnace, coil collector, ERP core, MES terminal, e-Odprema truck, green aluminium target, and measurement target.
+  - Visible result: the table starts moving closer to the mockup art direction.
+
+- [ ] Phase 7.3 - Asset integration pass - Status: pending
+  - Add generated assets as visual layers without changing the core physics contracts.
+  - Visible result: visual polish improves without breaking gameplay.
 
 ## 15. Post-MVP Backlog
 
