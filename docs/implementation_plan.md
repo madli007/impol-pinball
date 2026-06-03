@@ -488,7 +488,7 @@ Use small phases that produce visible progress as quickly as possible. Each phas
 
 ### Phase 7: Post-MVP Asset Pack Preparation
 
-- [ ] Phase 7.1 - Asset needs audit - Status: pending
+- [x] Phase 7.1 - Asset needs audit - Status: complete
   - Play the MVP and identify which playfield elements most need generated art.
   - Visible result: asset generation is based on real gameplay needs.
 
