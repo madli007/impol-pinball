@@ -13,6 +13,21 @@
       right: { pivotX: 656, pivotY: 1218, length: 166, height: 32, restAngle: Math.PI - 0.22, activeAngle: Math.PI + 0.58 }
     }
   };
+  const TABLE_CONFIG = {
+    bumpers: [
+      { id: "mes", label: "MES", x: 300, y: 392, radius: 56, accent: "#31a8ff", event: "hit:MES", points: 1000 },
+      { id: "erp", label: "ERP", x: 450, y: 344, radius: 60, accent: "#ff9b3d", event: "hit:ERP", points: 1500 },
+      { id: "co2", label: "CO2", x: 600, y: 392, radius: 56, accent: "#7bdc6c", event: "hit:GREEN", points: 1000 }
+    ],
+    targets: [
+      { id: "measurement-left", label: "MERILNI", x: 275, y: 592, width: 178, height: 52, accent: "#31a8ff", event: "hit:MEASUREMENT", points: 500 },
+      { id: "measurement-right", label: "PROTOKOL", x: 625, y: 592, width: 178, height: 52, accent: "#31a8ff", event: "hit:MEASUREMENT", points: 500 },
+      { id: "furnace", label: "FURNACE", x: 450, y: 696, width: 200, height: 56, accent: "#ff9b3d", event: "hit:FURNACE", points: 750 },
+      { id: "coil", label: "COIL COLLECTOR", x: 450, y: 899, width: 234, height: 58, accent: "#7bdc6c", event: "hit:COIL", points: 750 },
+      { id: "alcad", label: "ALCAD", x: 254, y: 784, width: 128, height: 48, accent: "#9ab3bf", event: "hit:ALCAD", points: 500 },
+      { id: "e-odprema", label: "E-ODPREMA", x: 646, y: 784, width: 156, height: 48, accent: "#9ab3bf", event: "hit:EODPREMA", points: 500 }
+    ]
+  };
   const ui = {
     score: document.getElementById("score-value"),
     ball: document.getElementById("ball-value"),
@@ -33,7 +48,11 @@
     status: "ready",
     resetAt: 0,
     drainCount: 0,
-    plungerPower: 0
+    plungerPower: 0,
+    lastEvent: "",
+    feedback: "",
+    feedbackUntil: 0,
+    hitCounts: {}
   };
   const inputState = {
     left: false,
@@ -79,9 +98,9 @@
     context.fillText(text, x, y);
   }
 
-  function drawBumper(x, y, radius, label, accent) {
+  function drawBumper(x, y, radius, label, accent, isLit) {
     const glow = context.createRadialGradient(x, y, 8, x, y, radius + 24);
-    glow.addColorStop(0, `${accent}cc`);
+    glow.addColorStop(0, isLit ? `${accent}ff` : `${accent}cc`);
     glow.addColorStop(1, "rgba(0, 0, 0, 0)");
     context.fillStyle = glow;
     context.beginPath();
@@ -93,7 +112,7 @@
     context.arc(x, y, radius, 0, Math.PI * 2);
     context.fill();
 
-    context.lineWidth = 10;
+    context.lineWidth = isLit ? 14 : 10;
     context.strokeStyle = accent;
     context.stroke();
 
@@ -106,10 +125,34 @@
     drawLabel(label, x, y + 3, "#edf7fb", 24);
   }
 
-  function drawTarget(x, y, width, height, label, accent) {
-    fillRoundedRect(x, y, width, height, 12, "#102736");
-    strokeRoundedRect(x, y, width, height, 12, accent, 5);
-    drawLabel(label, x + width / 2, y + height / 2 + 1, "#edf7fb", 20);
+  function drawTarget(x, y, width, height, label, accent, isLit) {
+    fillRoundedRect(x, y, width, height, 12, isLit ? "#173d4f" : "#102736");
+    strokeRoundedRect(x, y, width, height, 12, accent, isLit ? 7 : 5);
+    drawLabel(label, x + width / 2, y + height / 2 + 1, "#edf7fb", label.length > 10 ? 18 : 20);
+  }
+
+  function drawConfiguredBumpers() {
+    TABLE_CONFIG.bumpers.forEach((bumper) => {
+      drawBumper(bumper.x, bumper.y, bumper.radius, bumper.label, bumper.accent, wasRecentlyHit(bumper.id));
+    });
+  }
+
+  function drawConfiguredTargets() {
+    TABLE_CONFIG.targets.forEach((target) => {
+      drawTarget(
+        target.x - target.width / 2,
+        target.y - target.height / 2,
+        target.width,
+        target.height,
+        target.label,
+        target.accent,
+        wasRecentlyHit(target.id)
+      );
+    });
+  }
+
+  function wasRecentlyHit(id) {
+    return gameState.hitCounts[id] && performance.now() - gameState.hitCounts[id] < 220;
   }
 
   function drawMatterBody(body) {
@@ -163,6 +206,19 @@
     context.textAlign = "center";
     context.textBaseline = "middle";
     context.fillText(label, 695, 121);
+  }
+
+  function drawScoreFeedback() {
+    if (!gameState.feedback || performance.now() > gameState.feedbackUntil) {
+      return;
+    }
+
+    fillRoundedRect(314, 1000, 272, 48, 8, "rgba(5, 11, 16, 0.72)");
+    context.fillStyle = "#ff9b3d";
+    context.font = "800 22px Arial, Helvetica, sans-serif";
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillText(gameState.feedback, 450, 1024);
   }
 
   function drawBall(ball) {
@@ -242,15 +298,18 @@
 
   function syncInspectableState(physics) {
     window.ImpolPinball = {
-      phase: "3.3",
+      phase: "4.4",
       matterLoaded: Boolean(MatterLib),
       staticBodyCount: physics ? physics.staticBodies.length : 0,
+      tableObjectCount: physics ? physics.bumperBodies.length + physics.targetBodies.length : 0,
       ballSpawned: Boolean(physics && physics.ball),
       ballsLeft: gameState.ballsLeft,
       ballNumber: gameState.ballNumber,
       status: gameState.status,
       drainCount: gameState.drainCount,
       plungerPower: Number(gameState.plungerPower.toFixed(2)),
+      score: gameState.score,
+      lastEvent: gameState.lastEvent,
       input: { ...inputState }
     };
   }
@@ -302,14 +361,8 @@
     drawLabel("IMPOL", canvas.width / 2, 178, "#edf7fb", 68);
     drawLabel("ALUMINIUM INDUSTRY", canvas.width / 2, 230, "#9ab3bf", 24);
 
-    drawBumper(300, 392, 56, "MES", "#31a8ff");
-    drawBumper(450, 344, 60, "ERP", "#ff9b3d");
-    drawBumper(600, 392, 56, "CO2", "#7bdc6c");
-
-    drawTarget(186, 566, 178, 52, "MERILNI", "#31a8ff");
-    drawTarget(536, 566, 178, 52, "PROTOKOL", "#31a8ff");
-    drawTarget(350, 668, 200, 56, "FURNACE", "#ff9b3d");
-    drawTarget(333, 870, 234, 58, "COIL COLLECTOR", "#7bdc6c");
+    drawConfiguredBumpers();
+    drawConfiguredTargets();
 
     context.fillStyle = "#1b3541";
     context.strokeStyle = "#7e939c";
@@ -451,6 +504,25 @@
         }
       )
     };
+    const bumperBodies = TABLE_CONFIG.bumpers.map((bumper) => {
+      const body = Bodies.circle(bumper.x, bumper.y, bumper.radius, {
+        isStatic: true,
+        label: `bumper:${bumper.id}`,
+        restitution: 1.04,
+        friction: 0.01
+      });
+      body.gameObject = { ...bumper, type: "bumper" };
+      return body;
+    });
+    const targetBodies = TABLE_CONFIG.targets.map((target) => {
+      const body = Bodies.rectangle(target.x, target.y, target.width, target.height, {
+        isStatic: true,
+        isSensor: true,
+        label: `target:${target.id}`
+      });
+      body.gameObject = { ...target, type: "target" };
+      return body;
+    });
 
     const ball = Bodies.circle(TABLE.ballStart.x, TABLE.ballStart.y, 26, {
       label: "pinball",
@@ -460,9 +532,9 @@
       density: 0.0011
     });
 
-    Composite.add(engine.world, [...staticBodies, flippers.left, flippers.right, ball]);
+    Composite.add(engine.world, [...staticBodies, ...bumperBodies, ...targetBodies, flippers.left, flippers.right, ball]);
 
-    [...staticBodies, flippers.left, flippers.right].forEach((body) => {
+    [...staticBodies, ...bumperBodies, ...targetBodies, flippers.left, flippers.right].forEach((body) => {
       Body.setStatic(body, true);
     });
 
@@ -475,12 +547,19 @@
         if (labels.includes("drain-sensor") && labels.includes("pinball")) {
           drainBall(ball);
         }
+
+        const hitObject = getHitObject(pair);
+        if (hitObject) {
+          handleTableHit(hitObject, ball);
+        }
       });
     });
 
     return {
       engine,
       staticBodies,
+      bumperBodies,
+      targetBodies,
       flippers,
       ball
     };
@@ -535,6 +614,51 @@
     syncInspectableState(physics);
   }
 
+  function getHitObject(pair) {
+    if (pair.bodyA.label === "pinball" && pair.bodyB.gameObject) {
+      return pair.bodyB.gameObject;
+    }
+
+    if (pair.bodyB.label === "pinball" && pair.bodyA.gameObject) {
+      return pair.bodyA.gameObject;
+    }
+
+    return null;
+  }
+
+  function handleTableHit(object, ball) {
+    if (gameState.status !== "playing") {
+      return;
+    }
+
+    const points = object.points * gameState.multiplier;
+    gameState.score += points;
+    gameState.highScore = Math.max(gameState.highScore, gameState.score);
+    gameState.lastEvent = object.event;
+    gameState.feedback = `+${points.toLocaleString("sl-SI")} ${object.label}`;
+    gameState.feedbackUntil = performance.now() + 700;
+    gameState.hitCounts[object.id] = performance.now();
+
+    if (object.type === "bumper") {
+      kickBallFromObject(ball, object);
+    }
+
+    updateHud();
+    syncInspectableState(physics);
+  }
+
+  function kickBallFromObject(ball, object) {
+    const dx = ball.position.x - object.x;
+    const dy = ball.position.y - object.y;
+    const length = Math.max(1, Math.hypot(dx, dy));
+    const kick = 7.2;
+
+    MatterLib.Body.setVelocity(ball, {
+      x: ball.velocity.x + (dx / length) * kick,
+      y: ball.velocity.y + (dy / length) * kick
+    });
+  }
+
   function drainBall(ball) {
     if (gameState.status !== "playing") {
       return;
@@ -567,6 +691,10 @@
     gameState.resetAt = 0;
     gameState.drainCount = 0;
     gameState.plungerPower = 0;
+    gameState.lastEvent = "";
+    gameState.feedback = "";
+    gameState.feedbackUntil = 0;
+    gameState.hitCounts = {};
 
     if (physics) {
       resetBall(physics.ball, true);
@@ -832,12 +960,13 @@
     drawPlayfieldFrame();
 
     if (physics) {
-      drawPhysicsOverlay(physics.staticBodies);
+      drawPhysicsOverlay([...physics.staticBodies, ...physics.bumperBodies, ...physics.targetBodies]);
       drawFlipper(physics.flippers.left, inputState.left);
       drawFlipper(physics.flippers.right, inputState.right);
       drawPlungerCharge();
       drawBall(physics.ball);
       drawStatusBadge();
+      drawScoreFeedback();
     } else {
       fillRoundedRect(104, 100, 210, 44, 6, "rgba(120, 36, 28, 0.76)");
       drawLabel("MATTER.JS NOT LOADED", 209, 123, "#ff7567", 16);

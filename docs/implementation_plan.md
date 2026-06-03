@@ -438,19 +438,19 @@ Use small phases that produce visible progress as quickly as possible. Each phas
 
 ### Phase 4: First Scoring Fun
 
-- [ ] Phase 4.1 - Table config - Status: pending
+- [x] Phase 4.1 - Table config - Status: complete
   - Introduce `TABLE_CONFIG` for bumpers, targets, labels, events, and points.
   - Visible result: table elements come from data instead of hardcoded one-offs.
 
-- [ ] Phase 4.2 - Bumpers and targets - Status: pending
+- [x] Phase 4.2 - Bumpers and targets - Status: complete
   - Add MES bumper, Furnace bumper, ERP core target, measurement targets, and coil target.
   - Visible result: playfield has themed objects to aim at.
 
-- [ ] Phase 4.3 - Collision events - Status: pending
+- [x] Phase 4.3 - Collision events - Status: complete
   - Route physics collisions into named gameplay events such as `hit:MES`, `hit:ERP`, and `hit:MEASUREMENT`.
   - Visible result: hitting objects can trigger UI feedback.
 
-- [ ] Phase 4.4 - Score manager - Status: pending
+- [x] Phase 4.4 - Score manager - Status: complete
   - Add score updates, object point values, bonus text, and multiplier display.
   - Visible result: hitting objects increases score immediately.
 
