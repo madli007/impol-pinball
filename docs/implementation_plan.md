@@ -414,7 +414,7 @@ Use small phases that produce visible progress as quickly as possible. Each phas
   - Initialize Matter.js engine, fixed table coordinates, canvas scaling, and static walls.
   - Visible result: physics world exists and renders simple bodies.
 
-- [ ] Phase 2.2 - Ball spawn - Status: pending
+- [x] Phase 2.2 - Ball spawn - Status: complete
   - Add one ball with tuned restitution/friction and visible rendering.
   - Visible result: the ball appears and falls/bounces in the table.
 

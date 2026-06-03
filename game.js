@@ -110,6 +110,37 @@
     context.fillText("MATTER STATIC BODIES", 116, 121);
   }
 
+  function drawBall(ball) {
+    const { x, y } = ball.position;
+    const radius = ball.circleRadius || 26;
+    const shadow = context.createRadialGradient(x + 10, y + 14, 4, x + 10, y + 14, radius + 20);
+    shadow.addColorStop(0, "rgba(0, 0, 0, 0.34)");
+    shadow.addColorStop(1, "rgba(0, 0, 0, 0)");
+    context.fillStyle = shadow;
+    context.beginPath();
+    context.arc(x + 12, y + 18, radius + 18, 0, Math.PI * 2);
+    context.fill();
+
+    const metal = context.createRadialGradient(x - 11, y - 13, 5, x, y, radius);
+    metal.addColorStop(0, "#ffffff");
+    metal.addColorStop(0.22, "#d9e3e6");
+    metal.addColorStop(0.58, "#7e939c");
+    metal.addColorStop(1, "#2c414b");
+    context.fillStyle = metal;
+    context.beginPath();
+    context.arc(x, y, radius, 0, Math.PI * 2);
+    context.fill();
+
+    context.strokeStyle = "#edf7fb";
+    context.lineWidth = 3;
+    context.stroke();
+
+    context.fillStyle = "rgba(255, 255, 255, 0.88)";
+    context.beginPath();
+    context.arc(x - radius * 0.34, y - radius * 0.38, radius * 0.22, 0, Math.PI * 2);
+    context.fill();
+  }
+
   function drawPlayfieldFrame() {
     context.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -293,7 +324,15 @@
       })
     ];
 
-    Composite.add(engine.world, staticBodies);
+    const ball = Bodies.circle(744, 1040, 26, {
+      label: "pinball",
+      restitution: 0.88,
+      friction: 0.005,
+      frictionAir: 0.012,
+      density: 0.004
+    });
+
+    Composite.add(engine.world, [...staticBodies, ball]);
 
     staticBodies.forEach((body) => {
       Body.setStatic(body, true);
@@ -301,7 +340,8 @@
 
     return {
       engine,
-      staticBodies
+      staticBodies,
+      ball
     };
   }
 
@@ -316,6 +356,7 @@
 
     if (physics) {
       drawPhysicsOverlay(physics.staticBodies);
+      drawBall(physics.ball);
     } else {
       fillRoundedRect(104, 100, 210, 44, 6, "rgba(120, 36, 28, 0.76)");
       drawLabel("MATTER.JS NOT LOADED", 209, 123, "#ff7567", 16);
@@ -327,8 +368,9 @@
   update();
 
   window.ImpolPinball = {
-    phase: "2.1",
+    phase: "2.2",
     matterLoaded: Boolean(MatterLib),
-    staticBodyCount: physics ? physics.staticBodies.length : 0
+    staticBodyCount: physics ? physics.staticBodies.length : 0,
+    ballSpawned: Boolean(physics && physics.ball)
   };
 })();
