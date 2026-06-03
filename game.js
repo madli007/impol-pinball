@@ -6,11 +6,11 @@
     width: canvas.width,
     height: canvas.height,
     wall: 60,
-    ballStart: { x: 744, y: 1054 },
+    ballStart: { x: 748, y: 1066 },
     totalBalls: 3,
     flippers: {
-      left: { x: 306, y: 1208, width: 184, height: 34, restAngle: -0.24, activeAngle: -0.82 },
-      right: { x: 594, y: 1208, width: 184, height: 34, restAngle: 0.24, activeAngle: 0.82 }
+      left: { pivotX: 244, pivotY: 1218, length: 166, height: 32, restAngle: 0.22, activeAngle: -0.58 },
+      right: { pivotX: 656, pivotY: 1218, length: 166, height: 32, restAngle: Math.PI - 0.22, activeAngle: Math.PI + 0.58 }
     }
   };
   const ui = {
@@ -38,6 +38,8 @@
   const inputState = {
     left: false,
     right: false,
+    leftPulse: false,
+    rightPulse: false,
     space: false,
     chargingSince: 0
   };
@@ -199,18 +201,22 @@
   }
 
   function drawFlipper(body, isActive) {
+    const config = body.label === "left-flipper" ? TABLE.flippers.left : TABLE.flippers.right;
+    const pivotX = config.pivotX;
+    const pivotY = config.pivotY;
+
     context.save();
     context.translate(body.position.x, body.position.y);
     context.rotate(body.angle);
 
-    fillRoundedRect(-92, -17, 184, 34, 17, isActive ? "#f7fbff" : "#dbe5e7");
-    strokeRoundedRect(-92, -17, 184, 34, 17, isActive ? "#31a8ff" : "#738891", 5);
+    fillRoundedRect(-config.length / 2, -config.height / 2, config.length, config.height, 16, isActive ? "#f7fbff" : "#dbe5e7");
+    strokeRoundedRect(-config.length / 2, -config.height / 2, config.length, config.height, 16, isActive ? "#31a8ff" : "#738891", 5);
 
     context.restore();
 
     context.fillStyle = isActive ? "#31a8ff" : "#ff9b3d";
     context.beginPath();
-    context.arc(body.position.x - (body.label === "left-flipper" ? 74 : -74), body.position.y, 12, 0, Math.PI * 2);
+    context.arc(pivotX, pivotY, 12, 0, Math.PI * 2);
     context.fill();
   }
 
@@ -375,11 +381,11 @@
 
     const { Bodies, Body, Composite, Engine, Events } = MatterLib;
     const engine = Engine.create();
-    engine.gravity.y = 0.9;
+    engine.gravity.y = 0.48;
 
     const wallOptions = {
       isStatic: true,
-      restitution: 0.72,
+      restitution: 0.58,
       friction: 0.02,
       render: { visible: true }
     };
@@ -419,39 +425,39 @@
     ];
     const flippers = {
       left: Bodies.rectangle(
-        TABLE.flippers.left.x,
-        TABLE.flippers.left.y,
-        TABLE.flippers.left.width,
+        0,
+        0,
+        TABLE.flippers.left.length,
         TABLE.flippers.left.height,
         {
           isStatic: true,
           label: "left-flipper",
           angle: TABLE.flippers.left.restAngle,
-          restitution: 0.86,
-          friction: 0.02
+          restitution: 0.16,
+          friction: 0.08
         }
       ),
       right: Bodies.rectangle(
-        TABLE.flippers.right.x,
-        TABLE.flippers.right.y,
-        TABLE.flippers.right.width,
+        0,
+        0,
+        TABLE.flippers.right.length,
         TABLE.flippers.right.height,
         {
           isStatic: true,
           label: "right-flipper",
           angle: TABLE.flippers.right.restAngle,
-          restitution: 0.86,
-          friction: 0.02
+          restitution: 0.16,
+          friction: 0.08
         }
       )
     };
 
     const ball = Bodies.circle(TABLE.ballStart.x, TABLE.ballStart.y, 26, {
       label: "pinball",
-      restitution: 0.88,
+      restitution: 0.86,
       friction: 0.005,
-      frictionAir: 0.012,
-      density: 0.004
+      frictionAir: 0.002,
+      density: 0.0011
     });
 
     Composite.add(engine.world, [...staticBodies, flippers.left, flippers.right, ball]);
@@ -459,6 +465,9 @@
     [...staticBodies, flippers.left, flippers.right].forEach((body) => {
       Body.setStatic(body, true);
     });
+
+    positionFlipper(flippers.left, TABLE.flippers.left, TABLE.flippers.left.restAngle);
+    positionFlipper(flippers.right, TABLE.flippers.right, TABLE.flippers.right.restAngle);
 
     Events.on(engine, "collisionStart", (event) => {
       event.pairs.forEach((pair) => {
@@ -478,6 +487,14 @@
   }
 
   const physics = createMatterWorld();
+
+  function positionFlipper(body, config, angle) {
+    const centerX = config.pivotX + Math.cos(angle) * config.length * 0.5;
+    const centerY = config.pivotY + Math.sin(angle) * config.length * 0.5;
+
+    MatterLib.Body.setPosition(body, { x: centerX, y: centerY });
+    MatterLib.Body.setAngle(body, angle);
+  }
 
   function resetBall(ball, holdForLaunch) {
     if (!MatterLib || !ball) {
@@ -509,8 +526,8 @@
     const power = Math.max(0.34, gameState.plungerPower);
     MatterLib.Body.setStatic(physics.ball, false);
     MatterLib.Body.setVelocity(physics.ball, {
-      x: -3.2 - power * 3.8,
-      y: -14 - power * 12
+      x: -0.2 - power * 0.7,
+      y: -18 - power * 16
     });
     gameState.status = "playing";
     gameState.plungerPower = 0;
@@ -589,11 +606,17 @@
 
   function handleKeyDown(event) {
     if (event.code === "ArrowLeft" || event.code === "KeyA") {
+      if (!inputState.left) {
+        inputState.leftPulse = true;
+      }
       inputState.left = true;
       event.preventDefault();
     }
 
     if (event.code === "ArrowRight" || event.code === "KeyD") {
+      if (!inputState.right) {
+        inputState.rightPulse = true;
+      }
       inputState.right = true;
       event.preventDefault();
     }
@@ -640,10 +663,16 @@
 
   function beginControl(control) {
     if (control === "left") {
+      if (!inputState.left) {
+        inputState.leftPulse = true;
+      }
       inputState.left = true;
     }
 
     if (control === "right") {
+      if (!inputState.right) {
+        inputState.rightPulse = true;
+      }
       inputState.right = true;
     }
 
@@ -729,41 +758,52 @@
     const rightConfig = TABLE.flippers.right;
     const leftTarget = inputState.left ? leftConfig.activeAngle : leftConfig.restAngle;
     const rightTarget = inputState.right ? rightConfig.activeAngle : rightConfig.restAngle;
+    const leftAngle = physics.flippers.left.angle + (leftTarget - physics.flippers.left.angle) * 0.52;
+    const rightAngle = physics.flippers.right.angle + (rightTarget - physics.flippers.right.angle) * 0.52;
 
-    MatterLib.Body.setAngle(
-      physics.flippers.left,
-      physics.flippers.left.angle + (leftTarget - physics.flippers.left.angle) * 0.42
-    );
-    MatterLib.Body.setAngle(
-      physics.flippers.right,
-      physics.flippers.right.angle + (rightTarget - physics.flippers.right.angle) * 0.42
-    );
+    positionFlipper(physics.flippers.left, leftConfig, leftAngle);
+    positionFlipper(physics.flippers.right, rightConfig, rightAngle);
 
     applyFlipperKick();
   }
 
   function applyFlipperKick() {
     if (gameState.status !== "playing" || !physics.ball) {
+      inputState.leftPulse = false;
+      inputState.rightPulse = false;
       return;
     }
 
     const ball = physics.ball;
-    const nearLeft = Math.abs(ball.position.x - TABLE.flippers.left.x) < 142 && Math.abs(ball.position.y - TABLE.flippers.left.y) < 88;
-    const nearRight = Math.abs(ball.position.x - TABLE.flippers.right.x) < 142 && Math.abs(ball.position.y - TABLE.flippers.right.y) < 88;
+    const nearLeft = Math.abs(ball.position.x - TABLE.flippers.left.pivotX) < 170 && Math.abs(ball.position.y - TABLE.flippers.left.pivotY) < 110;
+    const nearRight = Math.abs(ball.position.x - TABLE.flippers.right.pivotX) < 170 && Math.abs(ball.position.y - TABLE.flippers.right.pivotY) < 110;
 
-    if (inputState.left && nearLeft && ball.velocity.y > -16) {
+    if (inputState.leftPulse && nearLeft && ball.velocity.y > -12) {
+      const distanceFromPivot = Math.max(0, Math.min(TABLE.flippers.left.length, ball.position.x - TABLE.flippers.left.pivotX));
+      const tipFactor = distanceFromPivot / TABLE.flippers.left.length;
+      const lift = 9 + tipFactor * 9;
+      const push = 2.4 + tipFactor * 4.2;
+
       MatterLib.Body.setVelocity(ball, {
-        x: Math.max(ball.velocity.x + 4.8, 5.8),
-        y: -18
+        x: Math.max(ball.velocity.x + push, push),
+        y: -lift
       });
     }
 
-    if (inputState.right && nearRight && ball.velocity.y > -16) {
+    if (inputState.rightPulse && nearRight && ball.velocity.y > -12) {
+      const distanceFromPivot = Math.max(0, Math.min(TABLE.flippers.right.length, TABLE.flippers.right.pivotX - ball.position.x));
+      const tipFactor = distanceFromPivot / TABLE.flippers.right.length;
+      const lift = 9 + tipFactor * 9;
+      const push = 2.4 + tipFactor * 4.2;
+
       MatterLib.Body.setVelocity(ball, {
-        x: Math.min(ball.velocity.x - 4.8, -5.8),
-        y: -18
+        x: Math.min(ball.velocity.x - push, -push),
+        y: -lift
       });
     }
+
+    inputState.leftPulse = false;
+    inputState.rightPulse = false;
   }
 
   window.addEventListener("keydown", handleKeyDown);
