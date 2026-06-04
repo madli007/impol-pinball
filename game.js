@@ -38,8 +38,8 @@
     "lamp-post-orange": { src: "assets/images/lamp-post-orange.png", width: 34, height: 67 },
     "lamp-post-blue": { src: "assets/images/lamp-post-blue.png", width: 34, height: 67 },
     "lamp-post-green": { src: "assets/images/lamp-post-green.png", width: 34, height: 67 },
-    "playfield-floor-texture": { src: "assets/images/playfield-floor-texture.png", width: 790, height: 1374 },
-    "table-frame-trim": { src: "assets/images/table-frame-trim.png", width: 742, height: 1344 },
+    "playfield-floor-texture": { src: "assets/images/playfield-floor-texture.png", width: 900, height: 1374 },
+    "table-frame-trim": { src: "assets/images/table-frame-trim.png", width: 900, height: 1344 },
     "drain-apron": { src: "assets/images/drain-apron.png", width: 336, height: 102 }
   };
   const TABLE_CONFIG = {
@@ -729,14 +729,14 @@
   }
 
   function drawTableArtAssets() {
-    drawDecorAsset("playfield-floor-texture", 450, 700, 790, 1374, {
+    drawDecorAsset("playfield-floor-texture", 450, 700, 900, 1374, {
       alpha: 0.72,
       shadowBlur: 0,
       shadowOffsetY: 0
     });
 
-    drawDecorAsset("table-frame-trim", 450, 700, 742, 1344, {
-      alpha: 0.42,
+    drawDecorAsset("table-frame-trim", 450, 700, 900, 1344, {
+      alpha: 0.34,
       shadowBlur: 18,
       shadowOffsetY: 7
     });
@@ -1615,11 +1615,11 @@
     const ball = physics.ball;
     const speed = Math.hypot(ball.velocity.x, ball.velocity.y);
     const inLowerTrap =
-      ball.position.y > 1120 &&
+      ball.position.y > 1090 &&
       ball.position.y < 1290 &&
-      ((ball.position.x > 112 && ball.position.x < 330) || (ball.position.x > 570 && ball.position.x < 788));
+      ((ball.position.x > 72 && ball.position.x < 330) || (ball.position.x > 570 && ball.position.x < 828));
 
-    if (!inLowerTrap || speed > 0.22) {
+    if (!inLowerTrap || speed > 0.34) {
       gameState.lowerTrapSince = 0;
       return;
     }
