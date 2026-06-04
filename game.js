@@ -142,6 +142,7 @@
     lastTime: 0,
     accumulator: 0,
     step: 1000 / 60,
+    simulationScale: 1.28,
     maxFrameDelta: 1000 / 12,
     maxSteps: 4
   };
@@ -1105,7 +1106,7 @@
 
     const { Bodies, Body, Composite, Engine, Events } = MatterLib;
     const engine = Engine.create();
-    engine.gravity.y = 0.48;
+    engine.gravity.y = 0.88;
 
     const wallOptions = {
       isStatic: true,
@@ -1213,7 +1214,7 @@
       label: "pinball",
       restitution: 0.82,
       friction: 0.005,
-      frictionAir: 0.002,
+      frictionAir: 0.0008,
       density: 0.0011
     });
 
@@ -1299,7 +1300,7 @@
     MatterLib.Body.setStatic(physics.ball, false);
     MatterLib.Body.setVelocity(physics.ball, {
       x: 0,
-      y: -20 - power * 11
+      y: -25 - power * 15
     });
     gameState.status = "playing";
     gameState.skillShotAvailableUntil = performance.now() + 2600;
@@ -1480,12 +1481,33 @@
     const dx = ball.position.x - object.x;
     const dy = ball.position.y - object.y;
     const length = Math.max(1, Math.hypot(dx, dy));
-    const kick = 5.8;
+    const radialX = dx / length;
+    const radialY = dy / length;
+    const tangentX = -radialY;
+    const tangentY = radialX;
+    const speed = Math.hypot(ball.velocity.x, ball.velocity.y);
+    const tangentDot = ball.velocity.x * tangentX + ball.velocity.y * tangentY;
+    const tangentDirection = Math.sign(tangentDot) || (ball.position.x < object.x ? -1 : 1);
+    const radialKick = 7.6;
+    const tangentKick = Math.min(5.8, Math.max(2.8, speed * 0.42));
+    const retainedVelocity = 0.55;
+    let nextVelocity = {
+      x: ball.velocity.x * retainedVelocity + radialX * radialKick + tangentX * tangentDirection * tangentKick,
+      y: ball.velocity.y * retainedVelocity + radialY * radialKick + tangentY * tangentDirection * tangentKick
+    };
 
-    MatterLib.Body.setVelocity(ball, {
-      x: ball.velocity.x + (dx / length) * kick,
-      y: ball.velocity.y + (dy / length) * kick
-    });
+    const outgoingSpeed = Math.hypot(nextVelocity.x, nextVelocity.y);
+    const minOutgoingSpeed = Math.min(13.5, Math.max(9.4, speed * 0.92));
+
+    if (outgoingSpeed < minOutgoingSpeed) {
+      const scale = minOutgoingSpeed / Math.max(0.1, outgoingSpeed);
+      nextVelocity = {
+        x: nextVelocity.x * scale,
+        y: nextVelocity.y * scale
+      };
+    }
+
+    MatterLib.Body.setVelocity(ball, nextVelocity);
   }
 
   function drainBall(ball) {
@@ -1795,8 +1817,8 @@
 
     if (inputState.leftPulse && leftContact.isValid && ball.velocity.y > -12) {
       const tipFactor = leftContact.tipFactor;
-      const lift = 7.2 + tipFactor * 7.4;
-      const push = 1.8 + tipFactor * 3.4;
+      const lift = 11.6 + tipFactor * 11.2;
+      const push = 3.1 + tipFactor * 5.1;
 
       MatterLib.Body.setVelocity(ball, {
         x: Math.max(ball.velocity.x + push, push),
@@ -1806,8 +1828,8 @@
 
     if (inputState.rightPulse && rightContact.isValid && ball.velocity.y > -12) {
       const tipFactor = rightContact.tipFactor;
-      const lift = 7.2 + tipFactor * 7.4;
-      const push = 1.8 + tipFactor * 3.4;
+      const lift = 11.6 + tipFactor * 11.2;
+      const push = 3.1 + tipFactor * 5.1;
 
       MatterLib.Body.setVelocity(ball, {
         x: Math.min(ball.velocity.x - push, -push),
@@ -1859,7 +1881,7 @@
       updatePlungerPower();
       updateFlippers();
       holdBallInLaunchLane();
-      MatterLib.Engine.update(physics.engine, physicsClock.step);
+      MatterLib.Engine.update(physics.engine, physicsClock.step * physicsClock.simulationScale);
       maybeGuideShooterLaneExit();
       maybeCatchLostBall();
       maybeRescueLowerFlipperTrap();
