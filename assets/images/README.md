@@ -30,6 +30,13 @@ Supporting files:
 - `lower-plastic-left.png`, `lower-plastic-right.png` - cropped lower playfield plastic guide plates.
 - `shooter-plunger-housing.png` - cropped shooter lane / plunger housing detail.
 - `mechanical-post-blue.png`, `mechanical-post-orange.png` - cropped decorative rubber/metal post caps.
+- `phase9-industrial-decal-sheet.png` - generated Phase 9.4 source sheet for visual-only industrial decals.
+- `decal-arrow-blue.png`, `decal-arrow-orange.png` - cropped direction arrow decals.
+- `decal-coil-route-blue.png` - cropped curved coil-route decal.
+- `decal-warning-stripe.png` - cropped hazard stripe plate.
+- `decal-led-strip.png` - cropped blue LED strip plate.
+- `decal-circuit-plate.png` - cropped circuit/production route plate.
+- `decal-roller-symbol.png` - cropped roller/extrusion symbol decal.
 
 ## Style Notes
 
@@ -48,3 +55,5 @@ Phase 8.3b prepares additional visual-only assets for later integration. The fir
 Phase 9.2 adds a background/frame asset pass with a playfield floor texture, table frame trim, and drain apron. These remain visual-only layers and do not change Matter.js collision bodies.
 
 Phase 9.3 adds lower playfield mechanical details, shooter lane housing art, and small decorative post caps. These also remain visual-only layers.
+
+Phase 9.4 adds low-contrast industrial decals such as route curves, warning stripe plates, LED strips, circuit plates, and roller symbols. These remain decorative and should not read as scoring targets.

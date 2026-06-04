@@ -45,7 +45,14 @@
     "lower-plastic-right": { src: "assets/images/lower-plastic-right.png", width: 204, height: 169 },
     "shooter-plunger-housing": { src: "assets/images/shooter-plunger-housing.png", width: 54, height: 246 },
     "mechanical-post-blue": { src: "assets/images/mechanical-post-blue.png", width: 32, height: 48 },
-    "mechanical-post-orange": { src: "assets/images/mechanical-post-orange.png", width: 32, height: 51 }
+    "mechanical-post-orange": { src: "assets/images/mechanical-post-orange.png", width: 32, height: 51 },
+    "decal-arrow-blue": { src: "assets/images/decal-arrow-blue.png", width: 34, height: 32 },
+    "decal-arrow-orange": { src: "assets/images/decal-arrow-orange.png", width: 34, height: 32 },
+    "decal-coil-route-blue": { src: "assets/images/decal-coil-route-blue.png", width: 126, height: 76 },
+    "decal-warning-stripe": { src: "assets/images/decal-warning-stripe.png", width: 126, height: 24 },
+    "decal-led-strip": { src: "assets/images/decal-led-strip.png", width: 132, height: 28 },
+    "decal-circuit-plate": { src: "assets/images/decal-circuit-plate.png", width: 132, height: 47 },
+    "decal-roller-symbol": { src: "assets/images/decal-roller-symbol.png", width: 74, height: 49 }
   };
   const TABLE_CONFIG = {
     bumpers: [
@@ -357,13 +364,17 @@
     context.shadowColor = options.shadowColor || "rgba(0, 0, 0, 0.38)";
     context.shadowBlur = options.shadowBlur ?? 12;
     context.shadowOffsetY = options.shadowOffsetY ?? 6;
+    context.translate(x, y);
+
+    if (options.rotation) {
+      context.rotate(options.rotation);
+    }
 
     if (options.flipX) {
-      context.translate(x, y);
       context.scale(-1, 1);
       context.drawImage(asset.image, -width / 2, -height / 2, width, height);
     } else {
-      context.drawImage(asset.image, x - width / 2, y - height / 2, width, height);
+      context.drawImage(asset.image, -width / 2, -height / 2, width, height);
     }
 
     context.restore();
@@ -775,6 +786,70 @@
     });
   }
 
+  function drawIndustrialDecorationAssets() {
+    drawDecorAsset("decal-circuit-plate", 262, 536, 132, 47, {
+      alpha: 0.18,
+      rotation: -0.12,
+      shadowBlur: 5,
+      shadowOffsetY: 3
+    });
+    drawDecorAsset("decal-circuit-plate", 638, 536, 132, 47, {
+      alpha: 0.17,
+      rotation: 0.12,
+      flipX: true,
+      shadowBlur: 5,
+      shadowOffsetY: 3
+    });
+    drawDecorAsset("decal-coil-route-blue", 342, 902, 118, 71, {
+      alpha: 0.16,
+      rotation: -0.2,
+      shadowBlur: 4,
+      shadowOffsetY: 2
+    });
+    drawDecorAsset("decal-coil-route-blue", 558, 902, 118, 71, {
+      alpha: 0.15,
+      rotation: 0.2,
+      flipX: true,
+      shadowBlur: 4,
+      shadowOffsetY: 2
+    });
+    drawDecorAsset("decal-led-strip", 450, 1160, 112, 24, {
+      alpha: 0.14,
+      shadowBlur: 7,
+      shadowOffsetY: 3
+    });
+    drawDecorAsset("decal-warning-stripe", 190, 1038, 112, 21, {
+      alpha: 0.16,
+      rotation: 0.4,
+      shadowBlur: 5,
+      shadowOffsetY: 3
+    });
+    drawDecorAsset("decal-warning-stripe", 710, 1038, 112, 21, {
+      alpha: 0.15,
+      rotation: -0.4,
+      flipX: true,
+      shadowBlur: 5,
+      shadowOffsetY: 3
+    });
+    drawDecorAsset("decal-roller-symbol", 318, 1072, 62, 41, {
+      alpha: 0.15,
+      shadowBlur: 5,
+      shadowOffsetY: 3
+    });
+    drawDecorAsset("decal-arrow-blue", 390, 820, 34, 32, {
+      alpha: 0.2,
+      rotation: 0.18,
+      shadowBlur: 5,
+      shadowOffsetY: 3
+    });
+    drawDecorAsset("decal-arrow-orange", 510, 820, 34, 32, {
+      alpha: 0.19,
+      rotation: -0.18,
+      shadowBlur: 5,
+      shadowOffsetY: 3
+    });
+  }
+
   function drawPlungerCharge() {
     if (gameState.status !== "charging" && gameState.status !== "ready") {
       return;
@@ -1048,7 +1123,7 @@
 
   function syncInspectableState(physics) {
     window.ImpolPinball = {
-      phase: "9.3",
+      phase: "9.4",
       matterLoaded: Boolean(MatterLib),
       staticBodyCount: physics ? physics.staticBodies.length : 0,
       tableObjectCount: physics ? physics.bumperBodies.length + physics.targetBodies.length : 0,
@@ -1119,6 +1194,7 @@
     drawLabel("ALUMINIUM INDUSTRY", canvas.width / 2, 230, "#9ab3bf", 24);
 
     drawConfiguredBumpers();
+    drawIndustrialDecorationAssets();
     drawMechanicalDetailAssets();
     drawLowerLanePolish();
 

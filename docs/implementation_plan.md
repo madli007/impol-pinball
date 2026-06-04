@@ -603,10 +603,11 @@ Priority order:
   - Integrate the first pass as visual-only lower plastics, shooter housing, and post caps.
   - Visible result: the bottom third and shooter lane look finished in screenshots and during play.
 
-- [ ] Phase 9.4 - Industrial decoration asset pack - Status: planned
+- [x] Phase 9.4 - Industrial decoration asset pack - Status: complete
   - Add non-colliding aluminium/production-themed decorations: rollers, extrusion arrows, coil route decals, warning stripes, small status LEDs, and label plates.
   - Use the decorations to guide the eye toward active targets without making them look playable unless they score.
   - Keep text sparse and readable; do not cover the ball path or existing mission targets.
+  - Integrate the first pass as low-contrast visual-only decals under gameplay objects.
   - Visible result: the Impol/aluminium theme is visible even when the ball is not hitting active targets.
 
 - [ ] Phase 9.5 - Asset integration pass - Status: planned
