@@ -596,10 +596,11 @@ Priority order:
   - Keep collision bodies unchanged unless artwork visibly exposes a mismatch.
   - Visible result: the table reads as one physical cabinet instead of a canvas with independent objects.
 
-- [ ] Phase 9.3 - Mechanical detail asset pack - Status: planned
+- [x] Phase 9.3 - Mechanical detail asset pack - Status: complete
   - Upgrade or replace flipper sprites if needed, keeping separate left/right assets.
   - Add visual-only plastics, metal brackets, lane dividers, screw caps, rubber posts, and small guide rails around the lower playfield.
   - Add a cleaner plunger knob, shooter lane meter, and launch gate artwork if the current drawn pieces still look too flat.
+  - Integrate the first pass as visual-only lower plastics, shooter housing, and post caps.
   - Visible result: the bottom third and shooter lane look finished in screenshots and during play.
 
 - [ ] Phase 9.4 - Industrial decoration asset pack - Status: planned

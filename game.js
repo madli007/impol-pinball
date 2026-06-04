@@ -40,7 +40,12 @@
     "lamp-post-green": { src: "assets/images/lamp-post-green.png", width: 34, height: 67 },
     "playfield-floor-texture": { src: "assets/images/playfield-floor-texture.png", width: 900, height: 1374 },
     "table-frame-trim": { src: "assets/images/table-frame-trim.png", width: 900, height: 1344 },
-    "drain-apron": { src: "assets/images/drain-apron.png", width: 336, height: 102 }
+    "drain-apron": { src: "assets/images/drain-apron.png", width: 336, height: 102 },
+    "lower-plastic-left": { src: "assets/images/lower-plastic-left.png", width: 204, height: 171 },
+    "lower-plastic-right": { src: "assets/images/lower-plastic-right.png", width: 204, height: 169 },
+    "shooter-plunger-housing": { src: "assets/images/shooter-plunger-housing.png", width: 54, height: 246 },
+    "mechanical-post-blue": { src: "assets/images/mechanical-post-blue.png", width: 32, height: 48 },
+    "mechanical-post-orange": { src: "assets/images/mechanical-post-orange.png", width: 32, height: 51 }
   };
   const TABLE_CONFIG = {
     bumpers: [
@@ -730,15 +735,43 @@
 
   function drawTableArtAssets() {
     drawDecorAsset("playfield-floor-texture", 450, 700, 900, 1374, {
-      alpha: 0.72,
+      alpha: 0.68,
       shadowBlur: 0,
       shadowOffsetY: 0
     });
 
     drawDecorAsset("table-frame-trim", 450, 700, 900, 1344, {
-      alpha: 0.34,
+      alpha: 0.3,
       shadowBlur: 18,
       shadowOffsetY: 7
+    });
+  }
+
+  function drawMechanicalDetailAssets() {
+    drawDecorAsset("lower-plastic-left", 194, 1216, 204, 171, {
+      alpha: 0.34,
+      shadowBlur: 10,
+      shadowOffsetY: 5
+    });
+    drawDecorAsset("lower-plastic-right", 706, 1216, 204, 169, {
+      alpha: 0.34,
+      shadowBlur: 10,
+      shadowOffsetY: 5
+    });
+    drawDecorAsset("shooter-plunger-housing", 838, 1034, 54, 246, {
+      alpha: 0.28,
+      shadowBlur: 9,
+      shadowOffsetY: 4
+    });
+    drawDecorAsset("mechanical-post-blue", 132, 1138, 32, 48, {
+      alpha: 0.54,
+      shadowBlur: 8,
+      shadowOffsetY: 4
+    });
+    drawDecorAsset("mechanical-post-orange", 768, 1138, 32, 51, {
+      alpha: 0.54,
+      shadowBlur: 8,
+      shadowOffsetY: 4
     });
   }
 
@@ -1015,7 +1048,7 @@
 
   function syncInspectableState(physics) {
     window.ImpolPinball = {
-      phase: "9.2",
+      phase: "9.3",
       matterLoaded: Boolean(MatterLib),
       staticBodyCount: physics ? physics.staticBodies.length : 0,
       tableObjectCount: physics ? physics.bumperBodies.length + physics.targetBodies.length : 0,
@@ -1086,6 +1119,7 @@
     drawLabel("ALUMINIUM INDUSTRY", canvas.width / 2, 230, "#9ab3bf", 24);
 
     drawConfiguredBumpers();
+    drawMechanicalDetailAssets();
     drawLowerLanePolish();
 
     context.fillStyle = "#1b3541";

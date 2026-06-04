@@ -26,6 +26,10 @@ Supporting files:
 - `playfield-floor-texture.png` - cropped transparent playfield floor texture.
 - `table-frame-trim.png` - cropped transparent aluminium table frame trim.
 - `drain-apron.png` - cropped transparent lower drain apron.
+- `phase9-mechanical-detail-sheet.png` - generated Phase 9.3 source sheet for mechanical detail assets.
+- `lower-plastic-left.png`, `lower-plastic-right.png` - cropped lower playfield plastic guide plates.
+- `shooter-plunger-housing.png` - cropped shooter lane / plunger housing detail.
+- `mechanical-post-blue.png`, `mechanical-post-orange.png` - cropped decorative rubber/metal post caps.
 
 ## Style Notes
 
@@ -42,3 +46,5 @@ Phase 7.3 integrates these images as Canvas visual layers with fallback drawing 
 Phase 8.3b prepares additional visual-only assets for later integration. The first integration pass uses the flipper and lamp sprites while keeping Matter.js physics bodies unchanged.
 
 Phase 9.2 adds a background/frame asset pass with a playfield floor texture, table frame trim, and drain apron. These remain visual-only layers and do not change Matter.js collision bodies.
+
+Phase 9.3 adds lower playfield mechanical details, shooter lane housing art, and small decorative post caps. These also remain visual-only layers.
