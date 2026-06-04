@@ -252,6 +252,12 @@ h1 {
   box-shadow: 0 0 18px rgba(49, 168, 255, 0.18);
 }
 
+.controls-hint button.is-enabled {
+  border-color: rgba(123, 220, 108, 0.64);
+  color: var(--text);
+  background: rgba(22, 84, 54, 0.42);
+}
+
 .game-stage {
   position: relative;
   min-height: calc(100vh - 36px);

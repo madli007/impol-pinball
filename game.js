@@ -22,6 +22,7 @@
   };
   const DEBUG_PHYSICS = false;
   const HIGH_SCORE_KEY = "impol-pinball.high-score";
+  const AUDIO_MUTED_KEY = "impol-pinball.audio-muted";
   const ASSET_CONFIG = {
     furnace: { src: "assets/images/furnace-target.png", width: 154, height: 132, yOffset: -8 },
     coil: { src: "assets/images/coil-collector.png", width: 184, height: 120, yOffset: -8 },
@@ -106,6 +107,7 @@
     leftControl: document.getElementById("left-control"),
     rightControl: document.getElementById("right-control"),
     spaceControl: document.getElementById("space-control"),
+    audioToggle: document.getElementById("audio-toggle"),
     missions: {
       measurement: {
         row: document.getElementById("mission-measurement"),
@@ -162,6 +164,7 @@
     maxSteps: 4
   };
   const assets = loadAssets(ASSET_CONFIG);
+  const audio = createAudioManager();
 
   function createMissionState() {
     return MISSION_CONFIG.reduce((missions, mission) => {
@@ -206,6 +209,117 @@
     } catch (_error) {
       // Keep the game playable if browser storage is unavailable.
     }
+  }
+
+  function loadAudioMutedPreference() {
+    try {
+      return window.localStorage.getItem(AUDIO_MUTED_KEY) !== "false";
+    } catch (_error) {
+      return true;
+    }
+  }
+
+  function saveAudioMutedPreference(isMuted) {
+    try {
+      window.localStorage.setItem(AUDIO_MUTED_KEY, String(isMuted));
+    } catch (_error) {
+      // Audio remains usable even if browser storage is unavailable.
+    }
+  }
+
+  function createAudioManager() {
+    const state = {
+      context: null,
+      master: null,
+      isMuted: loadAudioMutedPreference(),
+      isUnlocked: false,
+      isAvailable: Boolean(window.AudioContext || window.webkitAudioContext)
+    };
+
+    function ensureContext() {
+      if (!state.isAvailable) {
+        return null;
+      }
+
+      if (!state.context) {
+        try {
+          const AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
+          state.context = new AudioContextConstructor();
+          state.master = state.context.createGain();
+          state.master.gain.value = state.isMuted ? 0 : 0.16;
+          state.master.connect(state.context.destination);
+        } catch (_error) {
+          state.isAvailable = false;
+          return null;
+        }
+      }
+
+      return state.context;
+    }
+
+    function setMuted(isMuted) {
+      state.isMuted = isMuted;
+      saveAudioMutedPreference(state.isMuted);
+
+      if (state.master) {
+        state.master.gain.setTargetAtTime(state.isMuted ? 0 : 0.16, state.context.currentTime, 0.015);
+      }
+    }
+
+    function unlock() {
+      const context = ensureContext();
+
+      if (!context) {
+        return false;
+      }
+
+      if (context.state === "suspended") {
+        context.resume().catch(() => {
+          state.isAvailable = false;
+        });
+      }
+
+      state.isUnlocked = true;
+      return true;
+    }
+
+    return {
+      get isMuted() {
+        return state.isMuted;
+      },
+      get isUnlocked() {
+        return state.isUnlocked;
+      },
+      get isAvailable() {
+        return state.isAvailable;
+      },
+      setMuted,
+      unlock
+    };
+  }
+
+  function unlockAudio() {
+    audio.unlock();
+    updateAudioUi();
+    syncInspectableState(physics);
+  }
+
+  function toggleAudioMute() {
+    audio.unlock();
+    audio.setMuted(!audio.isMuted);
+    updateAudioUi();
+    syncInspectableState(physics);
+  }
+
+  function updateAudioUi() {
+    if (!ui.audioToggle) {
+      return;
+    }
+
+    const enabled = audio.isAvailable && !audio.isMuted;
+    ui.audioToggle.textContent = enabled ? "Sound On" : "Sound Off";
+    ui.audioToggle.setAttribute("aria-pressed", String(enabled));
+    ui.audioToggle.classList.toggle("is-enabled", enabled);
   }
 
   function setHighScore(candidate) {
@@ -1126,7 +1240,7 @@
 
   function syncInspectableState(physics) {
     window.ImpolPinball = {
-      phase: "9.6",
+      phase: "10.1",
       matterLoaded: Boolean(MatterLib),
       staticBodyCount: physics ? physics.staticBodies.length : 0,
       tableObjectCount: physics ? physics.bumperBodies.length + physics.targetBodies.length : 0,
@@ -1143,6 +1257,11 @@
       skillShotAwarded: gameState.skillShotAwarded,
       activeMissionId: gameState.activeMissionId,
       missions: gameState.missions,
+      audio: {
+        isAvailable: audio.isAvailable,
+        isMuted: audio.isMuted,
+        isUnlocked: audio.isUnlocked
+      },
       input: { ...inputState }
     };
   }
@@ -1782,6 +1901,7 @@
 
   function handleKeyDown(event) {
     if (event.code === "ArrowLeft" || event.code === "KeyA") {
+      unlockAudio();
       if (!inputState.left) {
         inputState.leftPulse = true;
       }
@@ -1790,6 +1910,7 @@
     }
 
     if (event.code === "ArrowRight" || event.code === "KeyD") {
+      unlockAudio();
       if (!inputState.right) {
         inputState.rightPulse = true;
       }
@@ -1799,6 +1920,7 @@
 
     if (event.code === "Space") {
       event.preventDefault();
+      unlockAudio();
 
       if (!inputState.space) {
         if (gameState.status === "game-over") {
@@ -1838,6 +1960,8 @@
   }
 
   function beginControl(control) {
+    unlockAudio();
+
     if (control === "left") {
       if (!inputState.left) {
         inputState.leftPulse = true;
@@ -2004,14 +2128,20 @@
 
   window.addEventListener("keydown", handleKeyDown);
   window.addEventListener("keyup", handleKeyUp);
+  canvas.addEventListener("pointerdown", unlockAudio);
   wireHoldButton(ui.leftControl, "left");
   wireHoldButton(ui.rightControl, "right");
   wireHoldButton(ui.spaceControl, "space");
-  ui.restartButton.addEventListener("click", restartGame);
+  ui.restartButton.addEventListener("click", () => {
+    unlockAudio();
+    restartGame();
+  });
+  ui.audioToggle.addEventListener("click", toggleAudioMute);
   if (physics) {
     resetBall(physics.ball, true);
   }
   updateHud();
+  updateAudioUi();
   updateControlsUi();
   syncInspectableState(physics);
 

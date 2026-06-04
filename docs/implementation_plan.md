@@ -626,10 +626,54 @@ Priority order:
   - Confirm source sheets are not loaded at runtime through `ASSET_CONFIG`.
   - Visible result: the upgraded table looks better while staying smooth enough for the demo use case.
 
+### Phase 10: Sound And Arcade Feel
+
+Goal: add lightweight, browser-safe sound feedback that makes the game feel more like a real pinball table without introducing asset loading complexity, autoplay problems, or annoying always-on audio.
+
+Priority order:
+
+1. Keep sound opt-in and easy to mute.
+2. Add short, satisfying effects for the highest-frequency actions first.
+3. Use procedural Web Audio API tones/noise before adding external audio files.
+4. Keep sounds short and mixed quietly so they support gameplay instead of becoming tiring.
+
+- [x] Phase 10.1 - Audio foundation and mute control - Status: complete
+  - Add a small audio manager around the Web Audio API.
+  - Unlock audio only after a player gesture such as `Space`, flipper key, canvas click, or mute toggle click.
+  - Add a simple mute/unmute control in the UI.
+  - Persist mute preference in `localStorage`.
+  - Handle browsers where audio context creation fails without breaking gameplay.
+  - Visible result: sound can be enabled/disabled predictably and never blocks the game.
+
+- [ ] Phase 10.2 - Core pinball sound effects - Status: planned
+  - Add short procedural effects for launch, flipper press, bumper hit, target hit, drain, and next-ball reset.
+  - Keep effects under roughly 250 ms except drain/game-over.
+  - Use volume differences to make important hits feel stronger without making routine collisions harsh.
+  - Avoid continuous background music in this phase.
+  - Visible result: common gameplay actions have immediate audio feedback.
+
+- [ ] Phase 10.3 - Mission and combo audio feedback - Status: planned
+  - Add distinct sounds for skill shot, combo increase, mission progress, mission complete, multiplier reward, and game over.
+  - Keep mission-complete sounds celebratory but short.
+  - Avoid overlapping sounds becoming muddy during rapid hits by throttling or ducking repeated events.
+  - Visible result: scoring milestones are easier to feel even without watching the side HUD.
+
+- [ ] Phase 10.4 - Audio mix and comfort pass - Status: planned
+  - Balance volumes while playing a full game.
+  - Prevent repeated bumper or flipper sounds from stacking too loudly.
+  - Make sure mute state applies immediately to any currently playing sound.
+  - Confirm the game remains silent by default until the browser allows audio.
+  - Visible result: audio feels fun for a quick demo and not annoying after several balls.
+
+- [ ] Phase 10.5 - Optional generated audio asset evaluation - Status: planned
+  - Decide whether procedural sound is good enough.
+  - Only add audio files if a specific effect clearly needs more character than Web Audio can provide.
+  - If files are added, keep them small, local, and documented under `assets/audio/`.
+  - Visible result: the project has a clear decision on whether it needs real audio assets.
+
 ## 15. Post-MVP Backlog
 
 - Touch/mobile controls.
-- Sound effects via Web Audio API.
 - Ball save.
 - Combo shots.
 - Multiball.
