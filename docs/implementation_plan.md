@@ -645,7 +645,7 @@ Priority order:
   - Handle browsers where audio context creation fails without breaking gameplay.
   - Visible result: sound can be enabled/disabled predictably and never blocks the game.
 
-- [ ] Phase 10.2 - Core pinball sound effects - Status: planned
+- [x] Phase 10.2 - Core pinball sound effects - Status: complete
   - Add short procedural effects for launch, flipper press, bumper hit, target hit, drain, and next-ball reset.
   - Keep effects under roughly 250 ms except drain/game-over.
   - Use volume differences to make important hits feel stronger without making routine collisions harsh.

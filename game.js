@@ -213,9 +213,9 @@
 
   function loadAudioMutedPreference() {
     try {
-      return window.localStorage.getItem(AUDIO_MUTED_KEY) !== "false";
+      return window.localStorage.getItem(AUDIO_MUTED_KEY) === "true";
     } catch (_error) {
-      return true;
+      return false;
     }
   }
 
@@ -233,7 +233,8 @@
       master: null,
       isMuted: loadAudioMutedPreference(),
       isUnlocked: false,
-      isAvailable: Boolean(window.AudioContext || window.webkitAudioContext)
+      isAvailable: Boolean(window.AudioContext || window.webkitAudioContext),
+      lastPlayed: {}
     };
 
     function ensureContext() {
@@ -246,7 +247,7 @@
           const AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
           state.context = new AudioContextConstructor();
           state.master = state.context.createGain();
-          state.master.gain.value = state.isMuted ? 0 : 0.16;
+          state.master.gain.value = state.isMuted ? 0 : 0.42;
           state.master.connect(state.context.destination);
         } catch (_error) {
           state.isAvailable = false;
@@ -262,7 +263,7 @@
       saveAudioMutedPreference(state.isMuted);
 
       if (state.master) {
-        state.master.gain.setTargetAtTime(state.isMuted ? 0 : 0.16, state.context.currentTime, 0.015);
+        state.master.gain.setTargetAtTime(state.isMuted ? 0 : 0.42, state.context.currentTime, 0.015);
       }
     }
 
@@ -283,6 +284,119 @@
       return true;
     }
 
+    function canPlay(effectName, throttleMs = 28) {
+      if (state.isMuted || !state.isAvailable || !state.isUnlocked) {
+        return false;
+      }
+
+      const context = ensureContext();
+
+      if (!context || !state.master) {
+        return false;
+      }
+
+      const now = performance.now();
+      if (now - (state.lastPlayed[effectName] || 0) < throttleMs) {
+        return false;
+      }
+
+      state.lastPlayed[effectName] = now;
+      return true;
+    }
+
+    function playTone({ frequency, endFrequency, duration, type = "sine", volume = 0.08, startOffset = 0 }) {
+      const context = ensureContext();
+
+      if (!context || !state.master) {
+        return;
+      }
+
+      const startAt = context.currentTime + startOffset;
+      const endAt = startAt + duration;
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+
+      oscillator.type = type;
+      oscillator.frequency.setValueAtTime(frequency, startAt);
+      oscillator.frequency.exponentialRampToValueAtTime(Math.max(20, endFrequency || frequency), endAt);
+      gain.gain.setValueAtTime(0.0001, startAt);
+      gain.gain.exponentialRampToValueAtTime(volume, startAt + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, endAt);
+      oscillator.connect(gain);
+      gain.connect(state.master);
+      oscillator.start(startAt);
+      oscillator.stop(endAt + 0.02);
+    }
+
+    function playNoise({ duration, volume = 0.05, filterFrequency = 1200, startOffset = 0 }) {
+      const context = ensureContext();
+
+      if (!context || !state.master) {
+        return;
+      }
+
+      const sampleCount = Math.max(1, Math.floor(context.sampleRate * duration));
+      const buffer = context.createBuffer(1, sampleCount, context.sampleRate);
+      const data = buffer.getChannelData(0);
+
+      for (let index = 0; index < sampleCount; index += 1) {
+        data[index] = Math.random() * 2 - 1;
+      }
+
+      const source = context.createBufferSource();
+      const filter = context.createBiquadFilter();
+      const gain = context.createGain();
+      const startAt = context.currentTime + startOffset;
+      const endAt = startAt + duration;
+
+      filter.type = "bandpass";
+      filter.frequency.value = filterFrequency;
+      filter.Q.value = 2.8;
+      gain.gain.setValueAtTime(volume, startAt);
+      gain.gain.exponentialRampToValueAtTime(0.0001, endAt);
+      source.buffer = buffer;
+      source.connect(filter);
+      filter.connect(gain);
+      gain.connect(state.master);
+      source.start(startAt);
+      source.stop(endAt + 0.02);
+    }
+
+    function play(effectName) {
+      const throttles = {
+        flipper: 55,
+        bumper: 45,
+        target: 55,
+        launch: 120,
+        drain: 350,
+        reset: 350
+      };
+
+      if (!canPlay(effectName, throttles[effectName])) {
+        return;
+      }
+
+      if (effectName === "flipper") {
+        playTone({ frequency: 190, endFrequency: 92, duration: 0.055, type: "square", volume: 0.035 });
+        playNoise({ duration: 0.035, volume: 0.018, filterFrequency: 900 });
+      } else if (effectName === "bumper") {
+        playTone({ frequency: 740, endFrequency: 1180, duration: 0.09, type: "triangle", volume: 0.055 });
+        playTone({ frequency: 1480, endFrequency: 980, duration: 0.07, type: "sine", volume: 0.025, startOffset: 0.015 });
+      } else if (effectName === "target") {
+        playTone({ frequency: 520, endFrequency: 420, duration: 0.075, type: "triangle", volume: 0.04 });
+        playNoise({ duration: 0.045, volume: 0.014, filterFrequency: 1600 });
+      } else if (effectName === "launch") {
+        playNoise({ duration: 0.16, volume: 0.045, filterFrequency: 620 });
+        playTone({ frequency: 180, endFrequency: 360, duration: 0.13, type: "sawtooth", volume: 0.03 });
+      } else if (effectName === "drain") {
+        playTone({ frequency: 220, endFrequency: 70, duration: 0.34, type: "sawtooth", volume: 0.055 });
+        playNoise({ duration: 0.12, volume: 0.025, filterFrequency: 420, startOffset: 0.06 });
+      } else if (effectName === "reset") {
+        playTone({ frequency: 360, endFrequency: 540, duration: 0.09, type: "sine", volume: 0.035 });
+        playTone({ frequency: 540, endFrequency: 720, duration: 0.09, type: "sine", volume: 0.026, startOffset: 0.08 });
+      }
+    }
+
     return {
       get isMuted() {
         return state.isMuted;
@@ -294,7 +408,8 @@
         return state.isAvailable;
       },
       setMuted,
-      unlock
+      unlock,
+      play
     };
   }
 
@@ -1240,7 +1355,7 @@
 
   function syncInspectableState(physics) {
     window.ImpolPinball = {
-      phase: "10.1",
+      phase: "10.2",
       matterLoaded: Boolean(MatterLib),
       staticBodyCount: physics ? physics.staticBodies.length : 0,
       tableObjectCount: physics ? physics.bumperBodies.length + physics.targetBodies.length : 0,
@@ -1565,6 +1680,7 @@
     gameState.skillShotAwarded = false;
     gameState.plungerPower = 0;
     inputState.chargingSince = 0;
+    audio.play("launch");
     syncInspectableState(physics);
   }
 
@@ -1648,7 +1764,10 @@
     });
 
     if (object.type === "bumper") {
+      audio.play("bumper");
       kickBallFromObject(ball, object);
+    } else {
+      audio.play("target");
     }
 
     advanceMissions(object.event);
@@ -1787,6 +1906,7 @@
       resetBall(ball, true);
     }
 
+    audio.play("drain");
     updateHud();
     syncInspectableState(physics);
   }
@@ -1826,6 +1946,7 @@
     if (gameState.status === "between-balls" && performance.now() >= gameState.resetAt) {
       resetBall(physics.ball, true);
       gameState.status = "ready";
+      audio.play("reset");
       syncInspectableState(physics);
     }
   }
@@ -1904,6 +2025,7 @@
       unlockAudio();
       if (!inputState.left) {
         inputState.leftPulse = true;
+        audio.play("flipper");
       }
       inputState.left = true;
       event.preventDefault();
@@ -1913,6 +2035,7 @@
       unlockAudio();
       if (!inputState.right) {
         inputState.rightPulse = true;
+        audio.play("flipper");
       }
       inputState.right = true;
       event.preventDefault();
@@ -1965,6 +2088,7 @@
     if (control === "left") {
       if (!inputState.left) {
         inputState.leftPulse = true;
+        audio.play("flipper");
       }
       inputState.left = true;
     }
@@ -1972,6 +2096,7 @@
     if (control === "right") {
       if (!inputState.right) {
         inputState.rightPulse = true;
+        audio.play("flipper");
       }
       inputState.right = true;
     }
