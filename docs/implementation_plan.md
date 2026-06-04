@@ -610,17 +610,20 @@ Priority order:
   - Integrate the first pass as low-contrast visual-only decals under gameplay objects.
   - Visible result: the Impol/aluminium theme is visible even when the ball is not hitting active targets.
 
-- [ ] Phase 9.5 - Asset integration pass - Status: planned
+- [x] Phase 9.5 - Asset integration pass - Status: complete
   - Add new assets to `ASSET_CONFIG` and render them in stable layers: background, rails, gameplay objects, decorative foreground, ball, UI feedback.
   - Make sure transparent PNG padding does not create alignment surprises.
   - Re-check z-order so the ball never disappears behind decorative art that should be under gameplay.
+  - Keep decorative table art below gameplay objects and move mission lights below ball and feedback.
   - Visible result: new art improves the table without breaking ball readability.
 
-- [ ] Phase 9.6 - Visual QA and performance check - Status: planned
+- [x] Phase 9.6 - Visual QA and performance check - Status: complete
   - Test at the normal desktop viewport and at a smaller laptop viewport.
   - Check that image count and dimensions do not cause noticeable slowdowns on weaker machines.
   - Compress or resize oversized PNGs if they do not add visible detail at game scale.
   - Keep a before/after screenshot for comparison.
+  - Use the June 5 gameplay screenshot as visual QA for z-order, readability, and decorative-asset balance.
+  - Confirm source sheets are not loaded at runtime through `ASSET_CONFIG`.
   - Visible result: the upgraded table looks better while staying smooth enough for the demo use case.
 
 ## 15. Post-MVP Backlog

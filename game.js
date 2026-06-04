@@ -359,6 +359,9 @@
       return false;
     }
 
+    const drawWidth = width || asset.width || asset.image.width;
+    const drawHeight = height || asset.height || asset.image.height;
+
     context.save();
     context.globalAlpha = options.alpha ?? 1;
     context.shadowColor = options.shadowColor || "rgba(0, 0, 0, 0.38)";
@@ -372,9 +375,9 @@
 
     if (options.flipX) {
       context.scale(-1, 1);
-      context.drawImage(asset.image, -width / 2, -height / 2, width, height);
+      context.drawImage(asset.image, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
     } else {
-      context.drawImage(asset.image, -width / 2, -height / 2, width, height);
+      context.drawImage(asset.image, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
     }
 
     context.restore();
@@ -1123,7 +1126,7 @@
 
   function syncInspectableState(physics) {
     window.ImpolPinball = {
-      phase: "9.4",
+      phase: "9.6",
       matterLoaded: Boolean(MatterLib),
       staticBodyCount: physics ? physics.staticBodies.length : 0,
       tableObjectCount: physics ? physics.bumperBodies.length + physics.targetBodies.length : 0,
@@ -1193,7 +1196,6 @@
     drawLabel("IMPOL", canvas.width / 2, 178, "#edf7fb", 68);
     drawLabel("ALUMINIUM INDUSTRY", canvas.width / 2, 230, "#9ab3bf", 24);
 
-    drawConfiguredBumpers();
     drawIndustrialDecorationAssets();
     drawMechanicalDetailAssets();
     drawLowerLanePolish();
@@ -1219,12 +1221,14 @@
     context.fill();
     context.stroke();
 
+    drawConfiguredBumpers();
     drawConfiguredTargets();
     drawDecorativeLamps();
 
     drawShooterChannel();
     drawSkillShotMarker();
     drawDrainAssembly();
+    drawMissionLights();
 
     context.fillStyle = "#31a8ff";
     context.beginPath();
@@ -2058,7 +2062,6 @@
       drawScoreFeedback();
       drawComboBadge();
       drawHitEffects();
-      drawMissionLights();
     } else {
       fillRoundedRect(104, 100, 210, 44, 6, "rgba(120, 36, 28, 0.76)");
       drawLabel("MATTER.JS NOT LOADED", 209, 123, "#ff7567", 16);
