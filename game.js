@@ -124,6 +124,7 @@
     floatingTexts: [],
     comboCount: 0,
     comboUntil: 0,
+    lowerTrapSince: 0,
     skillShotAvailableUntil: 0,
     skillShotAwarded: false,
     activeMissionId: "measurement",
@@ -136,6 +137,13 @@
     rightPulse: false,
     space: false,
     chargingSince: 0
+  };
+  const physicsClock = {
+    lastTime: 0,
+    accumulator: 0,
+    step: 1000 / 60,
+    maxFrameDelta: 1000 / 12,
+    maxSteps: 4
   };
   const assets = loadAssets(ASSET_CONFIG);
 
@@ -983,7 +991,7 @@
 
   function syncInspectableState(physics) {
     window.ImpolPinball = {
-      phase: "8.5",
+      phase: "8.6",
       matterLoaded: Boolean(MatterLib),
       staticBodyCount: physics ? physics.staticBodies.length : 0,
       tableObjectCount: physics ? physics.bumperBodies.length + physics.targetBodies.length : 0,
@@ -1520,6 +1528,7 @@
     gameState.floatingTexts = [];
     gameState.comboCount = 0;
     gameState.comboUntil = 0;
+    gameState.lowerTrapSince = 0;
     gameState.skillShotAvailableUntil = 0;
     gameState.skillShotAwarded = false;
     gameState.activeMissionId = "measurement";
@@ -1549,6 +1558,40 @@
     if (physics.ball.position.y > TABLE.height + 80) {
       drainBall(physics.ball);
     }
+  }
+
+  function maybeRescueLowerFlipperTrap() {
+    if (!physics || gameState.status !== "playing") {
+      return;
+    }
+
+    const ball = physics.ball;
+    const speed = Math.hypot(ball.velocity.x, ball.velocity.y);
+    const inLowerTrap =
+      ball.position.y > 1120 &&
+      ball.position.y < 1290 &&
+      ((ball.position.x > 112 && ball.position.x < 330) || (ball.position.x > 570 && ball.position.x < 788));
+
+    if (!inLowerTrap || speed > 0.22) {
+      gameState.lowerTrapSince = 0;
+      return;
+    }
+
+    if (!gameState.lowerTrapSince) {
+      gameState.lowerTrapSince = performance.now();
+      return;
+    }
+
+    if (performance.now() - gameState.lowerTrapSince < 950) {
+      return;
+    }
+
+    const direction = ball.position.x < TABLE.width / 2 ? 1 : -1;
+    MatterLib.Body.setVelocity(ball, {
+      x: direction * 1.35,
+      y: -2.8
+    });
+    gameState.lowerTrapSince = 0;
   }
 
   function maybeGuideShooterLaneExit() {
@@ -1747,14 +1790,13 @@
     }
 
     const ball = physics.ball;
-    const nearLeft = Math.abs(ball.position.x - TABLE.flippers.left.pivotX) < 170 && Math.abs(ball.position.y - TABLE.flippers.left.pivotY) < 110;
-    const nearRight = Math.abs(ball.position.x - TABLE.flippers.right.pivotX) < 170 && Math.abs(ball.position.y - TABLE.flippers.right.pivotY) < 110;
+    const leftContact = getFlipperContact(ball, physics.flippers.left, TABLE.flippers.left, false);
+    const rightContact = getFlipperContact(ball, physics.flippers.right, TABLE.flippers.right, true);
 
-    if (inputState.leftPulse && nearLeft && ball.velocity.y > -12) {
-      const distanceFromPivot = Math.max(0, Math.min(TABLE.flippers.left.length, ball.position.x - TABLE.flippers.left.pivotX));
-      const tipFactor = distanceFromPivot / TABLE.flippers.left.length;
-      const lift = 9 + tipFactor * 9;
-      const push = 2.4 + tipFactor * 4.2;
+    if (inputState.leftPulse && leftContact.isValid && ball.velocity.y > -12) {
+      const tipFactor = leftContact.tipFactor;
+      const lift = 7.2 + tipFactor * 7.4;
+      const push = 1.8 + tipFactor * 3.4;
 
       MatterLib.Body.setVelocity(ball, {
         x: Math.max(ball.velocity.x + push, push),
@@ -1762,11 +1804,10 @@
       });
     }
 
-    if (inputState.rightPulse && nearRight && ball.velocity.y > -12) {
-      const distanceFromPivot = Math.max(0, Math.min(TABLE.flippers.right.length, TABLE.flippers.right.pivotX - ball.position.x));
-      const tipFactor = distanceFromPivot / TABLE.flippers.right.length;
-      const lift = 9 + tipFactor * 9;
-      const push = 2.4 + tipFactor * 4.2;
+    if (inputState.rightPulse && rightContact.isValid && ball.velocity.y > -12) {
+      const tipFactor = rightContact.tipFactor;
+      const lift = 7.2 + tipFactor * 7.4;
+      const push = 1.8 + tipFactor * 3.4;
 
       MatterLib.Body.setVelocity(ball, {
         x: Math.min(ball.velocity.x - push, -push),
@@ -1776,6 +1817,28 @@
 
     inputState.leftPulse = false;
     inputState.rightPulse = false;
+  }
+
+  function getFlipperContact(ball, flipperBody, config, isRight) {
+    const dx = ball.position.x - config.pivotX;
+    const dy = ball.position.y - config.pivotY;
+    const cos = Math.cos(flipperBody.angle);
+    const sin = Math.sin(flipperBody.angle);
+    const localX = dx * cos + dy * sin;
+    const localY = -dx * sin + dy * cos;
+    const tipFactor = localX / config.length;
+    const playfieldSideDistance = isRight ? localY : -localY;
+    const isValid =
+      tipFactor > 0.08 &&
+      tipFactor < 0.98 &&
+      playfieldSideDistance > -8 &&
+      playfieldSideDistance < 48 &&
+      Math.abs(localY) < 52;
+
+    return {
+      isValid,
+      tipFactor: Math.max(0, Math.min(1, tipFactor))
+    };
   }
 
   window.addEventListener("keydown", handleKeyDown);
@@ -1791,15 +1854,39 @@
   updateControlsUi();
   syncInspectableState(physics);
 
-  function update() {
+  function stepPhysics() {
     if (physics) {
       updatePlungerPower();
       updateFlippers();
       holdBallInLaunchLane();
-      MatterLib.Engine.update(physics.engine, 1000 / 60);
+      MatterLib.Engine.update(physics.engine, physicsClock.step);
       maybeGuideShooterLaneExit();
       maybeCatchLostBall();
+      maybeRescueLowerFlipperTrap();
       maybeFinishBetweenBalls();
+    }
+  }
+
+  function update(now) {
+    if (!physicsClock.lastTime) {
+      physicsClock.lastTime = now || performance.now();
+    }
+
+    if (physics) {
+      const frameDelta = Math.min((now || performance.now()) - physicsClock.lastTime, physicsClock.maxFrameDelta);
+      physicsClock.lastTime = now || performance.now();
+      physicsClock.accumulator += frameDelta;
+
+      let steps = 0;
+      while (physicsClock.accumulator >= physicsClock.step && steps < physicsClock.maxSteps) {
+        stepPhysics();
+        physicsClock.accumulator -= physicsClock.step;
+        steps += 1;
+      }
+
+      if (steps === physicsClock.maxSteps) {
+        physicsClock.accumulator = 0;
+      }
     }
 
     drawPlayfieldFrame();

@@ -559,7 +559,7 @@ Priority order:
   - Keep combo scoring modest and easy to remove if it makes balancing weird.
   - Visible result: hits feel more satisfying even without sound.
 
-- [ ] Phase 8.6 - Demo stability and reset pass - Status: planned
+- [x] Phase 8.6 - Demo stability and reset pass - Status: complete
   - Play several full games and watch for stuck balls, unfair drains, or weak launches.
   - Add a simple ball rescue only if the ball can reliably get stuck in a known area.
   - Confirm `Restart`, next-ball launch, high score, and mission progress still behave correctly.
