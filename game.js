@@ -37,7 +37,10 @@
     "lamp-post-red": { src: "assets/images/lamp-post-red.png", width: 34, height: 68 },
     "lamp-post-orange": { src: "assets/images/lamp-post-orange.png", width: 34, height: 67 },
     "lamp-post-blue": { src: "assets/images/lamp-post-blue.png", width: 34, height: 67 },
-    "lamp-post-green": { src: "assets/images/lamp-post-green.png", width: 34, height: 67 }
+    "lamp-post-green": { src: "assets/images/lamp-post-green.png", width: 34, height: 67 },
+    "playfield-floor-texture": { src: "assets/images/playfield-floor-texture.png", width: 790, height: 1374 },
+    "table-frame-trim": { src: "assets/images/table-frame-trim.png", width: 742, height: 1344 },
+    "drain-apron": { src: "assets/images/drain-apron.png", width: 336, height: 102 }
   };
   const TABLE_CONFIG = {
     bumpers: [
@@ -725,6 +728,20 @@
     });
   }
 
+  function drawTableArtAssets() {
+    drawDecorAsset("playfield-floor-texture", 450, 700, 790, 1374, {
+      alpha: 0.72,
+      shadowBlur: 0,
+      shadowOffsetY: 0
+    });
+
+    drawDecorAsset("table-frame-trim", 450, 700, 742, 1344, {
+      alpha: 0.42,
+      shadowBlur: 18,
+      shadowOffsetY: 7
+    });
+  }
+
   function drawPlungerCharge() {
     if (gameState.status !== "charging" && gameState.status !== "ready") {
       return;
@@ -925,6 +942,12 @@
   function drawDrainAssembly() {
     context.save();
 
+    drawDecorAsset("drain-apron", 450, 1330, 336, 102, {
+      alpha: 0.84,
+      shadowBlur: 18,
+      shadowOffsetY: 8
+    });
+
     const base = context.createLinearGradient(0, 1288, 0, 1378);
     base.addColorStop(0, "rgba(126, 147, 156, 0.32)");
     base.addColorStop(0.48, "rgba(8, 18, 25, 0.94)");
@@ -992,7 +1015,7 @@
 
   function syncInspectableState(physics) {
     window.ImpolPinball = {
-      phase: "8.7",
+      phase: "9.2",
       matterLoaded: Boolean(MatterLib),
       staticBodyCount: physics ? physics.staticBodies.length : 0,
       tableObjectCount: physics ? physics.bumperBodies.length + physics.targetBodies.length : 0,
@@ -1022,6 +1045,8 @@
     gradient.addColorStop(1, "#081016");
     context.fillStyle = gradient;
     context.fillRect(0, 0, canvas.width, canvas.height);
+
+    drawTableArtAssets();
 
     strokeRoundedRect(34, 34, canvas.width - 68, canvas.height - 68, 34, "#203946", 36);
     strokeRoundedRect(58, 58, canvas.width - 116, canvas.height - 116, 28, "#7e939c", 10);

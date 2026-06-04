@@ -571,6 +571,56 @@ Priority order:
   - Update README current status from "Playable MVP in progress" to a demo-ready status when this phase is complete.
   - Visible result: the game looks good enough in a quick screen share or screenshot.
 
+### Phase 9: Asset Expansion and Table Art Pass
+
+Goal: move from a demo-polished table to a richer, more physical Impol-themed pinball machine by expanding the reusable asset set and replacing remaining canvas-only decorative pieces where PNG assets would improve screenshot quality.
+
+Priority order:
+
+1. Improve the table as a single physical object: playfield plate, frame, rails, screws, trim, and drain assembly.
+2. Upgrade visible mechanical elements: flippers, plunger lane, shooter guide, side lanes, lane plastics, and small metal brackets.
+3. Add decorative industrial storytelling assets that do not change gameplay contracts.
+4. Keep asset integration incremental so physics tuning remains stable.
+
+- [x] Phase 9.1 - Asset inventory and art direction lock - Status: complete
+  - Review the current `assets/images/` set against `docs/mock.png` and recent gameplay screenshots.
+  - Decide which current PNGs stay as final enough, which need replacement, and which new pieces are missing.
+  - Define consistent visual rules for scale, perspective, shadows, glow strength, metal color, and transparent padding.
+  - Document the result in `docs/phase9_asset_inventory.md`.
+  - Visible result: a short asset checklist exists before generating or editing more files.
+
+- [x] Phase 9.2 - Playfield and frame asset pack - Status: complete
+  - Create or generate a dark industrial playfield plate with subtle brushed aluminium texture, rivets, panel seams, and low-contrast decals.
+  - Add frame/rail overlay pieces or a single table-frame overlay that matches the existing canvas dimensions.
+  - Include separate drain apron artwork so the bottom area feels like a real machine part rather than only drawn lines.
+  - Keep collision bodies unchanged unless artwork visibly exposes a mismatch.
+  - Visible result: the table reads as one physical cabinet instead of a canvas with independent objects.
+
+- [ ] Phase 9.3 - Mechanical detail asset pack - Status: planned
+  - Upgrade or replace flipper sprites if needed, keeping separate left/right assets.
+  - Add visual-only plastics, metal brackets, lane dividers, screw caps, rubber posts, and small guide rails around the lower playfield.
+  - Add a cleaner plunger knob, shooter lane meter, and launch gate artwork if the current drawn pieces still look too flat.
+  - Visible result: the bottom third and shooter lane look finished in screenshots and during play.
+
+- [ ] Phase 9.4 - Industrial decoration asset pack - Status: planned
+  - Add non-colliding aluminium/production-themed decorations: rollers, extrusion arrows, coil route decals, warning stripes, small status LEDs, and label plates.
+  - Use the decorations to guide the eye toward active targets without making them look playable unless they score.
+  - Keep text sparse and readable; do not cover the ball path or existing mission targets.
+  - Visible result: the Impol/aluminium theme is visible even when the ball is not hitting active targets.
+
+- [ ] Phase 9.5 - Asset integration pass - Status: planned
+  - Add new assets to `ASSET_CONFIG` and render them in stable layers: background, rails, gameplay objects, decorative foreground, ball, UI feedback.
+  - Make sure transparent PNG padding does not create alignment surprises.
+  - Re-check z-order so the ball never disappears behind decorative art that should be under gameplay.
+  - Visible result: new art improves the table without breaking ball readability.
+
+- [ ] Phase 9.6 - Visual QA and performance check - Status: planned
+  - Test at the normal desktop viewport and at a smaller laptop viewport.
+  - Check that image count and dimensions do not cause noticeable slowdowns on weaker machines.
+  - Compress or resize oversized PNGs if they do not add visible detail at game scale.
+  - Keep a before/after screenshot for comparison.
+  - Visible result: the upgraded table looks better while staying smooth enough for the demo use case.
+
 ## 15. Post-MVP Backlog
 
 - Touch/mobile controls.

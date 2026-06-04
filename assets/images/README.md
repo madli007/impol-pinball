@@ -22,6 +22,10 @@ Supporting files:
 - `flipper-left.png` - cropped left flipper sprite from the secondary visual sheet.
 - `flipper-right.png` - cropped right flipper sprite from the secondary visual sheet.
 - `lamp-post-red.png`, `lamp-post-orange.png`, `lamp-post-blue.png`, `lamp-post-green.png` - cropped decorative lamp sprites.
+- `phase9-table-art-sheet.png` - generated Phase 9.2 source sheet for playfield, frame, and drain art.
+- `playfield-floor-texture.png` - cropped transparent playfield floor texture.
+- `table-frame-trim.png` - cropped transparent aluminium table frame trim.
+- `drain-apron.png` - cropped transparent lower drain apron.
 
 ## Style Notes
 
@@ -36,3 +40,5 @@ Supporting files:
 Phase 7.3 integrates these images as Canvas visual layers with fallback drawing if an image has not loaded yet. Matter.js collision bodies remain unchanged.
 
 Phase 8.3b prepares additional visual-only assets for later integration. The first integration pass uses the flipper and lamp sprites while keeping Matter.js physics bodies unchanged.
+
+Phase 9.2 adds a background/frame asset pass with a playfield floor texture, table frame trim, and drain apron. These remain visual-only layers and do not change Matter.js collision bodies.
