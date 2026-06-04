@@ -120,6 +120,10 @@
     feedback: "",
     feedbackUntil: 0,
     hitCounts: {},
+    hitEffects: [],
+    floatingTexts: [],
+    comboCount: 0,
+    comboUntil: 0,
     skillShotAvailableUntil: 0,
     skillShotAwarded: false,
     activeMissionId: "measurement",
@@ -506,6 +510,71 @@
     context.textAlign = "center";
     context.textBaseline = "middle";
     context.fillText(gameState.feedback, 450, 1070);
+  }
+
+  function drawHitEffects() {
+    const now = performance.now();
+
+    gameState.hitEffects = gameState.hitEffects.filter((effect) => now < effect.until);
+    gameState.floatingTexts = gameState.floatingTexts.filter((text) => now < text.until);
+
+    gameState.hitEffects.forEach((effect) => {
+      const progress = 1 - (effect.until - now) / effect.duration;
+      const alpha = Math.max(0, 1 - progress);
+      const radius = effect.radius + progress * 34;
+
+      context.save();
+      context.globalAlpha = alpha;
+      context.strokeStyle = effect.accent;
+      context.lineWidth = 5 - progress * 2;
+      context.beginPath();
+      context.ellipse(effect.x, effect.y, radius, radius * 0.62, 0, 0, Math.PI * 2);
+      context.stroke();
+
+      const glow = context.createRadialGradient(effect.x, effect.y, 4, effect.x, effect.y, radius + 18);
+      glow.addColorStop(0, `${effect.accent}66`);
+      glow.addColorStop(1, "rgba(0, 0, 0, 0)");
+      context.fillStyle = glow;
+      context.beginPath();
+      context.ellipse(effect.x, effect.y, radius * 0.95, radius * 0.55, 0, 0, Math.PI * 2);
+      context.fill();
+      context.restore();
+    });
+
+    gameState.floatingTexts.forEach((text) => {
+      const progress = 1 - (text.until - now) / text.duration;
+      const alpha = Math.max(0, 1 - progress);
+      const y = text.y - progress * 42;
+
+      context.save();
+      context.globalAlpha = alpha;
+      context.font = `800 ${text.size}px Arial, Helvetica, sans-serif`;
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.lineWidth = 5;
+      context.strokeStyle = "rgba(5, 11, 16, 0.82)";
+      context.strokeText(text.label, text.x, y);
+      context.fillStyle = text.color;
+      context.fillText(text.label, text.x, y);
+      context.restore();
+    });
+  }
+
+  function drawComboBadge() {
+    if (gameState.comboCount < 2 || performance.now() > gameState.comboUntil) {
+      return;
+    }
+
+    const remaining = Math.max(0, gameState.comboUntil - performance.now()) / 1800;
+    fillRoundedRect(332, 1000, 236, 40, 8, "rgba(5, 11, 16, 0.74)");
+    context.fillStyle = "#31a8ff";
+    context.font = "800 18px Arial, Helvetica, sans-serif";
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillText(`${gameState.comboCount}x COMBO`, 450, 1019);
+
+    context.fillStyle = "rgba(255, 155, 61, 0.86)";
+    context.fillRect(354, 1034, 192 * remaining, 4);
   }
 
   function drawMissionLights() {
@@ -914,7 +983,7 @@
 
   function syncInspectableState(physics) {
     window.ImpolPinball = {
-      phase: "8.4",
+      phase: "8.5",
       matterLoaded: Boolean(MatterLib),
       staticBodyCount: physics ? physics.staticBodies.length : 0,
       tableObjectCount: physics ? physics.bumperBodies.length + physics.targetBodies.length : 0,
@@ -927,6 +996,7 @@
       plungerPower: Number(gameState.plungerPower.toFixed(2)),
       score: gameState.score,
       lastEvent: gameState.lastEvent,
+      comboCount: gameState.comboCount,
       skillShotAwarded: gameState.skillShotAwarded,
       activeMissionId: gameState.activeMissionId,
       missions: gameState.missions,
@@ -1262,6 +1332,14 @@
     gameState.feedback = `SKILL SHOT +${points.toLocaleString("sl-SI")}`;
     gameState.feedbackUntil = performance.now() + 1100;
     gameState.hitCounts["skill-shot"] = performance.now();
+    addHitFeedback({
+      id: "skill-shot",
+      x: 686,
+      y: 278,
+      accent: "#ff9b3d",
+      label: `SKILL +${points.toLocaleString("sl-SI")}`,
+      color: "#ffb967"
+    });
     updateHud();
     syncInspectableState(physics);
   }
@@ -1284,12 +1362,23 @@
     }
 
     const points = object.points * gameState.multiplier;
-    gameState.score += points;
+    const comboBonus = registerComboHit(object);
+    gameState.score += points + comboBonus;
     setHighScore(gameState.score);
     gameState.lastEvent = object.event;
-    gameState.feedback = `+${points.toLocaleString("sl-SI")} ${object.label}`;
+    gameState.feedback = comboBonus
+      ? `COMBO +${(points + comboBonus).toLocaleString("sl-SI")} ${object.label}`
+      : `+${points.toLocaleString("sl-SI")} ${object.label}`;
     gameState.feedbackUntil = performance.now() + 700;
     gameState.hitCounts[object.id] = performance.now();
+    addHitFeedback({
+      id: object.id,
+      x: object.x,
+      y: object.y,
+      accent: object.accent,
+      label: comboBonus ? `+${points.toLocaleString("sl-SI")}  COMBO +${comboBonus.toLocaleString("sl-SI")}` : `+${points.toLocaleString("sl-SI")}`,
+      color: comboBonus ? "#ffb967" : "#edf7fb"
+    });
 
     if (object.type === "bumper") {
       kickBallFromObject(ball, object);
@@ -1298,6 +1387,46 @@
     advanceMissions(object.event);
     updateHud();
     syncInspectableState(physics);
+  }
+
+  function addHitFeedback({ id, x, y, accent, label, color }) {
+    const now = performance.now();
+    gameState.hitEffects.push({
+      id,
+      x,
+      y,
+      accent,
+      radius: 26,
+      duration: 520,
+      until: now + 520
+    });
+    gameState.floatingTexts.push({
+      label,
+      x,
+      y: y - 36,
+      color,
+      size: label.length > 20 ? 17 : 19,
+      duration: 820,
+      until: now + 820
+    });
+  }
+
+  function registerComboHit(object) {
+    const now = performance.now();
+
+    if (now <= gameState.comboUntil) {
+      gameState.comboCount += 1;
+    } else {
+      gameState.comboCount = 1;
+    }
+
+    gameState.comboUntil = now + 1800;
+
+    if (gameState.comboCount < 3) {
+      return 0;
+    }
+
+    return Math.min(4000, 350 * (gameState.comboCount - 2)) * gameState.multiplier;
   }
 
   function advanceMissions(eventName) {
@@ -1387,6 +1516,10 @@
     gameState.feedback = "";
     gameState.feedbackUntil = 0;
     gameState.hitCounts = {};
+    gameState.hitEffects = [];
+    gameState.floatingTexts = [];
+    gameState.comboCount = 0;
+    gameState.comboUntil = 0;
     gameState.skillShotAvailableUntil = 0;
     gameState.skillShotAwarded = false;
     gameState.activeMissionId = "measurement";
@@ -1679,6 +1812,8 @@
       drawBall(physics.ball);
       drawStatusBadge();
       drawScoreFeedback();
+      drawComboBadge();
+      drawHitEffects();
       drawMissionLights();
     } else {
       fillRoundedRect(104, 100, 210, 44, 6, "rgba(120, 36, 28, 0.76)");

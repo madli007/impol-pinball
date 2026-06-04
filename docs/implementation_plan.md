@@ -552,7 +552,7 @@ Priority order:
   - Improve the drain warning area visually, but do not make it busier than the flippers.
   - Visible result: players can read the table structure quickly from the screenshot or first play.
 
-- [ ] Phase 8.5 - Hit feedback and combo feel - Status: planned
+- [x] Phase 8.5 - Hit feedback and combo feel - Status: complete
   - Add short-lived visual pulses on hit targets and bumpers.
   - Add a compact floating score text near the hit location.
   - Add a simple combo counter if the player hits multiple scoring elements within a short window.
