@@ -546,7 +546,7 @@ Priority order:
   - Add decorative lamp posts around the lower playfield as visual-only pieces.
   - Visible result: the bottom playfield looks closer to the mockup without changing controls or physics.
 
-- [ ] Phase 8.4 - Rail, lane, and drain polish - Status: planned
+- [x] Phase 8.4 - Rail, lane, and drain polish - Status: complete
   - Strengthen the aluminium rail look around the outer table and bottom drain.
   - Make side lanes and outlanes clearer with guide lines, lane labels, and small indicator lights.
   - Improve the drain warning area visually, but do not make it busier than the flippers.

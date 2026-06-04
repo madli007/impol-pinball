@@ -747,6 +747,152 @@
     context.restore();
   }
 
+  function drawRailBolt(x, y, radius = 5) {
+    const bolt = context.createRadialGradient(x - radius * 0.35, y - radius * 0.35, 1, x, y, radius);
+    bolt.addColorStop(0, "#edf7fb");
+    bolt.addColorStop(0.48, "#9ab3bf");
+    bolt.addColorStop(1, "#2c414b");
+    context.fillStyle = bolt;
+    context.beginPath();
+    context.arc(x, y, radius, 0, Math.PI * 2);
+    context.fill();
+
+    context.strokeStyle = "rgba(5, 11, 16, 0.72)";
+    context.lineWidth = 1.5;
+    context.beginPath();
+    context.moveTo(x - radius * 0.55, y);
+    context.lineTo(x + radius * 0.55, y);
+    context.stroke();
+  }
+
+  function drawLowerLanePolish() {
+    context.save();
+
+    const lanes = [
+      {
+        rail: [
+          [128, 1168],
+          [230, 1232],
+          [306, 1282]
+        ],
+        label: "OUTLANE",
+        labelX: 188,
+        labelY: 1210,
+        lampX: 152,
+        lampY: 1188,
+        angle: 0.56
+      },
+      {
+        rail: [
+          [772, 1168],
+          [670, 1232],
+          [594, 1282]
+        ],
+        label: "RETURN",
+        labelX: 712,
+        labelY: 1210,
+        lampX: 748,
+        lampY: 1188,
+        angle: -0.56
+      }
+    ];
+
+    lanes.forEach((lane) => {
+      context.strokeStyle = "rgba(3, 9, 13, 0.55)";
+      context.lineWidth = 18;
+      context.lineCap = "round";
+      context.beginPath();
+      context.moveTo(lane.rail[0][0], lane.rail[0][1]);
+      context.quadraticCurveTo(lane.rail[1][0], lane.rail[1][1], lane.rail[2][0], lane.rail[2][1]);
+      context.stroke();
+
+      context.strokeStyle = "rgba(126, 147, 156, 0.82)";
+      context.lineWidth = 10;
+      context.beginPath();
+      context.moveTo(lane.rail[0][0], lane.rail[0][1]);
+      context.quadraticCurveTo(lane.rail[1][0], lane.rail[1][1], lane.rail[2][0], lane.rail[2][1]);
+      context.stroke();
+
+      context.strokeStyle = "rgba(49, 168, 255, 0.45)";
+      context.lineWidth = 4;
+      context.beginPath();
+      context.moveTo(lane.rail[0][0] + (lane.angle > 0 ? 8 : -8), lane.rail[0][1] + 3);
+      context.quadraticCurveTo(lane.rail[1][0], lane.rail[1][1] + 4, lane.rail[2][0], lane.rail[2][1] - 4);
+      context.stroke();
+
+      context.save();
+      context.translate(lane.labelX, lane.labelY);
+      context.rotate(lane.angle);
+      fillRoundedRect(-42, -12, 84, 24, 6, "rgba(5, 11, 16, 0.68)");
+      context.fillStyle = "#9ab3bf";
+      context.font = "800 12px Arial, Helvetica, sans-serif";
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.fillText(lane.label, 0, 1);
+      context.restore();
+
+      const lampGlow = context.createRadialGradient(lane.lampX, lane.lampY, 2, lane.lampX, lane.lampY, 22);
+      lampGlow.addColorStop(0, "rgba(255, 155, 61, 0.9)");
+      lampGlow.addColorStop(1, "rgba(255, 155, 61, 0)");
+      context.fillStyle = lampGlow;
+      context.beginPath();
+      context.arc(lane.lampX, lane.lampY, 22, 0, Math.PI * 2);
+      context.fill();
+      drawRailBolt(lane.lampX, lane.lampY, 6);
+    });
+
+    context.restore();
+  }
+
+  function drawDrainAssembly() {
+    context.save();
+
+    const base = context.createLinearGradient(0, 1288, 0, 1378);
+    base.addColorStop(0, "rgba(126, 147, 156, 0.32)");
+    base.addColorStop(0.48, "rgba(8, 18, 25, 0.94)");
+    base.addColorStop(1, "rgba(2, 6, 9, 0.98)");
+    context.fillStyle = base;
+    context.beginPath();
+    context.moveTo(320, 1290);
+    context.lineTo(580, 1290);
+    context.lineTo(538, 1378);
+    context.lineTo(362, 1378);
+    context.closePath();
+    context.fill();
+
+    context.strokeStyle = "rgba(126, 147, 156, 0.72)";
+    context.lineWidth = 8;
+    context.stroke();
+
+    context.fillStyle = "#071018";
+    context.beginPath();
+    context.moveTo(355, 1310);
+    context.lineTo(545, 1310);
+    context.lineTo(505, 1372);
+    context.lineTo(395, 1372);
+    context.closePath();
+    context.fill();
+
+    context.strokeStyle = "#ff4f3d";
+    context.lineWidth = 5;
+    context.stroke();
+
+    const warning = context.createLinearGradient(365, 1305, 535, 1372);
+    warning.addColorStop(0, "rgba(255, 79, 61, 0)");
+    warning.addColorStop(0.5, "rgba(255, 79, 61, 0.2)");
+    warning.addColorStop(1, "rgba(255, 79, 61, 0)");
+    context.fillStyle = warning;
+    context.fill();
+
+    drawRailBolt(352, 1304, 5);
+    drawRailBolt(548, 1304, 5);
+    drawRailBolt(390, 1364, 4);
+    drawRailBolt(510, 1364, 4);
+    drawLabel("DRAIN", 450, 1338, "#ff7567", 22);
+
+    context.restore();
+  }
+
   function updateHud() {
     ui.score.textContent = gameState.score.toLocaleString("sl-SI");
     ui.ball.textContent = String(gameState.ballNumber);
@@ -768,7 +914,7 @@
 
   function syncInspectableState(physics) {
     window.ImpolPinball = {
-      phase: "8.3",
+      phase: "8.4",
       matterLoaded: Boolean(MatterLib),
       staticBodyCount: physics ? physics.staticBodies.length : 0,
       tableObjectCount: physics ? physics.bumperBodies.length + physics.targetBodies.length : 0,
@@ -802,16 +948,16 @@
     strokeRoundedRect(58, 58, canvas.width - 116, canvas.height - 116, 28, "#7e939c", 10);
     strokeRoundedRect(86, 88, canvas.width - 172, canvas.height - 176, 24, "#183541", 6);
 
-    context.save();
-    context.strokeStyle = "rgba(49, 168, 255, 0.28)";
-    context.lineWidth = 10;
-    context.beginPath();
-    context.moveTo(128, 1168);
-    context.lineTo(306, 1282);
-    context.moveTo(772, 1168);
-    context.lineTo(594, 1282);
-    context.stroke();
-    context.restore();
+    [
+      [74, 96],
+      [826, 96],
+      [74, 1302],
+      [826, 1302],
+      [112, 116],
+      [788, 116],
+      [112, 1284],
+      [788, 1284]
+    ].forEach(([x, y]) => drawRailBolt(x, y, 5));
 
     context.save();
     context.strokeStyle = "#6d8794";
@@ -836,6 +982,7 @@
     drawLabel("ALUMINIUM INDUSTRY", canvas.width / 2, 230, "#9ab3bf", 24);
 
     drawConfiguredBumpers();
+    drawLowerLanePolish();
 
     context.fillStyle = "#1b3541";
     context.strokeStyle = "rgba(126, 147, 156, 0.72)";
@@ -863,20 +1010,7 @@
 
     drawShooterChannel();
     drawSkillShotMarker();
-
-    context.fillStyle = "#071018";
-    context.beginPath();
-    context.moveTo(355, 1310);
-    context.lineTo(545, 1310);
-    context.lineTo(505, 1372);
-    context.lineTo(395, 1372);
-    context.closePath();
-    context.fill();
-
-    context.strokeStyle = "#ff4f3d";
-    context.lineWidth = 5;
-    context.stroke();
-    drawLabel("DRAIN", 450, 1338, "#ff7567", 22);
+    drawDrainAssembly();
 
     context.fillStyle = "#31a8ff";
     context.beginPath();
