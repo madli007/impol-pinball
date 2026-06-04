@@ -14,7 +14,7 @@ No npm, backend, database, login, or build step is planned for the first playabl
 
 ## Current Status
 
-Playable MVP in progress.
+Demo-ready playable MVP.
 
 The current version includes:
 
@@ -25,6 +25,8 @@ The current version includes:
 - score and balls remaining
 - scoring bumpers and targets
 - simple missions
+- skill shot and combo feedback
+- industrial playfield asset polish
 - local high score
 - keyboard and on-screen controls
 

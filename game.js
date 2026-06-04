@@ -991,7 +991,7 @@
 
   function syncInspectableState(physics) {
     window.ImpolPinball = {
-      phase: "8.6",
+      phase: "8.7",
       matterLoaded: Boolean(MatterLib),
       staticBodyCount: physics ? physics.staticBodies.length : 0,
       tableObjectCount: physics ? physics.bumperBodies.length + physics.targetBodies.length : 0,

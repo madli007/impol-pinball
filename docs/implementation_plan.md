@@ -565,7 +565,7 @@ Priority order:
   - Confirm `Restart`, next-ball launch, high score, and mission progress still behave correctly.
   - Visible result: the game can be handed to coworkers without needing developer supervision.
 
-- [ ] Phase 8.7 - Screenshot-ready presentation pass - Status: planned
+- [x] Phase 8.7 - Screenshot-ready presentation pass - Status: complete
   - Tune the first viewport composition for the current desktop layout.
   - Make sure the Impol identity, score HUD, mission panel, company panel, and full table are all readable.
   - Update README current status from "Playable MVP in progress" to a demo-ready status when this phase is complete.
