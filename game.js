@@ -1548,6 +1548,7 @@
       }),
       Bodies.rectangle(TABLE.shooterLane.innerX + 78, 212, 168, 18, {
         ...wallOptions,
+        restitution: 0.18,
         label: "launch-lane-top-exit",
         angle: -0.72
       }),
@@ -1723,8 +1724,8 @@
       y: Math.max(ball.position.y, lane.exitY + 30)
     });
     MatterLib.Body.setVelocity(ball, {
-      x: -8.4,
-      y: 3.2
+      x: -6.4,
+      y: 2.2
     });
     awardSkillShot();
   }
