@@ -234,7 +234,8 @@
       isMuted: loadAudioMutedPreference(),
       isUnlocked: false,
       isAvailable: Boolean(window.AudioContext || window.webkitAudioContext),
-      lastPlayed: {}
+      lastPlayed: {},
+      activeGains: new Set()
     };
 
     function ensureContext() {
@@ -263,7 +264,16 @@
       saveAudioMutedPreference(state.isMuted);
 
       if (state.master) {
-        state.master.gain.setTargetAtTime(state.isMuted ? 0 : 0.5, state.context.currentTime, 0.015);
+        const now = state.context.currentTime;
+        state.master.gain.cancelScheduledValues(now);
+        state.master.gain.setTargetAtTime(state.isMuted ? 0 : 0.5, now, state.isMuted ? 0.004 : 0.015);
+
+        if (state.isMuted) {
+          state.activeGains.forEach((gain) => {
+            gain.gain.cancelScheduledValues(now);
+            gain.gain.setTargetAtTime(0.0001, now, 0.004);
+          });
+        }
       }
     }
 
@@ -304,6 +314,13 @@
       return true;
     }
 
+    function trackGain(gain, context, stopAt) {
+      state.activeGains.add(gain);
+      window.setTimeout(() => {
+        state.activeGains.delete(gain);
+      }, Math.max(60, (stopAt - context.currentTime) * 1000 + 80));
+    }
+
     function playTone({ frequency, endFrequency, duration, type = "sine", volume = 0.08, startOffset = 0 }) {
       const context = ensureContext();
 
@@ -324,6 +341,7 @@
       gain.gain.exponentialRampToValueAtTime(0.0001, endAt);
       oscillator.connect(gain);
       gain.connect(state.master);
+      trackGain(gain, context, endAt);
       oscillator.start(startAt);
       oscillator.stop(endAt + 0.02);
     }
@@ -358,6 +376,7 @@
       source.connect(filter);
       filter.connect(gain);
       gain.connect(state.master);
+      trackGain(gain, context, endAt);
       source.start(startAt);
       source.stop(endAt + 0.02);
     }
@@ -365,13 +384,13 @@
     function play(effectName) {
       const throttles = {
         flipper: 55,
-        bumper: 45,
+        bumper: 65,
         target: 55,
         launch: 120,
         drain: 350,
         reset: 350,
         "skill-shot": 500,
-        combo: 140,
+        combo: 180,
         "mission-progress": 220,
         "mission-complete": 650,
         multiplier: 650,
@@ -1382,7 +1401,7 @@
 
   function syncInspectableState(physics) {
     window.ImpolPinball = {
-      phase: "10.3",
+      phase: "10.4",
       matterLoaded: Boolean(MatterLib),
       staticBodyCount: physics ? physics.staticBodies.length : 0,
       tableObjectCount: physics ? physics.bumperBodies.length + physics.targetBodies.length : 0,

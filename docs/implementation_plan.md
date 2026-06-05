@@ -658,11 +658,12 @@ Priority order:
   - Avoid overlapping sounds becoming muddy during rapid hits by throttling or ducking repeated events.
   - Visible result: scoring milestones are easier to feel even without watching the side HUD.
 
-- [ ] Phase 10.4 - Audio mix and comfort pass - Status: planned
+- [x] Phase 10.4 - Audio mix and comfort pass - Status: complete
   - Balance volumes while playing a full game.
   - Prevent repeated bumper or flipper sounds from stacking too loudly.
   - Make sure mute state applies immediately to any currently playing sound.
   - Confirm the game remains silent by default until the browser allows audio.
+  - Track active sound gains so mute can quickly duck sounds already in progress.
   - Visible result: audio feels fun for a quick demo and not annoying after several balls.
 
 - [ ] Phase 10.5 - Optional generated audio asset evaluation - Status: planned
