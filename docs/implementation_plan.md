@@ -652,7 +652,7 @@ Priority order:
   - Avoid continuous background music in this phase.
   - Visible result: common gameplay actions have immediate audio feedback.
 
-- [ ] Phase 10.3 - Mission and combo audio feedback - Status: planned
+- [x] Phase 10.3 - Mission and combo audio feedback - Status: complete
   - Add distinct sounds for skill shot, combo increase, mission progress, mission complete, multiplier reward, and game over.
   - Keep mission-complete sounds celebratory but short.
   - Avoid overlapping sounds becoming muddy during rapid hits by throttling or ducking repeated events.

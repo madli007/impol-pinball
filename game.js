@@ -247,7 +247,7 @@
           const AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
           state.context = new AudioContextConstructor();
           state.master = state.context.createGain();
-          state.master.gain.value = state.isMuted ? 0 : 0.42;
+          state.master.gain.value = state.isMuted ? 0 : 0.5;
           state.master.connect(state.context.destination);
         } catch (_error) {
           state.isAvailable = false;
@@ -263,7 +263,7 @@
       saveAudioMutedPreference(state.isMuted);
 
       if (state.master) {
-        state.master.gain.setTargetAtTime(state.isMuted ? 0 : 0.42, state.context.currentTime, 0.015);
+        state.master.gain.setTargetAtTime(state.isMuted ? 0 : 0.5, state.context.currentTime, 0.015);
       }
     }
 
@@ -369,7 +369,13 @@
         target: 55,
         launch: 120,
         drain: 350,
-        reset: 350
+        reset: 350,
+        "skill-shot": 500,
+        combo: 140,
+        "mission-progress": 220,
+        "mission-complete": 650,
+        multiplier: 650,
+        "game-over": 900
       };
 
       if (!canPlay(effectName, throttles[effectName])) {
@@ -394,6 +400,27 @@
       } else if (effectName === "reset") {
         playTone({ frequency: 360, endFrequency: 540, duration: 0.09, type: "sine", volume: 0.035 });
         playTone({ frequency: 540, endFrequency: 720, duration: 0.09, type: "sine", volume: 0.026, startOffset: 0.08 });
+      } else if (effectName === "skill-shot") {
+        playTone({ frequency: 680, endFrequency: 1020, duration: 0.11, type: "triangle", volume: 0.052 });
+        playTone({ frequency: 1020, endFrequency: 1360, duration: 0.12, type: "sine", volume: 0.04, startOffset: 0.08 });
+        playNoise({ duration: 0.055, volume: 0.018, filterFrequency: 2400, startOffset: 0.02 });
+      } else if (effectName === "combo") {
+        playTone({ frequency: 620, endFrequency: 930, duration: 0.07, type: "triangle", volume: 0.042 });
+        playTone({ frequency: 930, endFrequency: 1240, duration: 0.07, type: "triangle", volume: 0.034, startOffset: 0.055 });
+      } else if (effectName === "mission-progress") {
+        playTone({ frequency: 460, endFrequency: 690, duration: 0.08, type: "sine", volume: 0.034 });
+        playTone({ frequency: 690, endFrequency: 760, duration: 0.06, type: "sine", volume: 0.026, startOffset: 0.06 });
+      } else if (effectName === "mission-complete") {
+        playTone({ frequency: 420, endFrequency: 630, duration: 0.1, type: "triangle", volume: 0.045 });
+        playTone({ frequency: 630, endFrequency: 840, duration: 0.1, type: "triangle", volume: 0.043, startOffset: 0.09 });
+        playTone({ frequency: 840, endFrequency: 1120, duration: 0.13, type: "sine", volume: 0.038, startOffset: 0.18 });
+      } else if (effectName === "multiplier") {
+        playTone({ frequency: 520, endFrequency: 1040, duration: 0.16, type: "sawtooth", volume: 0.038 });
+        playTone({ frequency: 1040, endFrequency: 1560, duration: 0.12, type: "triangle", volume: 0.032, startOffset: 0.12 });
+      } else if (effectName === "game-over") {
+        playTone({ frequency: 280, endFrequency: 120, duration: 0.32, type: "sawtooth", volume: 0.052 });
+        playTone({ frequency: 170, endFrequency: 70, duration: 0.42, type: "triangle", volume: 0.04, startOffset: 0.16 });
+        playNoise({ duration: 0.18, volume: 0.02, filterFrequency: 360, startOffset: 0.08 });
       }
     }
 
@@ -1355,7 +1382,7 @@
 
   function syncInspectableState(physics) {
     window.ImpolPinball = {
-      phase: "10.2",
+      phase: "10.3",
       matterLoaded: Boolean(MatterLib),
       staticBodyCount: physics ? physics.staticBodies.length : 0,
       tableObjectCount: physics ? physics.bumperBodies.length + physics.targetBodies.length : 0,
@@ -1723,6 +1750,7 @@
       label: `SKILL +${points.toLocaleString("sl-SI")}`,
       color: "#ffb967"
     });
+    audio.play("skill-shot");
     updateHud();
     syncInspectableState(physics);
   }
@@ -1762,6 +1790,10 @@
       label: comboBonus ? `+${points.toLocaleString("sl-SI")}  COMBO +${comboBonus.toLocaleString("sl-SI")}` : `+${points.toLocaleString("sl-SI")}`,
       color: comboBonus ? "#ffb967" : "#edf7fb"
     });
+
+    if (comboBonus) {
+      audio.play("combo");
+    }
 
     if (object.type === "bumper") {
       audio.play("bumper");
@@ -1832,6 +1864,7 @@
       } else {
         gameState.feedback = `${mission.label} ${state.progress}/${mission.required}`;
         gameState.feedbackUntil = performance.now() + 850;
+        audio.play("mission-progress");
       }
     });
 
@@ -1848,6 +1881,9 @@
 
     if (mission.multiplierReward) {
       gameState.multiplier = Math.max(gameState.multiplier, mission.multiplierReward);
+      audio.play("multiplier");
+    } else {
+      audio.play("mission-complete");
     }
 
     gameState.feedback = `${mission.label} COMPLETE +${mission.bonus.toLocaleString("sl-SI")}`;
@@ -1899,14 +1935,15 @@
     if (gameState.ballsLeft === 0) {
       gameState.status = "game-over";
       resetBall(ball, true);
+      audio.play("game-over");
     } else {
       gameState.status = "between-balls";
       gameState.ballNumber += 1;
       gameState.resetAt = performance.now() + 900;
       resetBall(ball, true);
+      audio.play("drain");
     }
 
-    audio.play("drain");
     updateHud();
     syncInspectableState(physics);
   }
