@@ -666,10 +666,11 @@ Priority order:
   - Track active sound gains so mute can quickly duck sounds already in progress.
   - Visible result: audio feels fun for a quick demo and not annoying after several balls.
 
-- [ ] Phase 10.5 - Optional generated audio asset evaluation - Status: planned
+- [x] Phase 10.5 - Optional generated audio asset evaluation - Status: complete
   - Decide whether procedural sound is good enough.
   - Only add audio files if a specific effect clearly needs more character than Web Audio can provide.
   - If files are added, keep them small, local, and documented under `assets/audio/`.
+  - Decision: keep the current Web Audio effects for now and document future file-based candidates in `assets/audio/README.md`.
   - Visible result: the project has a clear decision on whether it needs real audio assets.
 
 ## 15. Post-MVP Backlog
