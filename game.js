@@ -1092,11 +1092,6 @@
       shadowBlur: 10,
       shadowOffsetY: 5
     });
-    drawDecorAsset("shooter-plunger-housing", 838, 1034, 54, 246, {
-      alpha: 0.28,
-      shadowBlur: 9,
-      shadowOffsetY: 4
-    });
     drawDecorAsset("mechanical-post-blue", 132, 1138, 32, 48, {
       alpha: 0.54,
       shadowBlur: 8,
@@ -1179,14 +1174,14 @@
     }
 
     const lane = TABLE.shooterLane;
-    const barX = lane.outerX + 18;
-    const barY = 1014;
-    const barWidth = 18;
-    const barHeight = 168;
+    const barX = lane.outerX - 39;
+    const barY = lane.bottomY - 82;
+    const barWidth = 14;
+    const barHeight = 58;
     const filled = barHeight * gameState.plungerPower;
-    fillRoundedRect(barX, barY, barWidth, barHeight, 8, "rgba(5, 11, 16, 0.78)");
-    fillRoundedRect(barX, barY + barHeight - filled, barWidth, filled, 8, "#ff9b3d");
-    strokeRoundedRect(barX, barY, barWidth, barHeight, 8, "#7e939c", 3);
+    fillRoundedRect(barX, barY, barWidth, barHeight, 7, "rgba(5, 11, 16, 0.58)");
+    fillRoundedRect(barX, barY + barHeight - filled, barWidth, filled, 7, "#31a8ff");
+    strokeRoundedRect(barX, barY, barWidth, barHeight, 7, "rgba(237, 247, 251, 0.46)", 2);
   }
 
   function drawShooterChannel() {
@@ -1245,6 +1240,12 @@
     context.moveTo(lane.innerX + 48, lane.topY + 22);
     context.quadraticCurveTo(lane.innerX + 4, lane.exitY + 46, lane.innerX - 78, lane.exitY + 54);
     context.stroke();
+
+    drawDecorAsset("shooter-plunger-housing", lane.outerX - 29, lane.bottomY - 115, 58, 264, {
+      alpha: 0.86,
+      shadowBlur: 14,
+      shadowOffsetY: 5
+    });
 
     fillRoundedRect(lane.innerX - 96, lane.bottomY - 62, 82, 52, 12, "#0a1820");
     strokeRoundedRect(lane.innerX - 96, lane.bottomY - 62, 82, 52, 12, "#ff9b3d", 4);
