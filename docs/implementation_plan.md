@@ -679,12 +679,35 @@ Goal: move from a polished MVP table toward a more classic pinball ruleset with 
 
 Priority order:
 
-1. Add physical table features that improve ball flow before adding complex rules.
+1. Add small physical features that improve existing ball flow before adding new routes.
 2. Make every new visual element match a simple collision body or clearly mark it as decorative.
-3. Keep bonus modes short and optional so the base pinball game stays readable.
-4. Prefer one well-tuned mechanic per phase over several half-working features.
+3. Avoid full ramp/orbit/lane rewrites until the lower table is stable.
+4. Keep bonus modes short and optional so the base pinball game stays readable.
+5. Prefer one well-tuned mechanic per phase over several half-working features.
 
-- [ ] Phase 11.1 - Lane and outlane system - Status: planned
+Recommended simple-first order:
+
+1. Left/right slingshot bumpers near the flippers.
+2. Small lane lamps or rollover sensors that only score, not redirect.
+3. Timed ball-save as an invisible drain recovery, not a visible physical wall.
+4. Only then revisit outlanes, ramps, orbit channels, lock holes, and mini-games.
+
+- [ ] Phase 11.1 - Left/right slingshot bumpers - Status: planned
+  - Add one left and one right angled slingshot bumper above the flippers.
+  - Use simple triangular or narrow rectangular Matter bodies that bounce the ball back into play.
+  - Keep the visual footprint small and aligned with the existing lower plastic art.
+  - Award a small score bonus and use the existing bumper sound.
+  - Tune impulse carefully so the ball feels lively but does not rocket straight into the drain.
+  - Visible result: the lower table feels more like real pinball without adding a complex new route.
+
+- [ ] Phase 11.2 - Simple rollover lane lamps - Status: planned
+  - Add two or three small sensor-only rollover lanes or lamps in the lower/mid playfield.
+  - Award small points and combo progress when the ball passes over them.
+  - Keep them non-blocking so they cannot trap the ball.
+  - Use this as a low-risk way to add more things to aim for before complex ramps.
+  - Visible result: more activity and feedback without changing core physics much.
+
+- [ ] Phase 11.3 - Lane and outlane system - Status: planned
   - Add clearer left/right inlanes and outlanes near the flippers.
   - Add a temporary ball-save or side shield at the start of each ball.
   - Let the shield open after a timer, first bumper hit, or first scoring sequence.
@@ -694,21 +717,22 @@ Priority order:
   - Keep the previous lane/ball-save experiment in stash as a reference, but redesign the layout before implementing it again.
   - Visible result: side drains feel fair and intentional instead of accidental.
 
-- [ ] Phase 11.2 - Upper orbit and return channel - Status: planned
+- [ ] Phase 11.4 - Upper orbit and return channel - Status: planned
   - Add a left or right orbit/channel that carries the ball up and returns it down another path.
   - Use guide rails and a simple sensor zone rather than a fully simulated ramp at first.
   - Award a route/combo bonus when the ball completes the channel cleanly.
   - Add industrial route art such as aluminium flow arrows, conveyor markings, or pipe rails.
+  - Keep the previous ramp/orbit experiment in stash as a reference, but redesign the entry so it is easy to hit and does not create a hidden wall.
   - Visible result: the player can intentionally shoot a loop instead of only hitting central targets.
 
-- [ ] Phase 11.3 - Lock house / kickout opening - Status: planned
+- [ ] Phase 11.5 - Lock house / kickout opening - Status: planned
   - Add a themed opening or "house" that can catch the ball.
   - Keep it closed until the player hits required targets or lane switches.
   - When open, let the ball enter, pause briefly, award a bonus, then kick it back into play.
   - Add sound and light feedback for closed, opening, locked, and kickout states.
   - Visible result: the table has a memorable feature that changes state during a ball.
 
-- [ ] Phase 11.4 - Bonus mini-game hook - Status: planned
+- [ ] Phase 11.6 - Bonus mini-game hook - Status: planned
   - Trigger a short top-screen bonus mode from the lock house or completed route sequence.
   - Start with a very small overlay interaction, such as timing a press or dodging simple obstacles.
   - Keep normal pinball paused or safely held while the mini-game runs.
@@ -716,7 +740,7 @@ Priority order:
   - Candidate theme: a tiny Flappy-style aluminium coil / delivery drone / factory route challenge.
   - Visible result: completing table objectives can unlock a funny bonus moment without derailing the main game.
 
-- [ ] Phase 11.5 - Advanced feature backlog breakdown - Status: planned
+- [ ] Phase 11.7 - Advanced feature backlog breakdown - Status: planned
   - Revisit multiball, jackpot, company progress, Hall of Fame, and extra missions after the first new table mechanics are stable.
   - Decide which features belong in Phase 12 versus the long-term backlog.
   - Visible result: the next roadmap stays grounded in tested gameplay instead of wish-list sprawl.
