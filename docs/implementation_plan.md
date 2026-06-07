@@ -692,12 +692,13 @@ Recommended simple-first order:
 3. Timed ball-save as an invisible drain recovery, not a visible physical wall.
 4. Only then revisit outlanes, ramps, orbit channels, lock holes, and mini-games.
 
-- [ ] Phase 11.1 - Left/right slingshot bumpers - Status: planned
+- [x] Phase 11.1 - Left/right slingshot bumpers - Status: complete
   - Add one left and one right angled slingshot bumper above the flippers.
   - Use simple triangular or narrow rectangular Matter bodies that bounce the ball back into play.
   - Keep the visual footprint small and aligned with the existing lower plastic art.
   - Award a small score bonus and use the existing bumper sound.
   - Tune impulse carefully so the ball feels lively but does not rocket straight into the drain.
+  - First pass uses sensor bodies plus controlled impulses to avoid hidden walls around the flippers.
   - Visible result: the lower table feels more like real pinball without adding a complex new route.
 
 - [ ] Phase 11.2 - Simple rollover lane lamps - Status: planned

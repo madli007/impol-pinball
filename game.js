@@ -68,6 +68,10 @@
       { id: "coil", label: "COIL COLLECTOR", x: 450, y: 899, width: 234, height: 58, accent: "#7bdc6c", event: "hit:COIL", points: 750 },
       { id: "alcad", label: "ALCAD", x: 254, y: 784, width: 128, height: 48, accent: "#9ab3bf", event: "hit:ALCAD", points: 500 },
       { id: "e-odprema", label: "E-ODPREMA", x: 646, y: 784, width: 156, height: 48, accent: "#9ab3bf", event: "hit:EODPREMA", points: 500 }
+    ],
+    slingshots: [
+      { id: "left-slingshot", label: "SEVAL", x: 278, y: 1126, width: 130, height: 34, angle: 0.42, accent: "#31a8ff", event: "hit:LEFT_SLINGSHOT", points: 350, impulse: { x: 6.8, y: -7.8 } },
+      { id: "right-slingshot", label: "IMPOL-PC", x: 622, y: 1126, width: 130, height: 34, angle: -0.42, accent: "#31a8ff", event: "hit:RIGHT_SLINGSHOT", points: 350, impulse: { x: -6.8, y: -7.8 } }
     ]
   };
   const MISSION_CONFIG = [
@@ -744,6 +748,47 @@
     });
   }
 
+  function drawConfiguredSlingshots() {
+    TABLE_CONFIG.slingshots.forEach((slingshot) => {
+      const isLit = wasRecentlyHit(slingshot.id);
+
+      context.save();
+      context.translate(slingshot.x, slingshot.y);
+      context.rotate(slingshot.angle);
+
+      const glow = context.createLinearGradient(-slingshot.width / 2, 0, slingshot.width / 2, 0);
+      glow.addColorStop(0, isLit ? "rgba(49, 168, 255, 0.22)" : "rgba(5, 11, 16, 0.48)");
+      glow.addColorStop(0.5, isLit ? "rgba(49, 168, 255, 0.72)" : "rgba(126, 147, 156, 0.52)");
+      glow.addColorStop(1, isLit ? "rgba(49, 168, 255, 0.22)" : "rgba(5, 11, 16, 0.48)");
+
+      fillRoundedRect(-slingshot.width / 2, -slingshot.height / 2, slingshot.width, slingshot.height, 12, glow);
+      strokeRoundedRect(
+        -slingshot.width / 2,
+        -slingshot.height / 2,
+        slingshot.width,
+        slingshot.height,
+        12,
+        isLit ? "#52bcff" : "rgba(126, 147, 156, 0.82)",
+        isLit ? 4 : 3
+      );
+
+      context.strokeStyle = isLit ? "rgba(237, 247, 251, 0.74)" : "rgba(237, 247, 251, 0.34)";
+      context.lineWidth = 3;
+      context.beginPath();
+      context.moveTo(-slingshot.width / 2 + 18, -2);
+      context.lineTo(slingshot.width / 2 - 18, -2);
+      context.stroke();
+
+      context.fillStyle = isLit ? "#edf7fb" : "#9ab3bf";
+      context.font = "800 10px Arial, Helvetica, sans-serif";
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.fillText(slingshot.label, 0, 12);
+
+      context.restore();
+    });
+  }
+
   function wasRecentlyHit(id) {
     return gameState.hitCounts[id] && performance.now() - gameState.hitCounts[id] < 220;
   }
@@ -1401,10 +1446,11 @@
 
   function syncInspectableState(physics) {
     window.ImpolPinball = {
-      phase: "10.4",
+      phase: "11.1",
       matterLoaded: Boolean(MatterLib),
       staticBodyCount: physics ? physics.staticBodies.length : 0,
-      tableObjectCount: physics ? physics.bumperBodies.length + physics.targetBodies.length : 0,
+      tableObjectCount: physics ? physics.bumperBodies.length + physics.targetBodies.length + physics.slingshotBodies.length : 0,
+      slingshotCount: physics ? physics.slingshotBodies.length : 0,
       assetLoadedCount: Object.values(assets).filter((asset) => asset.loaded).length,
       ballSpawned: Boolean(physics && physics.ball),
       ballsLeft: gameState.ballsLeft,
@@ -1504,6 +1550,7 @@
     drawConfiguredBumpers();
     drawConfiguredTargets();
     drawDecorativeLamps();
+    drawConfiguredSlingshots();
 
     drawShooterChannel();
     drawSkillShotMarker();
@@ -1629,6 +1676,16 @@
       body.gameObject = { ...target, type: "target" };
       return body;
     });
+    const slingshotBodies = TABLE_CONFIG.slingshots.map((slingshot) => {
+      const body = Bodies.rectangle(slingshot.x, slingshot.y, slingshot.width, slingshot.height, {
+        isStatic: true,
+        isSensor: true,
+        label: `slingshot:${slingshot.id}`,
+        angle: slingshot.angle
+      });
+      body.gameObject = { ...slingshot, type: "slingshot" };
+      return body;
+    });
 
     const ball = Bodies.circle(TABLE.ballStart.x, TABLE.ballStart.y, 26, {
       label: "pinball",
@@ -1638,9 +1695,9 @@
       density: 0.0011
     });
 
-    Composite.add(engine.world, [...staticBodies, ...bumperBodies, ...targetBodies, flippers.left, flippers.right, ball]);
+    Composite.add(engine.world, [...staticBodies, ...bumperBodies, ...targetBodies, ...slingshotBodies, flippers.left, flippers.right, ball]);
 
-    [...staticBodies, ...bumperBodies, ...targetBodies, flippers.left, flippers.right].forEach((body) => {
+    [...staticBodies, ...bumperBodies, ...targetBodies, ...slingshotBodies, flippers.left, flippers.right].forEach((body) => {
       Body.setStatic(body, true);
     });
 
@@ -1674,6 +1731,7 @@
       staticBodies,
       bumperBodies,
       targetBodies,
+      slingshotBodies,
       flippers,
       ball
     };
@@ -1818,11 +1876,16 @@
     if (object.type === "bumper") {
       audio.play("bumper");
       kickBallFromObject(ball, object);
+    } else if (object.type === "slingshot") {
+      audio.play("bumper");
+      kickBallFromSlingshot(ball, object);
     } else {
       audio.play("target");
     }
 
-    advanceMissions(object.event);
+    if (object.type !== "slingshot") {
+      advanceMissions(object.event);
+    }
     updateHud();
     syncInspectableState(physics);
   }
@@ -1939,6 +2002,18 @@
         y: nextVelocity.y * scale
       };
     }
+
+    MatterLib.Body.setVelocity(ball, nextVelocity);
+  }
+
+  function kickBallFromSlingshot(ball, slingshot) {
+    const speed = Math.hypot(ball.velocity.x, ball.velocity.y);
+    const retainedVelocity = 0.42;
+    const impulseScale = Math.min(1.2, Math.max(0.78, speed / 9));
+    const nextVelocity = {
+      x: ball.velocity.x * retainedVelocity + slingshot.impulse.x * impulseScale,
+      y: Math.min(ball.velocity.y * retainedVelocity + slingshot.impulse.y * impulseScale, -5.2)
+    };
 
     MatterLib.Body.setVelocity(ball, nextVelocity);
   }
