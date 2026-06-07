@@ -44,6 +44,8 @@
     "drain-apron": { src: "assets/images/drain-apron.png", width: 336, height: 102 },
     "lower-plastic-left": { src: "assets/images/lower-plastic-left.png", width: 204, height: 171 },
     "lower-plastic-right": { src: "assets/images/lower-plastic-right.png", width: 204, height: 169 },
+    "left-slingshot": { src: "assets/images/slingshot-left.png", width: 108, height: 115 },
+    "right-slingshot": { src: "assets/images/slingshot-right.png", width: 108, height: 115 },
     "shooter-plunger-housing": { src: "assets/images/shooter-plunger-housing.png", width: 54, height: 246 },
     "mechanical-post-blue": { src: "assets/images/mechanical-post-blue.png", width: 32, height: 48 },
     "mechanical-post-orange": { src: "assets/images/mechanical-post-orange.png", width: 32, height: 51 },
@@ -70,8 +72,8 @@
       { id: "e-odprema", label: "E-ODPREMA", x: 646, y: 784, width: 156, height: 48, accent: "#9ab3bf", event: "hit:EODPREMA", points: 500 }
     ],
     slingshots: [
-      { id: "left-slingshot", label: "SEVAL", x: 278, y: 1126, width: 130, height: 34, angle: 0.42, accent: "#31a8ff", event: "hit:LEFT_SLINGSHOT", points: 350, impulse: { x: 6.8, y: -7.8 } },
-      { id: "right-slingshot", label: "IMPOL-PC", x: 622, y: 1126, width: 130, height: 34, angle: -0.42, accent: "#31a8ff", event: "hit:RIGHT_SLINGSHOT", points: 350, impulse: { x: -6.8, y: -7.8 } }
+      { id: "left-slingshot", label: "SEVAL", x: 286, y: 1098, width: 100, height: 22, angle: 0.72, visualX: 258, visualY: 1098, visualWidth: 108, visualHeight: 115, visualAngle: 0, accent: "#31a8ff", event: "hit:LEFT_SLINGSHOT", points: 350, impulse: { x: 6.8, y: -7.8 } },
+      { id: "right-slingshot", label: "IMPOL-PC", x: 614, y: 1098, width: 100, height: 22, angle: -0.72, visualX: 642, visualY: 1098, visualWidth: 108, visualHeight: 115, visualAngle: 0, accent: "#31a8ff", event: "hit:RIGHT_SLINGSHOT", points: 350, impulse: { x: -6.8, y: -7.8 } }
     ]
   };
   const MISSION_CONFIG = [
@@ -751,40 +753,38 @@
   function drawConfiguredSlingshots() {
     TABLE_CONFIG.slingshots.forEach((slingshot) => {
       const isLit = wasRecentlyHit(slingshot.id);
+      const assetReady = assets[slingshot.id]?.loaded;
+
+      if (isLit) {
+        drawHitHalo(
+          slingshot.visualX,
+          slingshot.visualY,
+          slingshot.visualWidth,
+          slingshot.visualHeight,
+          slingshot.accent
+        );
+      }
+
+      if (assetReady) {
+        drawDecorAsset(slingshot.id, slingshot.visualX, slingshot.visualY, slingshot.visualWidth, slingshot.visualHeight, {
+          rotation: slingshot.visualAngle,
+          shadowBlur: isLit ? 20 : 12,
+          shadowColor: isLit ? "rgba(49, 168, 255, 0.42)" : "rgba(0, 0, 0, 0.38)"
+        });
+        return;
+      }
 
       context.save();
       context.translate(slingshot.x, slingshot.y);
       context.rotate(slingshot.angle);
-
-      const glow = context.createLinearGradient(-slingshot.width / 2, 0, slingshot.width / 2, 0);
-      glow.addColorStop(0, isLit ? "rgba(49, 168, 255, 0.22)" : "rgba(5, 11, 16, 0.48)");
-      glow.addColorStop(0.5, isLit ? "rgba(49, 168, 255, 0.72)" : "rgba(126, 147, 156, 0.52)");
-      glow.addColorStop(1, isLit ? "rgba(49, 168, 255, 0.22)" : "rgba(5, 11, 16, 0.48)");
-
-      fillRoundedRect(-slingshot.width / 2, -slingshot.height / 2, slingshot.width, slingshot.height, 12, glow);
-      strokeRoundedRect(
+      fillRoundedRect(
         -slingshot.width / 2,
         -slingshot.height / 2,
         slingshot.width,
         slingshot.height,
         12,
-        isLit ? "#52bcff" : "rgba(126, 147, 156, 0.82)",
-        isLit ? 4 : 3
+        isLit ? "rgba(49, 168, 255, 0.72)" : "rgba(126, 147, 156, 0.52)"
       );
-
-      context.strokeStyle = isLit ? "rgba(237, 247, 251, 0.74)" : "rgba(237, 247, 251, 0.34)";
-      context.lineWidth = 3;
-      context.beginPath();
-      context.moveTo(-slingshot.width / 2 + 18, -2);
-      context.lineTo(slingshot.width / 2 - 18, -2);
-      context.stroke();
-
-      context.fillStyle = isLit ? "#edf7fb" : "#9ab3bf";
-      context.font = "800 10px Arial, Helvetica, sans-serif";
-      context.textAlign = "center";
-      context.textBaseline = "middle";
-      context.fillText(slingshot.label, 0, 12);
-
       context.restore();
     });
   }
