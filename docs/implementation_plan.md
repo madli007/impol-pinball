@@ -690,7 +690,8 @@ Recommended simple-first order:
 1. Left/right slingshot bumpers near the flippers.
 2. Small lane lamps or rollover sensors that only score, not redirect.
 3. Timed ball-save as an invisible drain recovery, not a visible physical wall.
-4. Only then revisit outlanes, ramps, orbit channels, lock holes, and mini-games.
+4. A short internal-joke bonus mode such as BOM / Kosovnica Panic.
+5. Only then revisit outlanes, ramps, orbit channels, lock holes, and mini-games.
 
 - [x] Phase 11.1 - Left/right slingshot bumpers - Status: complete
   - Add one left and one right angled slingshot bumper above the flippers.
@@ -733,7 +734,16 @@ Recommended simple-first order:
   - Add sound and light feedback for closed, opening, locked, and kickout states.
   - Visible result: the table has a memorable feature that changes state during a ball.
 
-- [ ] Phase 11.6 - Bonus mini-game hook - Status: planned
+- [ ] Phase 11.6 - BOM Panic / Kosovnica mode - Status: planned
+  - Add a "KOSOVNICA" target, terminal, or small indicator as an internal joke because nobody likes BOM cleanup.
+  - On hit, trigger a short timed mode such as "BOM ERROR: missing revision" or "MANJKA POZICIJA 0042".
+  - Reuse existing targets for the first pass: for example require `MES -> ERP -> COIL` within a short timer.
+  - Award a clear success bonus such as "KOSOVNICA USKLAJENA" and a small failure message such as "REVIZIJA ZAVRNJENA".
+  - Keep the mode funny but readable: no complex UI at first, just status text, flashing targets, score popups, and existing sounds.
+  - Possible variants for later: revision counter R12/R13, random missing part number, multiplier freeze on failure, or opening a lock/kickout after approval.
+  - Visible result: the game gets a recognizable internal factory joke with a small rules payoff.
+
+- [ ] Phase 11.7 - Bonus mini-game hook - Status: planned
   - Trigger a short top-screen bonus mode from the lock house or completed route sequence.
   - Start with a very small overlay interaction, such as timing a press or dodging simple obstacles.
   - Keep normal pinball paused or safely held while the mini-game runs.
@@ -741,7 +751,7 @@ Recommended simple-first order:
   - Candidate theme: a tiny Flappy-style aluminium coil / delivery drone / factory route challenge.
   - Visible result: completing table objectives can unlock a funny bonus moment without derailing the main game.
 
-- [ ] Phase 11.7 - Advanced feature backlog breakdown - Status: planned
+- [ ] Phase 11.8 - Advanced feature backlog breakdown - Status: planned
   - Revisit multiball, jackpot, company progress, Hall of Fame, and extra missions after the first new table mechanics are stable.
   - Decide which features belong in Phase 12 versus the long-term backlog.
   - Visible result: the next roadmap stays grounded in tested gameplay instead of wish-list sprawl.
@@ -757,6 +767,7 @@ Recommended simple-first order:
 - Side outlane shields that open during play.
 - Upper orbit and return channels.
 - Lock house / kickout opening.
+- BOM Panic / Kosovnica mode.
 - Short bonus mini-games triggered by table objectives.
 - More missions:
   - e-Odprema
