@@ -765,6 +765,58 @@ Recommended simple-first order:
   - Decide which features belong in Phase 12 versus the long-term backlog.
   - Visible result: the next roadmap stays grounded in tested gameplay instead of wish-list sprawl.
 
+### Phase 12: Low-risk Gameplay Depth
+
+Goal: add more pinball depth using rules, scoring, UI state, and existing targets before adding risky new physics routes.
+
+Priority order:
+
+1. Prefer logic-only or sensor-only features over new physical geometry.
+2. Reuse existing target hit events, popups, sounds, and mission state.
+3. Keep each feature independently testable in one short play session.
+4. Add visible feedback for every new rule so players understand why they scored.
+5. Save complex features such as multiball, jackpot, and real ramps until these rules feel solid.
+
+- [ ] Phase 12.1 - Combo shots - Status: planned
+  - Add a short combo window after every scoring target hit.
+  - Increase combo count when the player hits another valid object before the window expires.
+  - Award escalating combo bonuses and show clear popups such as `3x COMBO +2500`.
+  - Reuse existing score popup and audio feedback instead of adding new physics.
+  - Reset combo cleanly on drain, next ball, or timeout.
+  - Visible result: repeated accurate shots feel more rewarding without changing the table layout.
+
+- [ ] Phase 12.2 - Invisible ball save - Status: planned
+  - Enable ball save for a short period after launch.
+  - If the ball drains during that period, reset it to the shooter lane without reducing balls left.
+  - Show a clear `BALL SAVE` message and play a short feedback sound.
+  - Avoid physical gates or shields in the first pass so there is no new trapping risk.
+  - Let future lane/outlane art display the ball-save state after the rule is stable.
+  - Visible result: early unlucky drains feel fairer with very little physics risk.
+
+- [ ] Phase 12.3 - More missions from existing targets - Status: planned
+  - Add additional missions that reuse existing table objects and hit events.
+  - Candidate missions: e-Odprema, Green aluminium, Valjarna, Livarna, and Kosovnica.
+  - Keep mission requirements small and readable for demo play.
+  - Use the current mission panel style before designing a larger mission UI.
+  - Combine with combo rules where useful, but keep mission completion independent.
+  - Visible result: the table has more reasons to keep playing without adding new objects.
+
+- [ ] Phase 12.4 - Company progress system - Status: planned
+  - Turn the right-side company list into a lightweight progress/status panel.
+  - Update company states when related targets, missions, or combos are completed.
+  - Start with simple labels such as `Ready`, `Online`, `Complete`, or `Bonus`.
+  - Keep progress in-memory first; persistence can come later if it proves useful.
+  - Use the system to make IMPOL, SEVAL, ALCAD, TLM, IMPOL-PC, and RONDAL feel connected to gameplay.
+  - Visible result: the existing company panel becomes part of the ruleset instead of only decoration.
+
+- [ ] Phase 12.5 - Hall of Fame UI - Status: planned
+  - Add a small local Hall of Fame view for top scores.
+  - Store a few entries in localStorage with score, date, and optional initials.
+  - Keep the default flow simple: only ask for initials after a new high score.
+  - Add a compact display that does not compete with the main playfield.
+  - Preserve the current single high score as a fallback if localStorage is unavailable.
+  - Visible result: quick demo games become more social and replayable.
+
 ## 15. Post-MVP Backlog
 
 - Touch/mobile controls.
