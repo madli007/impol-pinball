@@ -702,6 +702,15 @@ Recommended simple-first order:
   - First pass uses sensor bodies plus controlled impulses to avoid hidden walls around the flippers.
   - Visible result: the lower table feels more like real pinball without adding a complex new route.
 
+- [x] Phase 11.1a - Touch controls - Status: complete
+  - Add mobile-friendly touch zones on the playfield canvas.
+  - Let lower-left touches activate the left flipper and lower-right touches activate the right flipper.
+  - Let the shooter area charge and launch the ball when the game is ready.
+  - Preserve keyboard controls and the existing sidebar control buttons.
+  - Prevent page scrolling or text selection while touching the canvas.
+  - Release held controls on pointer cancel, lost pointer capture, tab blur, or page hide.
+  - Visible result: the game is playable on a phone or tablet without needing a keyboard.
+
 - [ ] Phase 11.2 - Simple rollover lane lamps - Status: planned
   - Add two or three small sensor-only rollover lanes or lamps in the lower/mid playfield.
   - Award small points and combo progress when the ball passes over them.

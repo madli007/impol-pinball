@@ -159,7 +159,8 @@
     leftPulse: false,
     rightPulse: false,
     space: false,
-    chargingSince: 0
+    chargingSince: 0,
+    touchPointers: new Map()
   };
   const physicsClock = {
     lastTime: 0,
@@ -2267,6 +2268,117 @@
     syncInspectableState(physics);
   }
 
+  function endAllControls() {
+    inputState.left = false;
+    inputState.right = false;
+
+    if (inputState.space) {
+      inputState.space = false;
+      launchBall();
+    }
+
+    inputState.touchPointers.clear();
+    updateControlsUi();
+    syncInspectableState(physics);
+  }
+
+  function getCanvasPoint(event) {
+    const rect = canvas.getBoundingClientRect();
+
+    return {
+      x: ((event.clientX - rect.left) / rect.width) * TABLE.width,
+      y: ((event.clientY - rect.top) / rect.height) * TABLE.height
+    };
+  }
+
+  function getCanvasTouchControl(event) {
+    const point = getCanvasPoint(event);
+    const lowerPlayfield = point.y > TABLE.height * 0.58;
+    const flipperZone = point.y > TABLE.height * 0.68;
+    const shooterZone = point.x > TABLE.shooterLane.innerX - 24 && point.y > TABLE.height * 0.58;
+
+    if ((gameState.status === "ready" || gameState.status === "charging") && shooterZone) {
+      return "space";
+    }
+
+    if (!lowerPlayfield) {
+      return null;
+    }
+
+    if (flipperZone && point.x < TABLE.width / 2) {
+      return "left";
+    }
+
+    if (flipperZone) {
+      return "right";
+    }
+
+    if (point.x < TABLE.width * 0.34) {
+      return "left";
+    }
+
+    if (point.x > TABLE.width * 0.66) {
+      return "right";
+    }
+
+    return null;
+  }
+
+  function wireCanvasTouchControls() {
+    canvas.addEventListener("pointerdown", (event) => {
+      if (event.pointerType === "mouse") {
+        unlockAudio();
+        return;
+      }
+
+      const control = getCanvasTouchControl(event);
+
+      if (!control) {
+        unlockAudio();
+        return;
+      }
+
+      event.preventDefault();
+      canvas.setPointerCapture(event.pointerId);
+      inputState.touchPointers.set(event.pointerId, control);
+      beginControl(control);
+    });
+
+    canvas.addEventListener("pointerup", (event) => {
+      const control = inputState.touchPointers.get(event.pointerId);
+
+      if (!control) {
+        return;
+      }
+
+      event.preventDefault();
+      inputState.touchPointers.delete(event.pointerId);
+      endControl(control);
+    });
+
+    canvas.addEventListener("pointercancel", (event) => {
+      const control = inputState.touchPointers.get(event.pointerId);
+
+      if (!control) {
+        return;
+      }
+
+      inputState.touchPointers.delete(event.pointerId);
+      endControl(control);
+    });
+
+    canvas.addEventListener("lostpointercapture", (event) => {
+      const control = inputState.touchPointers.get(event.pointerId);
+
+      if (!control) {
+        return;
+      }
+
+      inputState.touchPointers.delete(event.pointerId);
+      endControl(control);
+    });
+  }
+
   function wireHoldButton(element, control) {
     element.addEventListener("pointerdown", (event) => {
       event.preventDefault();
@@ -2386,7 +2498,9 @@
 
   window.addEventListener("keydown", handleKeyDown);
   window.addEventListener("keyup", handleKeyUp);
-  canvas.addEventListener("pointerdown", unlockAudio);
+  window.addEventListener("blur", endAllControls);
+  window.addEventListener("pagehide", endAllControls);
+  wireCanvasTouchControls();
   wireHoldButton(ui.leftControl, "left");
   wireHoldButton(ui.rightControl, "right");
   wireHoldButton(ui.spaceControl, "space");
