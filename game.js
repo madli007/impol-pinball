@@ -110,6 +110,7 @@
     duration: 10000,
     successBonus: 15000
   };
+  const BALL_SAVE_DURATION = 9000;
   const ui = {
     score: document.getElementById("score-value"),
     ball: document.getElementById("ball-value"),
@@ -157,6 +158,8 @@
     lowerTrapSince: 0,
     skillShotAvailableUntil: 0,
     skillShotAwarded: false,
+    ballSaveUntil: 0,
+    ballSaveUsed: false,
     bomMode: {
       active: false,
       step: 0,
@@ -960,6 +963,27 @@
     context.fillRect(326, 968, 248 * remaining, 4);
   }
 
+  function isBallSaveActive() {
+    return gameState.status === "playing" && !gameState.ballSaveUsed && performance.now() <= gameState.ballSaveUntil;
+  }
+
+  function drawBallSaveBadge() {
+    if (!isBallSaveActive()) {
+      return;
+    }
+
+    const remaining = Math.max(0, gameState.ballSaveUntil - performance.now()) / BALL_SAVE_DURATION;
+    fillRoundedRect(328, 882, 244, 38, 8, "rgba(5, 11, 16, 0.72)");
+    context.fillStyle = "#7bdc6c";
+    context.font = "800 15px Arial, Helvetica, sans-serif";
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillText("BALL SAVE ACTIVE", 450, 901);
+
+    context.fillStyle = "rgba(123, 220, 108, 0.88)";
+    context.fillRect(354, 914, 192 * remaining, 4);
+  }
+
   function drawMissionLights() {
     MISSION_CONFIG.forEach((mission, index) => {
       const state = gameState.missions[mission.id];
@@ -1479,7 +1503,7 @@
 
   function syncInspectableState(physics) {
     window.ImpolPinball = {
-      phase: "11.6",
+      phase: "12.2",
       matterLoaded: Boolean(MatterLib),
       staticBodyCount: physics ? physics.staticBodies.length : 0,
       tableObjectCount: physics ? physics.bumperBodies.length + physics.targetBodies.length + physics.slingshotBodies.length : 0,
@@ -1494,6 +1518,11 @@
       score: gameState.score,
       lastEvent: gameState.lastEvent,
       comboCount: gameState.comboCount,
+      ballSave: {
+        active: gameState.status === "playing" && !gameState.ballSaveUsed && performance.now() <= gameState.ballSaveUntil,
+        used: gameState.ballSaveUsed,
+        remainingMs: Math.max(0, Math.round(gameState.ballSaveUntil - performance.now()))
+      },
       bomMode: gameState.bomMode,
       skillShotAwarded: gameState.skillShotAwarded,
       activeMissionId: gameState.activeMissionId,
@@ -1817,6 +1846,7 @@
     gameState.status = "playing";
     gameState.skillShotAvailableUntil = performance.now() + 2600;
     gameState.skillShotAwarded = false;
+    gameState.ballSaveUntil = gameState.ballSaveUsed ? 0 : performance.now() + BALL_SAVE_DURATION;
     gameState.plungerPower = 0;
     inputState.chargingSince = 0;
     audio.play("launch");
@@ -2051,6 +2081,12 @@
     }
   }
 
+  function updateBallSaveTimeout() {
+    if (gameState.ballSaveUntil && performance.now() > gameState.ballSaveUntil) {
+      gameState.ballSaveUntil = 0;
+    }
+  }
+
   function advanceMissions(eventName) {
     MISSION_CONFIG.forEach((mission) => {
       const state = gameState.missions[mission.id];
@@ -2139,12 +2175,48 @@
     MatterLib.Body.setVelocity(ball, nextVelocity);
   }
 
+  function tryBallSave(ball) {
+    if (gameState.ballSaveUsed || performance.now() > gameState.ballSaveUntil) {
+      return false;
+    }
+
+    gameState.ballSaveUsed = true;
+    gameState.ballSaveUntil = 0;
+    gameState.status = "ready";
+    gameState.resetAt = 0;
+    gameState.plungerPower = 0;
+    gameState.bomMode.active = false;
+    gameState.bomMode.step = 0;
+    gameState.bomMode.deadline = 0;
+    resetBall(ball, true);
+    gameState.feedback = "BALL SAVE";
+    gameState.feedbackUntil = performance.now() + 1400;
+    addHitFeedback({
+      id: "ball-save",
+      x: 450,
+      y: 1218,
+      accent: "#7bdc6c",
+      label: "BALL SAVE",
+      color: "#7bdc6c"
+    });
+    audio.play("mission-progress");
+    updateHud();
+    syncInspectableState(physics);
+    return true;
+  }
+
   function drainBall(ball) {
     if (gameState.status !== "playing") {
       return;
     }
 
+    if (tryBallSave(ball)) {
+      return;
+    }
+
     gameState.drainCount += 1;
+    gameState.ballSaveUntil = 0;
+    gameState.ballSaveUsed = false;
     gameState.bomMode.active = false;
     gameState.bomMode.step = 0;
     gameState.bomMode.deadline = 0;
@@ -2187,6 +2259,8 @@
     gameState.lowerTrapSince = 0;
     gameState.skillShotAvailableUntil = 0;
     gameState.skillShotAwarded = false;
+    gameState.ballSaveUntil = 0;
+    gameState.ballSaveUsed = false;
     gameState.bomMode = {
       active: false,
       step: 0,
@@ -2649,6 +2723,7 @@
       updatePlungerPower();
       updateFlippers();
       updateBomModeTimeout();
+      updateBallSaveTimeout();
       holdBallInLaunchLane();
       MatterLib.Engine.update(physics.engine, physicsClock.step * physicsClock.simulationScale);
       maybeGuideShooterLaneExit();
@@ -2691,6 +2766,7 @@
       drawStatusBadge();
       drawScoreFeedback();
       drawComboBadge();
+      drawBallSaveBadge();
       drawBomModeBadge();
       drawHitEffects();
     } else {

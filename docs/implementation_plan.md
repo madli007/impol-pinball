@@ -786,13 +786,14 @@ Priority order:
   - Reset combo cleanly on drain, next ball, or timeout.
   - Visible result: repeated accurate shots feel more rewarding without changing the table layout.
 
-- [ ] Phase 12.2 - Invisible ball save - Status: planned
+- [x] Phase 12.2 - Invisible ball save - Status: complete
   - Enable ball save for a short period after launch.
   - If the ball drains during that period, reset it to the shooter lane without reducing balls left.
   - Show a clear `BALL SAVE` message and play a short feedback sound.
   - Avoid physical gates or shields in the first pass so there is no new trapping risk.
   - Let future lane/outlane art display the ball-save state after the rule is stable.
   - Visible result: early unlucky drains feel fairer with very little physics risk.
+  - Implemented first pass as one save per ball with a visible `BALL SAVE ACTIVE` timer and shooter-lane relaunch.
 
 - [ ] Phase 12.3 - More missions from existing targets - Status: planned
   - Add additional missions that reuse existing table objects and hit events.
