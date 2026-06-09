@@ -169,6 +169,15 @@
       reward: "No revision bonus"
     }
   ];
+  const MISSION_STAGES = [
+    ["measurement"],
+    ["mes"],
+    ["erp"],
+    ["green", "coil"],
+    ["eodprema", "alcad"],
+    ["furnace"],
+    ["kosovnica"]
+  ];
   const BOM_MODE = {
     sequence: ["hit:MES", "hit:ERP", "hit:COIL"],
     labels: ["MES", "ERP", "COIL"],
@@ -187,6 +196,9 @@
     rightControl: document.getElementById("right-control"),
     spaceControl: document.getElementById("space-control"),
     audioToggle: document.getElementById("audio-toggle"),
+    missionStage: document.getElementById("mission-stage-value"),
+    missionNext: document.getElementById("mission-next-value"),
+    missionComplete: document.getElementById("mission-complete-value"),
     missionList: document.getElementById("mission-list"),
     missions: {}
   };
@@ -225,7 +237,9 @@
       step: 0,
       deadline: 0
     },
+    missionStageIndex: 0,
     activeMissionId: "measurement",
+    lastCompletedMissionId: "",
     missions: createMissionState()
   };
   gameState.previousHighScore = gameState.highScore;
@@ -250,10 +264,13 @@
   const audio = createAudioManager();
 
   function createMissionState() {
+    const firstStageMissionIds = new Set(MISSION_STAGES[0]);
+
     return MISSION_CONFIG.reduce((missions, mission) => {
       missions[mission.id] = {
         progress: 0,
         completed: false,
+        unlocked: firstStageMissionIds.has(mission.id),
         lastProgressAt: 0
       };
       return missions;
@@ -282,18 +299,59 @@
   }
 
   function getHudMissions(limit = 5) {
-    const active = MISSION_CONFIG.filter((mission) => mission.id === gameState.activeMissionId);
+    const activeStageMissionIds = new Set(MISSION_STAGES[gameState.missionStageIndex] || []);
+    const nextStageMissionIds = new Set(MISSION_STAGES[gameState.missionStageIndex + 1] || []);
+    const active = MISSION_CONFIG.filter((mission) => activeStageMissionIds.has(mission.id) && !gameState.missions[mission.id].completed);
     const progressing = MISSION_CONFIG.filter((mission) => {
       const state = gameState.missions[mission.id];
-      return mission.id !== gameState.activeMissionId && state.progress > 0 && !state.completed;
+      return !activeStageMissionIds.has(mission.id) && state.unlocked && state.progress > 0 && !state.completed;
     });
     const next = MISSION_CONFIG.filter((mission) => {
       const state = gameState.missions[mission.id];
-      return mission.id !== gameState.activeMissionId && state.progress === 0 && !state.completed;
+      return nextStageMissionIds.has(mission.id) && !state.unlocked && !state.completed;
     });
     const completed = MISSION_CONFIG.filter((mission) => gameState.missions[mission.id].completed);
 
     return [...active, ...progressing, ...next, ...completed].slice(0, limit);
+  }
+
+  function getMissionById(id) {
+    return MISSION_CONFIG.find((mission) => mission.id === id);
+  }
+
+  function formatMissionNames(missionIds) {
+    return missionIds
+      .map((id) => getMissionById(id))
+      .filter(Boolean)
+      .map((mission) => mission.label)
+      .join(" / ");
+  }
+
+  function getNextStageMissionIds() {
+    return MISSION_STAGES[gameState.missionStageIndex + 1] || [];
+  }
+
+  function getFirstIncompleteUnlockedMissionId() {
+    const currentStageMissionIds = MISSION_STAGES[gameState.missionStageIndex] || [];
+    const currentMissionId = currentStageMissionIds.find((id) => {
+      const state = gameState.missions[id];
+      return state && state.unlocked && !state.completed;
+    });
+
+    if (currentMissionId) {
+      return currentMissionId;
+    }
+
+    const fallback = MISSION_CONFIG.find((mission) => {
+      const state = gameState.missions[mission.id];
+      return state.unlocked && !state.completed;
+    });
+
+    return fallback ? fallback.id : gameState.activeMissionId;
+  }
+
+  function setActiveMissionFromStage() {
+    gameState.activeMissionId = getFirstIncompleteUnlockedMissionId();
   }
 
   function loadAssets(config) {
@@ -1220,6 +1278,7 @@
 
   function drawMissionLights() {
     const missions = getHudMissions(5);
+    const activeStageMissionIds = new Set(MISSION_STAGES[gameState.missionStageIndex] || []);
     const startX = 450 - ((missions.length - 1) * 32) / 2;
     const drewStageAsset = drawDecorAsset("mission-stage-lamps", 450, 964, 282, 50, {
       alpha: 0.32,
@@ -1232,7 +1291,7 @@
       const state = gameState.missions[mission.id];
       const x = startX + index * 32;
       const y = 964;
-      const isActive = gameState.activeMissionId === mission.id;
+      const isActive = activeStageMissionIds.has(mission.id) && state.unlocked && !state.completed;
 
       context.fillStyle = state.completed
         ? "rgba(123, 220, 108, 0.9)"
@@ -1824,13 +1883,21 @@
 
   function updateMissionUi() {
     const visibleMissionIds = new Set(getHudMissions().map((mission) => mission.id));
+    const currentStageMissionIds = MISSION_STAGES[gameState.missionStageIndex] || [];
+    const nextStageMissionIds = getNextStageMissionIds();
+    const lastCompletedMission = getMissionById(gameState.lastCompletedMissionId);
+
+    ui.missionStage.textContent = `${gameState.missionStageIndex + 1}/${MISSION_STAGES.length}`;
+    ui.missionNext.textContent = nextStageMissionIds.length ? formatMissionNames(nextStageMissionIds) : "FINAL READY";
+    ui.missionComplete.textContent = lastCompletedMission ? lastCompletedMission.label : "None";
 
     MISSION_CONFIG.forEach((mission) => {
       const state = gameState.missions[mission.id];
       const missionUi = ui.missions[mission.id];
-      missionUi.progress.textContent = state.completed ? "DONE" : `${state.progress}/${mission.required}`;
+      missionUi.progress.textContent = state.completed ? "DONE" : state.unlocked ? `${state.progress}/${mission.required}` : "LOCKED";
       missionUi.row.classList.toggle("is-complete", state.completed);
-      missionUi.row.classList.toggle("is-active", gameState.activeMissionId === mission.id && !state.completed);
+      missionUi.row.classList.toggle("is-active", currentStageMissionIds.includes(mission.id) && state.unlocked && !state.completed);
+      missionUi.row.classList.toggle("is-locked", !state.unlocked && !state.completed);
       missionUi.row.hidden = !visibleMissionIds.has(mission.id);
     });
   }
@@ -1872,7 +1939,9 @@
         finalHighScore: gameState.finalHighScore,
         finalWasRecord: gameState.finalWasRecord
       },
+      missionStageIndex: gameState.missionStageIndex,
       activeMissionId: gameState.activeMissionId,
+      lastCompletedMissionId: gameState.lastCompletedMissionId,
       missions: gameState.missions,
       audio: {
         isAvailable: audio.isAvailable,
@@ -2407,6 +2476,10 @@
 
   function updateBomMode(eventName) {
     if (eventName === "hit:KOSOVNICA") {
+      if (!gameState.missions.kosovnica.unlocked) {
+        return;
+      }
+
       startBomMode();
       return;
     }
@@ -2489,16 +2562,20 @@
   }
 
   function advanceMissions(eventName) {
+    const activeStageMissionIds = new Set(MISSION_STAGES[gameState.missionStageIndex] || []);
+    let didAdvance = false;
+
     MISSION_CONFIG.forEach((mission) => {
       const state = gameState.missions[mission.id];
 
-      if (state.completed || mission.event !== eventName) {
+      if (state.completed || !state.unlocked || !activeStageMissionIds.has(mission.id) || mission.event !== eventName) {
         return;
       }
 
       state.progress = Math.min(mission.required, state.progress + 1);
       state.lastProgressAt = performance.now();
       gameState.activeMissionId = mission.id;
+      didAdvance = true;
 
       if (state.progress >= mission.required) {
         completeMission(mission, state);
@@ -2509,14 +2586,55 @@
       }
     });
 
-    const nextMission = MISSION_CONFIG.find((mission) => !gameState.missions[mission.id].completed);
-    if (nextMission) {
-      gameState.activeMissionId = nextMission.id;
+    if (!didAdvance) {
+      return;
     }
+
+    maybeUnlockNextMissionStage();
+    setActiveMissionFromStage();
+  }
+
+  function maybeUnlockNextMissionStage() {
+    const currentStageMissionIds = MISSION_STAGES[gameState.missionStageIndex] || [];
+    const isCurrentStageComplete = currentStageMissionIds.every((missionId) => gameState.missions[missionId].completed);
+
+    if (!isCurrentStageComplete || gameState.missionStageIndex >= MISSION_STAGES.length - 1) {
+      return;
+    }
+
+    gameState.missionStageIndex += 1;
+
+    const nextStageMissionIds = MISSION_STAGES[gameState.missionStageIndex] || [];
+    nextStageMissionIds.forEach((missionId) => {
+      gameState.missions[missionId].unlocked = true;
+    });
+
+    const nextStageLabel = formatMissionNames(nextStageMissionIds);
+    gameState.feedback = `STAGE ${gameState.missionStageIndex + 1} UNLOCKED: ${nextStageLabel}`;
+    gameState.feedbackUntil = performance.now() + 1500;
+
+    nextStageMissionIds.forEach((missionId) => {
+      const mission = getMissionById(missionId);
+      if (!mission) {
+        return;
+      }
+
+      addHitFeedback({
+        id: `unlock-${missionId}`,
+        x: 450,
+        y: 1006,
+        accent: "#ff9b3d",
+        label: `UNLOCK: ${mission.label}`,
+        color: "#ffb967"
+      });
+    });
+
+    audio.play("mission-progress");
   }
 
   function completeMission(mission, state) {
     state.completed = true;
+    gameState.lastCompletedMissionId = mission.id;
     gameState.score += mission.bonus;
     setHighScore(gameState.score);
 
@@ -2694,7 +2812,9 @@
       step: 0,
       deadline: 0
     };
+    gameState.missionStageIndex = 0;
     gameState.activeMissionId = "measurement";
+    gameState.lastCompletedMissionId = "";
     gameState.missions = createMissionState();
 
     if (physics) {

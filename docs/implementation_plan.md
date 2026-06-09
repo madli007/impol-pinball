@@ -793,12 +793,15 @@ Priority order:
 3. Make final-state feedback impossible to miss: the player should immediately understand mission completion, multiball, and game over.
 4. Keep every rule visible in the HUD or canvas feedback so the table does not feel like hidden bookkeeping.
 
-- [ ] Phase 13.1 - Mission order and unlock rules - Status: planned
+- [x] Phase 13.1 - Mission order and unlock rules - Status: complete
   - Rework mission order according to the current design notes: core startup missions first, then production/green aluminium missions, then internal-joke or final missions.
   - Suggested sequence: `MERILNI PROTOKOL` -> `MES ONLINE` -> `ERP GO-LIVE` -> `GREEN ALUMINIUM` / `COIL COLLECTOR` -> `E-ODPREMA` / `ALCAD` -> `LIVARNA READY` -> `KOSOVNICA`.
   - Let inactive targets still score points and combos, but only active/unlocked missions advance.
   - Add small HUD state for current stage, next unlock, and recently completed mission.
   - Visible result: players know what to aim for next instead of seeing every mission compete at once.
+  - Implemented staged mission unlocks with `MERILNI PROTOKOL`, `MES ONLINE`, and `ERP GO-LIVE` as sequential startup missions, then the paired production stage (`GREEN ALUMINIUM` / `COIL COLLECTOR`), paired dispatch/recycle stage (`E-ODPREMA` / `ALCAD SORTIRANJE`), `LIVARNA READY`, and final `KOSOVNICA MIRNA`.
+  - Locked targets still award base points and combo feedback, but mission progress and Kosovnica BOM mode only advance after the relevant stage is unlocked.
+  - Added HUD state for current stage, next unlock, and recently completed mission, plus locked/progress/done mission row states.
 
 - [ ] Phase 13.2 - Company progress system - Status: planned
   - Turn the right-side company list into a lightweight progress/status panel.
@@ -829,6 +832,13 @@ Priority order:
   - Add clear `JACKPOT LIT` / `SUPER JACKPOT` canvas feedback and sound.
   - Keep jackpot values modest until longer playtesting shows the score curve.
   - Visible result: multiball has a goal beyond chaos.
+
+- [ ] Phase 13.6 - Extra ball reward candidates - Status: planned
+  - Explore whether selected missions, late-stage mission chains, or high-value combo streaks should award an extra ball.
+  - Define clear limits before implementation, such as one extra ball per game or one per completed ruleset, so the reward feels special without breaking game length.
+  - Candidate triggers: completing `KOSOVNICA MIRNA`, finishing all required missions, or reaching a demanding combo threshold.
+  - Add obvious HUD/canvas feedback such as `EXTRA BALL LIT` and `EXTRA BALL AWARDED` before adding the reward to scoring balance.
+  - Visible result: elite mission or combo play can extend a run in a controlled, readable way.
 
 ### Phase 14: Table Mechanics, Routes, And Long-Term Depth
 

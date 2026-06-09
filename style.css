@@ -113,6 +113,24 @@ h1 {
   gap: 8px;
 }
 
+.mission-status {
+  margin: 0 0 10px;
+  display: grid;
+  gap: 6px;
+}
+
+.mission-status div {
+  min-height: 32px;
+  padding: 6px 8px;
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 8px;
+  align-items: center;
+  border: 1px solid rgba(109, 135, 148, 0.18);
+  border-radius: 6px;
+  background: rgba(8, 18, 25, 0.48);
+}
+
 .score-board div,
 .mission-list li,
 .company-list li {
@@ -143,12 +161,30 @@ h1 {
   text-transform: uppercase;
 }
 
+.mission-status dt {
+  color: var(--muted);
+  font-size: 0.66rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
 .score-board dd {
   margin: 0;
   color: var(--blue);
   font-size: 1.1rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
+}
+
+.mission-status dd {
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .panel-block {
@@ -201,6 +237,14 @@ h1 {
 .mission-list li.is-active {
   border-color: rgba(255, 155, 61, 0.7);
   box-shadow: 0 0 18px rgba(255, 155, 61, 0.12);
+}
+
+.mission-list li.is-locked {
+  opacity: 0.56;
+}
+
+.mission-list li.is-locked strong {
+  color: var(--muted);
 }
 
 .company-list li {
