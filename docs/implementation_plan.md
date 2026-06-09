@@ -747,13 +747,17 @@ Priority order:
   - Added a canvas-level game-over presentation with dimming, pulse frame, final-score panel, high-score/new-record text, and delayed restart availability.
   - Visible result: it is obvious that the game ended, even if the player is focused on the table instead of the HUD.
 
-- [ ] Phase 12.4 - Better plunge, bumper, and game-over audio - Status: planned
+- [x] Phase 12.4 - Better plunge, bumper, and game-over audio - Status: complete
   - Upgrade ball plunge from a simple tone into a stronger mechanical spring/rail launch effect.
   - Upgrade bumper hits so MES/ERP/CO2 can have slightly different characters while sharing a coherent mix.
   - Add a distinct game-over sound with more weight than an ordinary drain.
   - Add a stronger multiball start sound once multiball exists.
   - Keep sounds short and browser-safe; use local audio files only if procedural synthesis is not enough.
   - Visible result: important game moments sound materially different, not just louder.
+  - Added a layered procedural plunger launch using spring sweep, rail noise, and power-scaled volume from the held launch strength.
+  - Added MES/ERP/CO2 bumper variants that keep a shared short pinball mix while changing pitch, waveform, and transient noise character.
+  - Reworked game-over audio into a heavier low drop with impact noise, distinct from the ordinary drain sound.
+  - Added a procedural `multiball-start` cue in the audio manager for the future multiball hook; no local audio files were needed.
 
 - [ ] Phase 12.5 - Missing visual assets backlog - Status: planned
   - Create or source a dedicated `KOSOVNICA` terminal/target asset so the current label plate can become a real table object.

@@ -458,7 +458,7 @@
       oscillator.stop(endAt + 0.02);
     }
 
-    function playNoise({ duration, volume = 0.05, filterFrequency = 1200, startOffset = 0 }) {
+    function playNoise({ duration, volume = 0.05, filterFrequency = 1200, startOffset = 0, type = "bandpass", q = 2.8 }) {
       const context = ensureContext();
 
       if (!context || !state.master) {
@@ -479,9 +479,9 @@
       const startAt = context.currentTime + startOffset;
       const endAt = startAt + duration;
 
-      filter.type = "bandpass";
+      filter.type = type;
       filter.frequency.value = filterFrequency;
-      filter.Q.value = 2.8;
+      filter.Q.value = q;
       gain.gain.setValueAtTime(volume, startAt);
       gain.gain.exponentialRampToValueAtTime(0.0001, endAt);
       source.buffer = buffer;
@@ -493,7 +493,72 @@
       source.stop(endAt + 0.02);
     }
 
-    function play(effectName) {
+    function playLaunch(options = {}) {
+      const power = Math.max(0.58, Math.min(1, options.power || 0.72));
+      const springVolume = 0.024 + power * 0.022;
+      const railVolume = 0.018 + power * 0.018;
+
+      playNoise({ duration: 0.045, volume: railVolume, filterFrequency: 1250, type: "highpass", q: 0.8 });
+      playTone({ frequency: 105 + power * 45, endFrequency: 360 + power * 160, duration: 0.13, type: "sawtooth", volume: springVolume, startOffset: 0.015 });
+      playTone({ frequency: 720 + power * 160, endFrequency: 460 + power * 80, duration: 0.07, type: "triangle", volume: 0.018 + power * 0.01, startOffset: 0.105 });
+      playNoise({ duration: 0.12, volume: 0.018 + power * 0.014, filterFrequency: 760, type: "bandpass", q: 3.4, startOffset: 0.04 });
+    }
+
+    function playBumper(options = {}) {
+      const variant = options.variant || "default";
+      const voices = {
+        mes: {
+          primary: [720, 1210],
+          secondary: [1540, 1040],
+          type: "triangle",
+          noise: 2300,
+          volume: 0.05
+        },
+        erp: {
+          primary: [560, 940],
+          secondary: [1120, 780],
+          type: "square",
+          noise: 1700,
+          volume: 0.043
+        },
+        co2: {
+          primary: [840, 1320],
+          secondary: [1760, 1260],
+          type: "sine",
+          noise: 2800,
+          volume: 0.044
+        },
+        default: {
+          primary: [700, 1120],
+          secondary: [1420, 960],
+          type: "triangle",
+          noise: 2100,
+          volume: 0.046
+        }
+      };
+      const voice = voices[variant] || voices.default;
+
+      playTone({ frequency: voice.primary[0], endFrequency: voice.primary[1], duration: 0.085, type: voice.type, volume: voice.volume });
+      playTone({ frequency: voice.secondary[0], endFrequency: voice.secondary[1], duration: 0.065, type: "sine", volume: 0.022, startOffset: 0.018 });
+      playNoise({ duration: 0.035, volume: 0.012, filterFrequency: voice.noise, type: "bandpass", q: 3.8, startOffset: 0.006 });
+    }
+
+    function playGameOver() {
+      playNoise({ duration: 0.09, volume: 0.034, filterFrequency: 260, type: "lowpass", q: 0.9 });
+      playTone({ frequency: 210, endFrequency: 68, duration: 0.48, type: "sawtooth", volume: 0.058, startOffset: 0.02 });
+      playTone({ frequency: 124, endFrequency: 48, duration: 0.56, type: "triangle", volume: 0.044, startOffset: 0.12 });
+      playTone({ frequency: 420, endFrequency: 180, duration: 0.18, type: "square", volume: 0.018, startOffset: 0.27 });
+      playNoise({ duration: 0.22, volume: 0.018, filterFrequency: 410, type: "bandpass", q: 1.6, startOffset: 0.1 });
+    }
+
+    function playMultiballStart() {
+      playTone({ frequency: 330, endFrequency: 660, duration: 0.11, type: "sawtooth", volume: 0.04 });
+      playTone({ frequency: 495, endFrequency: 990, duration: 0.12, type: "triangle", volume: 0.034, startOffset: 0.08 });
+      playTone({ frequency: 660, endFrequency: 1320, duration: 0.15, type: "sine", volume: 0.034, startOffset: 0.17 });
+      playNoise({ duration: 0.12, volume: 0.018, filterFrequency: 2600, type: "bandpass", q: 3.2, startOffset: 0.08 });
+    }
+
+    function play(effectName, options = {}) {
       const throttles = {
         flipper: 55,
         bumper: 65,
@@ -506,6 +571,7 @@
         "mission-progress": 220,
         "mission-complete": 650,
         multiplier: 650,
+        "multiball-start": 900,
         "game-over": 900
       };
 
@@ -517,14 +583,12 @@
         playTone({ frequency: 190, endFrequency: 92, duration: 0.055, type: "square", volume: 0.035 });
         playNoise({ duration: 0.035, volume: 0.018, filterFrequency: 900 });
       } else if (effectName === "bumper") {
-        playTone({ frequency: 740, endFrequency: 1180, duration: 0.09, type: "triangle", volume: 0.055 });
-        playTone({ frequency: 1480, endFrequency: 980, duration: 0.07, type: "sine", volume: 0.025, startOffset: 0.015 });
+        playBumper(options);
       } else if (effectName === "target") {
         playTone({ frequency: 520, endFrequency: 420, duration: 0.075, type: "triangle", volume: 0.04 });
         playNoise({ duration: 0.045, volume: 0.014, filterFrequency: 1600 });
       } else if (effectName === "launch") {
-        playNoise({ duration: 0.16, volume: 0.045, filterFrequency: 620 });
-        playTone({ frequency: 180, endFrequency: 360, duration: 0.13, type: "sawtooth", volume: 0.03 });
+        playLaunch(options);
       } else if (effectName === "drain") {
         playTone({ frequency: 220, endFrequency: 70, duration: 0.34, type: "sawtooth", volume: 0.055 });
         playNoise({ duration: 0.12, volume: 0.025, filterFrequency: 420, startOffset: 0.06 });
@@ -548,10 +612,10 @@
       } else if (effectName === "multiplier") {
         playTone({ frequency: 520, endFrequency: 1040, duration: 0.16, type: "sawtooth", volume: 0.038 });
         playTone({ frequency: 1040, endFrequency: 1560, duration: 0.12, type: "triangle", volume: 0.032, startOffset: 0.12 });
+      } else if (effectName === "multiball-start") {
+        playMultiballStart();
       } else if (effectName === "game-over") {
-        playTone({ frequency: 280, endFrequency: 120, duration: 0.32, type: "sawtooth", volume: 0.052 });
-        playTone({ frequency: 170, endFrequency: 70, duration: 0.42, type: "triangle", volume: 0.04, startOffset: 0.16 });
-        playNoise({ duration: 0.18, volume: 0.02, filterFrequency: 360, startOffset: 0.08 });
+        playGameOver();
       }
     }
 
@@ -2107,7 +2171,7 @@
     gameState.ballSaveUntil = gameState.ballSaveUsed ? 0 : performance.now() + BALL_SAVE_DURATION;
     gameState.plungerPower = 0;
     inputState.chargingSince = 0;
-    audio.play("launch");
+    audio.play("launch", { power });
     syncInspectableState(physics);
   }
 
@@ -2196,7 +2260,7 @@
     }
 
     if (object.type === "bumper") {
-      audio.play("bumper");
+      audio.play("bumper", { variant: object.id });
       kickBallFromObject(ball, object);
     } else if (object.type === "slingshot") {
       audio.play("bumper");
