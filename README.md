@@ -45,13 +45,39 @@ The right-side control buttons can also be clicked or held with a pointer.
 
 ## Local Run
 
-The game runs by opening:
+Preferred local preview:
 
-```text
-index.html
+```powershell
+python -m http.server 4173 --bind 127.0.0.1
 ```
 
-No install step should be required.
+Then open:
+
+```text
+http://127.0.0.1:4173/
+```
+
+If `python` is not on `PATH`, use any local Python 3 executable:
+
+```powershell
+& '<path-to-python.exe>' -m http.server 4173 --bind 127.0.0.1
+```
+
+For Codex desktop sessions, ask the workspace dependency helper for the bundled Python path instead of hardcoding a user-specific path.
+
+To keep the server running in the background from PowerShell, run it from the repository root:
+
+```powershell
+Start-Process -WindowStyle Hidden -WorkingDirectory (Get-Location) -FilePath '<path-to-python.exe>' -ArgumentList @('-m','http.server','4173','--bind','127.0.0.1')
+```
+
+If the sandbox stops a background server, rerun the same `Start-Process` command with escalated permission. Verify it with:
+
+```powershell
+Invoke-WebRequest -UseBasicParsing http://127.0.0.1:4173/ | Select-Object -ExpandProperty StatusCode
+```
+
+Opening `index.html` directly can still work for quick checks, but the local server path is the reliable preview path.
 
 Matter.js is loaded from CDN, so internet access is currently required for physics.
 
