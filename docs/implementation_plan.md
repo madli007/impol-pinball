@@ -803,13 +803,15 @@ Priority order:
   - Locked targets still award base points and combo feedback, but mission progress and Kosovnica BOM mode only advance after the relevant stage is unlocked.
   - Added HUD state for current stage, next unlock, and recently completed mission, plus locked/progress/done mission row states.
 
-- [ ] Phase 13.2 - Company progress system - Status: planned
+- [x] Phase 13.2 - Company progress system - Status: complete
   - Turn the right-side company list into a lightweight progress/status panel.
   - Update company states when related targets, missions, or combos are completed.
   - Start with simple labels such as `Ready`, `Online`, `Complete`, or `Bonus`.
   - Keep progress in-memory first; persistence can come later if it proves useful.
   - Use the system to make IMPOL, SEVAL, ALCAD, TLM, IMPOL-PC, and RONDAL feel connected to gameplay.
   - Visible result: the existing company panel becomes part of the ruleset instead of only decoration.
+  - Implemented a dynamic company panel with in-memory status state, active-company highlighting, and inspectable company progress state.
+  - Mapped target/slingshot/skill-shot events, mission progress, mission completion, combos, and Kosovnica BOM success into `Ready`, `Online`, `Complete`, and `Bonus` company statuses.
 
 - [ ] Phase 13.3 - Mission-complete meta reward - Status: planned
   - Add a global completion tracker for all required missions in the active ruleset.

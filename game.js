@@ -178,6 +178,62 @@
     ["furnace"],
     ["kosovnica"]
   ];
+  const COMPANY_STATUS = {
+    ready: { label: "Ready", rank: 0 },
+    online: { label: "Online", rank: 1 },
+    complete: { label: "Complete", rank: 2 },
+    bonus: { label: "Bonus", rank: 3 }
+  };
+  const COMPANY_CONFIG = [
+    {
+      id: "impol",
+      label: "IMPOL",
+      events: ["hit:MEASUREMENT", "hit:MES", "hit:ERP"],
+      missions: ["measurement", "mes", "erp"]
+    },
+    {
+      id: "seval",
+      label: "SEVAL",
+      events: ["hit:LEFT_SLINGSHOT", "hit:EODPREMA"],
+      missions: ["eodprema"]
+    },
+    {
+      id: "alcad",
+      label: "ALCAD",
+      events: ["hit:ALCAD"],
+      missions: ["alcad"]
+    },
+    {
+      id: "tlm",
+      label: "TLM",
+      events: ["hit:GREEN", "hit:FURNACE"],
+      missions: ["green", "furnace"]
+    },
+    {
+      id: "impol-pc",
+      label: "IMPOL-PC",
+      events: ["hit:RIGHT_SLINGSHOT", "hit:COIL"],
+      missions: ["coil"]
+    },
+    {
+      id: "rondal",
+      label: "RONDAL",
+      events: ["hit:SKILL_SHOT", "hit:KOSOVNICA"],
+      missions: ["kosovnica"]
+    }
+  ];
+  const COMPANY_BY_EVENT = COMPANY_CONFIG.reduce((companiesByEvent, company) => {
+    company.events.forEach((eventName) => {
+      companiesByEvent[eventName] = company.id;
+    });
+    return companiesByEvent;
+  }, {});
+  const COMPANY_BY_MISSION = COMPANY_CONFIG.reduce((companiesByMission, company) => {
+    company.missions.forEach((missionId) => {
+      companiesByMission[missionId] = company.id;
+    });
+    return companiesByMission;
+  }, {});
   const BOM_MODE = {
     sequence: ["hit:MES", "hit:ERP", "hit:COIL"],
     labels: ["MES", "ERP", "COIL"],
@@ -200,7 +256,10 @@
     missionNext: document.getElementById("mission-next-value"),
     missionComplete: document.getElementById("mission-complete-value"),
     missionList: document.getElementById("mission-list"),
-    missions: {}
+    missions: {},
+    companyList: document.getElementById("company-list"),
+    companies: {},
+    statusCopy: document.querySelector(".status-copy")
   };
   const gameState = {
     score: 0,
@@ -240,7 +299,9 @@
     missionStageIndex: 0,
     activeMissionId: "measurement",
     lastCompletedMissionId: "",
-    missions: createMissionState()
+    missions: createMissionState(),
+    activeCompanyId: "impol",
+    companies: createCompanyState()
   };
   gameState.previousHighScore = gameState.highScore;
   const inputState = {
@@ -277,6 +338,18 @@
     }, {});
   }
 
+  function createCompanyState() {
+    return COMPANY_CONFIG.reduce((companies, company) => {
+      companies[company.id] = {
+        status: COMPANY_STATUS.ready.label,
+        rank: COMPANY_STATUS.ready.rank,
+        detail: COMPANY_STATUS.ready.label,
+        lastUpdatedAt: 0
+      };
+      return companies;
+    }, {});
+  }
+
   function renderMissionList() {
     ui.missionList.innerHTML = "";
     ui.missions = {};
@@ -295,6 +368,27 @@
       row.append(label, progress);
       ui.missionList.append(row);
       ui.missions[mission.id] = { row, progress };
+    });
+  }
+
+  function renderCompanyList() {
+    ui.companyList.innerHTML = "";
+    ui.companies = {};
+
+    COMPANY_CONFIG.forEach((company) => {
+      const row = document.createElement("li");
+      row.id = `company-${company.id}`;
+
+      const label = document.createElement("span");
+      label.textContent = company.label;
+
+      const status = document.createElement("strong");
+      status.id = `company-${company.id}-status`;
+      status.textContent = COMPANY_STATUS.ready.label;
+
+      row.append(label, status);
+      ui.companyList.append(row);
+      ui.companies[company.id] = { row, status };
     });
   }
 
@@ -352,6 +446,70 @@
 
   function setActiveMissionFromStage() {
     gameState.activeMissionId = getFirstIncompleteUnlockedMissionId();
+  }
+
+  function getCompanyById(id) {
+    return COMPANY_CONFIG.find((company) => company.id === id);
+  }
+
+  function setCompanyStatus(companyId, statusKey, detail) {
+    const company = getCompanyById(companyId);
+    const status = COMPANY_STATUS[statusKey];
+    const state = gameState.companies[companyId];
+
+    if (!company || !status || !state || status.rank < state.rank) {
+      return false;
+    }
+
+    state.status = status.label;
+    state.rank = status.rank;
+    state.detail = detail || status.label;
+    state.lastUpdatedAt = performance.now();
+    gameState.activeCompanyId = companyId;
+    return true;
+  }
+
+  function updateCompanyForEvent(eventName) {
+    const companyId = COMPANY_BY_EVENT[eventName];
+
+    if (!companyId) {
+      return;
+    }
+
+    setCompanyStatus(companyId, "online", "Online");
+  }
+
+  function updateCompanyForMissionProgress(mission) {
+    const companyId = COMPANY_BY_MISSION[mission.id];
+
+    if (!companyId) {
+      return;
+    }
+
+    setCompanyStatus(companyId, "online", "Online");
+  }
+
+  function updateCompanyForMissionComplete(mission) {
+    const companyId = COMPANY_BY_MISSION[mission.id];
+
+    if (!companyId) {
+      return;
+    }
+
+    setCompanyStatus(companyId, "complete", "Complete");
+  }
+
+  function updateCompanyForCombo(object, combo) {
+    if (!combo.bonus) {
+      return;
+    }
+
+    const companyId = COMPANY_BY_EVENT[object.event];
+    setCompanyStatus("rondal", "bonus", "Bonus");
+
+    if (companyId) {
+      setCompanyStatus(companyId, "bonus", "Bonus");
+    }
   }
 
   function loadAssets(config) {
@@ -1864,6 +2022,7 @@
     ui.multiplier.textContent = `${gameState.multiplier}x`;
     ui.highScore.textContent = gameState.highScore.toLocaleString("sl-SI");
     updateMissionUi();
+    updateCompanyUi();
     updateRestartUi();
   }
 
@@ -1900,6 +2059,30 @@
       missionUi.row.classList.toggle("is-locked", !state.unlocked && !state.completed);
       missionUi.row.hidden = !visibleMissionIds.has(mission.id);
     });
+  }
+
+  function updateCompanyUi() {
+    const activeCompany = getCompanyById(gameState.activeCompanyId) || COMPANY_CONFIG[0];
+
+    COMPANY_CONFIG.forEach((company) => {
+      const state = gameState.companies[company.id];
+      const companyUi = ui.companies[company.id];
+
+      if (!companyUi) {
+        return;
+      }
+
+      companyUi.status.textContent = state.detail;
+      companyUi.row.classList.toggle("is-active", company.id === activeCompany.id);
+      companyUi.row.classList.toggle("is-online", state.status === COMPANY_STATUS.online.label);
+      companyUi.row.classList.toggle("is-complete", state.status === COMPANY_STATUS.complete.label);
+      companyUi.row.classList.toggle("is-bonus", state.status === COMPANY_STATUS.bonus.label);
+    });
+
+    if (ui.statusCopy && activeCompany) {
+      const activeState = gameState.companies[activeCompany.id];
+      ui.statusCopy.textContent = `${activeCompany.label}: ${activeState.detail}. Follow the staged missions and keep combos alive between targets.`;
+    }
   }
 
   function syncInspectableState(physics) {
@@ -1943,6 +2126,8 @@
       activeMissionId: gameState.activeMissionId,
       lastCompletedMissionId: gameState.lastCompletedMissionId,
       missions: gameState.missions,
+      activeCompanyId: gameState.activeCompanyId,
+      companies: gameState.companies,
       audio: {
         isAvailable: audio.isAvailable,
         isMuted: audio.isMuted,
@@ -2329,6 +2514,8 @@
     gameState.feedback = `SKILL SHOT +${points.toLocaleString("sl-SI")}`;
     gameState.feedbackUntil = performance.now() + 1100;
     gameState.hitCounts["skill-shot"] = performance.now();
+    updateCompanyForEvent(gameState.lastEvent);
+    setCompanyStatus("rondal", "bonus", "Bonus");
     addHitFeedback({
       id: "skill-shot",
       x: 686,
@@ -2381,6 +2568,9 @@
     if (combo.bonus) {
       audio.play("combo");
     }
+
+    updateCompanyForEvent(object.event);
+    updateCompanyForCombo(object, combo);
 
     if (object.type === "bumper") {
       audio.play("bumper", { variant: object.id });
@@ -2521,6 +2711,7 @@
     gameState.bomMode.deadline = 0;
     gameState.score += bonus;
     setHighScore(gameState.score);
+    setCompanyStatus("rondal", "bonus", "Bonus");
     gameState.feedback = `KOSOVNICA USKLAJENA +${bonus.toLocaleString("sl-SI")}`;
     gameState.feedbackUntil = performance.now() + 1600;
     addHitFeedback({
@@ -2576,6 +2767,7 @@
       state.lastProgressAt = performance.now();
       gameState.activeMissionId = mission.id;
       didAdvance = true;
+      updateCompanyForMissionProgress(mission);
 
       if (state.progress >= mission.required) {
         completeMission(mission, state);
@@ -2637,6 +2829,7 @@
     gameState.lastCompletedMissionId = mission.id;
     gameState.score += mission.bonus;
     setHighScore(gameState.score);
+    updateCompanyForMissionComplete(mission);
 
     if (mission.multiplierReward) {
       gameState.multiplier = Math.max(gameState.multiplier, mission.multiplierReward);
@@ -2816,6 +3009,8 @@
     gameState.activeMissionId = "measurement";
     gameState.lastCompletedMissionId = "";
     gameState.missions = createMissionState();
+    gameState.activeCompanyId = "impol";
+    gameState.companies = createCompanyState();
 
     if (physics) {
       resetBall(physics.ball, true);
@@ -3266,6 +3461,7 @@
     resetBall(physics.ball, true);
   }
   renderMissionList();
+  renderCompanyList();
   updateHud();
   updateAudioUi();
   updateControlsUi();

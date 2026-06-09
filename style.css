@@ -252,13 +252,40 @@ h1 {
 }
 
 .company-list li.is-active {
+  border-color: rgba(49, 168, 255, 0.62);
+  background: rgba(49, 168, 255, 0.18);
+}
+
+.company-list li.is-online {
+  border-color: rgba(49, 168, 255, 0.46);
+}
+
+.company-list li.is-complete {
   border-color: rgba(123, 220, 108, 0.52);
   background: rgba(22, 84, 54, 0.55);
+}
+
+.company-list li.is-bonus {
+  border-color: rgba(255, 155, 61, 0.76);
+  background: rgba(115, 58, 10, 0.5);
+  box-shadow: 0 0 18px rgba(255, 155, 61, 0.12);
 }
 
 .company-list strong {
   color: var(--muted);
   font-weight: 700;
+}
+
+.company-list li.is-online strong {
+  color: var(--blue);
+}
+
+.company-list li.is-complete strong {
+  color: var(--green);
+}
+
+.company-list li.is-bonus strong {
+  color: var(--orange);
 }
 
 .status-copy {
