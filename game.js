@@ -240,6 +240,24 @@
     duration: 10000,
     successBonus: 15000
   };
+  const META_REWARDS = {
+    missions: {
+      label: "INDUSTRY 4.0 JACKPOT",
+      bonus: 40000,
+      multiplier: 3,
+      duration: 22000,
+      ballSaveExtension: 9000,
+      color: "#ffb967"
+    },
+    companies: {
+      label: "IMPOL GROUP SYNERGY",
+      bonus: 30000,
+      multiplier: 4,
+      duration: 18000,
+      ballSaveExtension: 7000,
+      color: "#7bdc6c"
+    }
+  };
   const BALL_SAVE_DURATION = 9000;
   const ui = {
     score: document.getElementById("score-value"),
@@ -258,6 +276,7 @@
     missionList: document.getElementById("mission-list"),
     missions: {},
     companyList: document.getElementById("company-list"),
+    groupReward: document.getElementById("group-reward-value"),
     companies: {},
     statusCopy: document.querySelector(".status-copy")
   };
@@ -301,7 +320,8 @@
     lastCompletedMissionId: "",
     missions: createMissionState(),
     activeCompanyId: "impol",
-    companies: createCompanyState()
+    companies: createCompanyState(),
+    metaRewards: createMetaRewardState()
   };
   gameState.previousHighScore = gameState.highScore;
   const inputState = {
@@ -348,6 +368,17 @@
       };
       return companies;
     }, {});
+  }
+
+  function createMetaRewardState() {
+    return {
+      missionsAwarded: false,
+      companiesAwarded: false,
+      multiplierValue: 1,
+      multiplierUntil: 0,
+      multiplierRemainingMs: 0,
+      lastAwardLabel: ""
+    };
   }
 
   function renderMissionList() {
@@ -466,6 +497,7 @@
     state.detail = detail || status.label;
     state.lastUpdatedAt = performance.now();
     gameState.activeCompanyId = companyId;
+    maybeAwardCompanyMetaReward();
     return true;
   }
 
@@ -491,25 +523,108 @@
 
   function updateCompanyForMissionComplete(mission) {
     const companyId = COMPANY_BY_MISSION[mission.id];
+    const company = getCompanyById(companyId);
 
-    if (!companyId) {
+    if (!companyId || !company) {
       return;
     }
 
-    setCompanyStatus(companyId, "complete", "Complete");
+    const completedCount = company.missions.filter((missionId) => gameState.missions[missionId].completed).length;
+    const isCompanyComplete = completedCount === company.missions.length;
+    setCompanyStatus(companyId, isCompanyComplete ? "complete" : "online", isCompanyComplete ? "Complete" : `${completedCount}/${company.missions.length} Complete`);
   }
 
   function updateCompanyForCombo(object, combo) {
-    if (!combo.bonus) {
+    if (!combo.bonus || combo.count < 4) {
       return;
     }
 
     const companyId = COMPANY_BY_EVENT[object.event];
-    setCompanyStatus("rondal", "bonus", "Bonus");
+    const company = getCompanyById(companyId);
 
-    if (companyId) {
+    if (company && company.missions.every((missionId) => gameState.missions[missionId].completed)) {
       setCompanyStatus(companyId, "bonus", "Bonus");
     }
+  }
+
+  function getCompletedMissionCount() {
+    return MISSION_CONFIG.filter((mission) => gameState.missions[mission.id].completed).length;
+  }
+
+  function getBonusCompanyCount() {
+    return COMPANY_CONFIG.filter((company) => gameState.companies[company.id].rank >= COMPANY_STATUS.bonus.rank).length;
+  }
+
+  function areAllRequiredMissionsComplete() {
+    return getCompletedMissionCount() === MISSION_CONFIG.length;
+  }
+
+  function areAllCompaniesBonus() {
+    return getBonusCompanyCount() === COMPANY_CONFIG.length;
+  }
+
+  function getActiveMultiplier() {
+    const metaMultiplier = getMetaMultiplierRemainingMs() > 0 ? gameState.metaRewards.multiplierValue : 1;
+    return Math.max(gameState.multiplier, metaMultiplier);
+  }
+
+  function getMetaMultiplierRemainingMs() {
+    if (gameState.metaRewards.multiplierUntil) {
+      return Math.max(0, gameState.metaRewards.multiplierUntil - performance.now());
+    }
+
+    return Math.max(0, gameState.metaRewards.multiplierRemainingMs);
+  }
+
+  function extendBallSave(duration) {
+    const now = performance.now();
+    gameState.ballSaveUsed = false;
+    gameState.ballSaveUntil = Math.max(gameState.ballSaveUntil, now) + duration;
+  }
+
+  function activateMetaMultiplier(reward) {
+    const now = performance.now();
+    gameState.metaRewards.multiplierValue = Math.max(gameState.metaRewards.multiplierValue, reward.multiplier);
+    gameState.metaRewards.multiplierRemainingMs = getMetaMultiplierRemainingMs() + reward.duration;
+    gameState.metaRewards.multiplierUntil = gameState.status === "playing" ? now + gameState.metaRewards.multiplierRemainingMs : 0;
+  }
+
+  function awardMetaReward(reward, rewardKey) {
+    const bonus = reward.bonus * getActiveMultiplier();
+    gameState.score += bonus;
+    gameState.metaRewards.lastAwardLabel = reward.label;
+    activateMetaMultiplier(reward);
+    extendBallSave(reward.ballSaveExtension);
+    setHighScore(gameState.score);
+    gameState.feedback = `${reward.label} +${bonus.toLocaleString("sl-SI")}`;
+    gameState.feedbackUntil = performance.now() + 1900;
+    addHitFeedback({
+      id: `meta-${rewardKey}`,
+      x: 450,
+      y: rewardKey === "companies" ? 860 : 812,
+      accent: reward.color,
+      label: `${reward.multiplier}x ${reward.label}`,
+      color: reward.color
+    });
+    audio.play("multiball-start");
+  }
+
+  function maybeAwardMissionMetaReward() {
+    if (gameState.metaRewards.missionsAwarded || !areAllRequiredMissionsComplete()) {
+      return;
+    }
+
+    gameState.metaRewards.missionsAwarded = true;
+    awardMetaReward(META_REWARDS.missions, "missions");
+  }
+
+  function maybeAwardCompanyMetaReward() {
+    if (!gameState || !gameState.metaRewards || gameState.metaRewards.companiesAwarded || !areAllCompaniesBonus()) {
+      return;
+    }
+
+    gameState.metaRewards.companiesAwarded = true;
+    awardMetaReward(META_REWARDS.companies, "companies");
   }
 
   function loadAssets(config) {
@@ -1434,6 +1549,26 @@
     context.fillRect(354, 914, 192 * remaining, 4);
   }
 
+  function drawMetaRewardBadge() {
+    const remainingMs = getMetaMultiplierRemainingMs();
+
+    if (remainingMs <= 0) {
+      return;
+    }
+
+    const duration = gameState.metaRewards.multiplierValue >= META_REWARDS.companies.multiplier ? META_REWARDS.companies.duration : META_REWARDS.missions.duration;
+    const remaining = remainingMs / duration;
+    fillRoundedRect(292, 832, 316, 44, 8, "rgba(5, 11, 16, 0.78)");
+    context.fillStyle = gameState.metaRewards.multiplierValue >= META_REWARDS.companies.multiplier ? "#7bdc6c" : "#ffb967";
+    context.font = "800 16px Arial, Helvetica, sans-serif";
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillText(`${gameState.metaRewards.multiplierValue}x ${gameState.metaRewards.lastAwardLabel}`, 450, 850);
+
+    context.fillStyle = "rgba(255, 155, 61, 0.88)";
+    context.fillRect(326, 870, 248 * Math.min(1, remaining), 4);
+  }
+
   function drawMissionLights() {
     const missions = getHudMissions(5);
     const activeStageMissionIds = new Set(MISSION_STAGES[gameState.missionStageIndex] || []);
@@ -2019,7 +2154,7 @@
     ui.score.textContent = gameState.score.toLocaleString("sl-SI");
     ui.ball.textContent = String(gameState.ballNumber);
     ui.ballsLeft.textContent = String(gameState.ballsLeft);
-    ui.multiplier.textContent = `${gameState.multiplier}x`;
+    ui.multiplier.textContent = `${getActiveMultiplier()}x`;
     ui.highScore.textContent = gameState.highScore.toLocaleString("sl-SI");
     updateMissionUi();
     updateCompanyUi();
@@ -2045,10 +2180,11 @@
     const currentStageMissionIds = MISSION_STAGES[gameState.missionStageIndex] || [];
     const nextStageMissionIds = getNextStageMissionIds();
     const lastCompletedMission = getMissionById(gameState.lastCompletedMissionId);
+    const allMissionsComplete = areAllRequiredMissionsComplete();
 
     ui.missionStage.textContent = `${gameState.missionStageIndex + 1}/${MISSION_STAGES.length}`;
-    ui.missionNext.textContent = nextStageMissionIds.length ? formatMissionNames(nextStageMissionIds) : "FINAL READY";
-    ui.missionComplete.textContent = lastCompletedMission ? lastCompletedMission.label : "None";
+    ui.missionNext.textContent = allMissionsComplete ? "META REWARD LIT" : nextStageMissionIds.length ? formatMissionNames(nextStageMissionIds) : "FINAL READY";
+    ui.missionComplete.textContent = allMissionsComplete ? "ALL COMPLETE" : lastCompletedMission ? lastCompletedMission.label : "None";
 
     MISSION_CONFIG.forEach((mission) => {
       const state = gameState.missions[mission.id];
@@ -2063,6 +2199,8 @@
 
   function updateCompanyUi() {
     const activeCompany = getCompanyById(gameState.activeCompanyId) || COMPANY_CONFIG[0];
+    const bonusCompanyCount = getBonusCompanyCount();
+    const groupRewardActive = gameState.metaRewards.companiesAwarded;
 
     COMPANY_CONFIG.forEach((company) => {
       const state = gameState.companies[company.id];
@@ -2079,15 +2217,24 @@
       companyUi.row.classList.toggle("is-bonus", state.status === COMPANY_STATUS.bonus.label);
     });
 
+    if (ui.groupReward) {
+      if (groupRewardActive) {
+        ui.groupReward.textContent = META_REWARDS.companies.label;
+      } else {
+        ui.groupReward.textContent = `${bonusCompanyCount}/${COMPANY_CONFIG.length} Bonus`;
+      }
+    }
+
     if (ui.statusCopy && activeCompany) {
       const activeState = gameState.companies[activeCompany.id];
-      ui.statusCopy.textContent = `${activeCompany.label}: ${activeState.detail}. Follow the staged missions and keep combos alive between targets.`;
+      const metaLabel = gameState.metaRewards.lastAwardLabel ? ` Last reward: ${gameState.metaRewards.lastAwardLabel}.` : "";
+      ui.statusCopy.textContent = `${activeCompany.label}: ${activeState.detail}. Group bonus ${bonusCompanyCount}/${COMPANY_CONFIG.length}.${metaLabel}`;
     }
   }
 
   function syncInspectableState(physics) {
     window.ImpolPinball = {
-      phase: "12.3",
+      phase: "13.3",
       matterLoaded: Boolean(MatterLib),
       staticBodyCount: physics ? physics.staticBodies.length : 0,
       tableObjectCount: physics ? physics.bumperBodies.length + physics.targetBodies.length + physics.slingshotBodies.length : 0,
@@ -2106,6 +2253,13 @@
       comboLastObjectId: gameState.comboLastObjectId,
       comboActive: gameState.status === "playing" && gameState.comboUntil > performance.now(),
       comboRemainingMs: Math.max(0, Math.round(gameState.comboUntil - performance.now())),
+      activeMultiplier: getActiveMultiplier(),
+      metaRewards: {
+        ...gameState.metaRewards,
+        missionCompletion: `${getCompletedMissionCount()}/${MISSION_CONFIG.length}`,
+        companyCompletion: `${getBonusCompanyCount()}/${COMPANY_CONFIG.length}`,
+        multiplierRemainingMs: Math.round(getMetaMultiplierRemainingMs())
+      },
       ballSave: {
         active: gameState.status === "playing" && !gameState.ballSaveUsed && performance.now() <= gameState.ballSaveUntil,
         used: gameState.ballSaveUsed,
@@ -2479,6 +2633,7 @@
     gameState.ballSaveUntil = gameState.ballSaveUsed ? 0 : performance.now() + BALL_SAVE_DURATION;
     gameState.plungerPower = 0;
     inputState.chargingSince = 0;
+    updateMetaRewardTimeout();
     audio.play("launch", { power });
     syncInspectableState(physics);
   }
@@ -2506,7 +2661,7 @@
       return;
     }
 
-    const points = 3500 * gameState.multiplier;
+    const points = 3500 * getActiveMultiplier();
     gameState.skillShotAwarded = true;
     gameState.score += points;
     setHighScore(gameState.score);
@@ -2515,7 +2670,6 @@
     gameState.feedbackUntil = performance.now() + 1100;
     gameState.hitCounts["skill-shot"] = performance.now();
     updateCompanyForEvent(gameState.lastEvent);
-    setCompanyStatus("rondal", "bonus", "Bonus");
     addHitFeedback({
       id: "skill-shot",
       x: 686,
@@ -2546,7 +2700,7 @@
       return;
     }
 
-    const points = object.points * gameState.multiplier;
+    const points = object.points * getActiveMultiplier();
     const combo = registerComboHit(object);
     gameState.score += points + combo.bonus;
     setHighScore(gameState.score);
@@ -2638,7 +2792,7 @@
 
     return {
       count: gameState.comboCount,
-      bonus: baseBonus * gameState.multiplier
+      bonus: baseBonus * getActiveMultiplier()
     };
   }
 
@@ -2705,7 +2859,7 @@
   }
 
   function completeBomMode() {
-    const bonus = BOM_MODE.successBonus * gameState.multiplier;
+    const bonus = BOM_MODE.successBonus * getActiveMultiplier();
     gameState.bomMode.active = false;
     gameState.bomMode.step = 0;
     gameState.bomMode.deadline = 0;
@@ -2749,6 +2903,31 @@
   function updateBallSaveTimeout() {
     if (gameState.ballSaveUntil && performance.now() > gameState.ballSaveUntil) {
       gameState.ballSaveUntil = 0;
+    }
+  }
+
+  function updateMetaRewardTimeout() {
+    if (!gameState.metaRewards.multiplierUntil && gameState.status === "playing" && gameState.metaRewards.multiplierRemainingMs > 0) {
+      gameState.metaRewards.multiplierUntil = performance.now() + gameState.metaRewards.multiplierRemainingMs;
+      updateHud();
+      syncInspectableState(physics);
+      return;
+    }
+
+    if (gameState.metaRewards.multiplierUntil && gameState.status !== "playing") {
+      gameState.metaRewards.multiplierRemainingMs = getMetaMultiplierRemainingMs();
+      gameState.metaRewards.multiplierUntil = 0;
+      updateHud();
+      syncInspectableState(physics);
+      return;
+    }
+
+    if (gameState.metaRewards.multiplierUntil && performance.now() > gameState.metaRewards.multiplierUntil) {
+      gameState.metaRewards.multiplierUntil = 0;
+      gameState.metaRewards.multiplierRemainingMs = 0;
+      gameState.metaRewards.multiplierValue = 1;
+      updateHud();
+      syncInspectableState(physics);
     }
   }
 
@@ -2840,6 +3019,7 @@
 
     gameState.feedback = `${mission.label} COMPLETE +${mission.bonus.toLocaleString("sl-SI")}`;
     gameState.feedbackUntil = performance.now() + 1300;
+    maybeAwardMissionMetaReward();
   }
 
   function kickBallFromObject(ball, object) {
@@ -3011,6 +3191,7 @@
     gameState.missions = createMissionState();
     gameState.activeCompanyId = "impol";
     gameState.companies = createCompanyState();
+    gameState.metaRewards = createMetaRewardState();
 
     if (physics) {
       resetBall(physics.ball, true);
@@ -3474,6 +3655,7 @@
       updateBomModeTimeout();
       updateComboTimeout();
       updateBallSaveTimeout();
+      updateMetaRewardTimeout();
       holdBallInLaunchLane();
       MatterLib.Engine.update(physics.engine, physicsClock.step * physicsClock.simulationScale);
       maybeGuideShooterLaneExit();
@@ -3516,6 +3698,7 @@
       drawStatusBadge();
       drawScoreFeedback();
       drawComboBadge();
+      drawMetaRewardBadge();
       drawBallSaveBadge();
       drawBomModeBadge();
       drawHitEffects();

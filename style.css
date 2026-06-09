@@ -113,13 +113,15 @@ h1 {
   gap: 8px;
 }
 
-.mission-status {
+.mission-status,
+.group-reward-status {
   margin: 0 0 10px;
   display: grid;
   gap: 6px;
 }
 
-.mission-status div {
+.mission-status div,
+.group-reward-status div {
   min-height: 32px;
   padding: 6px 8px;
   display: grid;
@@ -129,6 +131,10 @@ h1 {
   border: 1px solid rgba(109, 135, 148, 0.18);
   border-radius: 6px;
   background: rgba(8, 18, 25, 0.48);
+}
+
+.group-reward-status div {
+  grid-template-columns: 92px 1fr;
 }
 
 .score-board div,
@@ -161,7 +167,8 @@ h1 {
   text-transform: uppercase;
 }
 
-.mission-status dt {
+.mission-status dt,
+.group-reward-status dt {
   color: var(--muted);
   font-size: 0.66rem;
   font-weight: 800;
@@ -176,7 +183,8 @@ h1 {
   font-variant-numeric: tabular-nums;
 }
 
-.mission-status dd {
+.mission-status dd,
+.group-reward-status dd {
   margin: 0;
   min-width: 0;
   overflow: hidden;

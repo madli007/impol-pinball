@@ -813,12 +813,18 @@ Priority order:
   - Implemented a dynamic company panel with in-memory status state, active-company highlighting, and inspectable company progress state.
   - Mapped target/slingshot/skill-shot events, mission progress, mission completion, combos, and Kosovnica BOM success into `Ready`, `Online`, `Complete`, and `Bonus` company statuses.
 
-- [ ] Phase 13.3 - Mission-complete meta reward - Status: planned
+- [x] Phase 13.3 - Mission-complete meta reward - Status: complete
   - Add a global completion tracker for all required missions in the active ruleset.
   - When all required missions are completed, trigger a major reward instead of only points.
+  - Add a secondary company-completion tracker: when IMPOL, SEVAL, ALCAD, TLM, IMPOL-PC, and RONDAL are all at `Bonus`, trigger a separate group-level reward.
+  - Candidate company reward: `IMPOL GROUP SYNERGY` / `FULL GROUP BONUS`, temporary 3x-4x scoring, ball-save extension, or immediate multiball/jackpot light if those systems are already available.
+  - Make the all-companies reward visible in the right HUD panel so players understand why the company statuses matter.
   - First candidate reward: start multiball.
   - Backup reward if multiball is not ready yet: `INDUSTRY 4.0 JACKPOT` plus temporary 3x multiplier and ball-save extension.
   - Visible result: finishing missions has a memorable table-level payoff.
+  - Implemented one-time all-mission completion tracking with an `INDUSTRY 4.0 JACKPOT` backup reward, score burst, temporary 3x scoring, ball-save extension, canvas feedback, and inspectable meta state.
+  - Implemented one-time all-company `Bonus` tracking with a separate `IMPOL GROUP SYNERGY` reward, score burst, temporary 4x scoring, ball-save extension, and right-HUD `Group reward` progress.
+  - Tuned company `Bonus` status so it requires stronger post-mission play instead of ordinary early combos, and changed meta reward timers to count down only while a ball is actively in play.
 
 - [ ] Phase 13.4 - Two-ball multiball foundation - Status: planned
   - Extend ball management from one active ball to a small collection of active balls.
