@@ -127,6 +127,15 @@ h1 {
   background: rgba(8, 18, 25, 0.72);
 }
 
+.mission-list li {
+  min-height: 38px;
+  padding: 8px 10px;
+}
+
+.mission-list li[hidden] {
+  display: none;
+}
+
 .score-board dt {
   color: var(--muted);
   font-size: 0.72rem;
@@ -163,6 +172,10 @@ h1 {
   display: grid;
   gap: 8px;
   list-style: none;
+}
+
+.mission-list {
+  gap: 6px;
 }
 
 .mission-list span,

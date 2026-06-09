@@ -102,6 +102,54 @@
       bonus: 10000,
       multiplierReward: 2,
       reward: "2x multiplier"
+    },
+    {
+      id: "green",
+      label: "GREEN ALUMINIUM",
+      event: "hit:GREEN",
+      required: 4,
+      bonus: 9000,
+      reward: "CO2 bonus"
+    },
+    {
+      id: "coil",
+      label: "COIL COLLECTOR",
+      event: "hit:COIL",
+      required: 3,
+      bonus: 8500,
+      reward: "Coil bonus"
+    },
+    {
+      id: "eodprema",
+      label: "E-ODPREMA",
+      event: "hit:EODPREMA",
+      required: 2,
+      bonus: 7000,
+      reward: "Dispatch bonus"
+    },
+    {
+      id: "alcad",
+      label: "ALCAD SORTIRANJE",
+      event: "hit:ALCAD",
+      required: 2,
+      bonus: 7000,
+      reward: "Recycle bonus"
+    },
+    {
+      id: "furnace",
+      label: "LIVARNA READY",
+      event: "hit:FURNACE",
+      required: 3,
+      bonus: 9500,
+      reward: "Furnace bonus"
+    },
+    {
+      id: "kosovnica",
+      label: "KOSOVNICA MIRNA",
+      event: "hit:KOSOVNICA",
+      required: 2,
+      bonus: 11000,
+      reward: "No revision bonus"
     }
   ];
   const BOM_MODE = {
@@ -122,20 +170,8 @@
     rightControl: document.getElementById("right-control"),
     spaceControl: document.getElementById("space-control"),
     audioToggle: document.getElementById("audio-toggle"),
-    missions: {
-      measurement: {
-        row: document.getElementById("mission-measurement"),
-        progress: document.getElementById("mission-measurement-progress")
-      },
-      mes: {
-        row: document.getElementById("mission-mes"),
-        progress: document.getElementById("mission-mes-progress")
-      },
-      erp: {
-        row: document.getElementById("mission-erp"),
-        progress: document.getElementById("mission-erp-progress")
-      }
-    }
+    missionList: document.getElementById("mission-list"),
+    missions: {}
   };
   const gameState = {
     score: 0,
@@ -197,6 +233,42 @@
       };
       return missions;
     }, {});
+  }
+
+  function renderMissionList() {
+    ui.missionList.innerHTML = "";
+    ui.missions = {};
+
+    MISSION_CONFIG.forEach((mission) => {
+      const row = document.createElement("li");
+      row.id = `mission-${mission.id}`;
+
+      const label = document.createElement("span");
+      label.textContent = mission.label;
+
+      const progress = document.createElement("strong");
+      progress.id = `mission-${mission.id}-progress`;
+      progress.textContent = `0/${mission.required}`;
+
+      row.append(label, progress);
+      ui.missionList.append(row);
+      ui.missions[mission.id] = { row, progress };
+    });
+  }
+
+  function getHudMissions(limit = 5) {
+    const active = MISSION_CONFIG.filter((mission) => mission.id === gameState.activeMissionId);
+    const progressing = MISSION_CONFIG.filter((mission) => {
+      const state = gameState.missions[mission.id];
+      return mission.id !== gameState.activeMissionId && state.progress > 0 && !state.completed;
+    });
+    const next = MISSION_CONFIG.filter((mission) => {
+      const state = gameState.missions[mission.id];
+      return mission.id !== gameState.activeMissionId && state.progress === 0 && !state.completed;
+    });
+    const completed = MISSION_CONFIG.filter((mission) => gameState.missions[mission.id].completed);
+
+    return [...active, ...progressing, ...next, ...completed].slice(0, limit);
   }
 
   function loadAssets(config) {
@@ -985,18 +1057,21 @@
   }
 
   function drawMissionLights() {
-    MISSION_CONFIG.forEach((mission, index) => {
+    const missions = getHudMissions(5);
+    const startX = 450 - ((missions.length - 1) * 32) / 2;
+
+    missions.forEach((mission, index) => {
       const state = gameState.missions[mission.id];
-      const x = 316 + index * 134;
+      const x = startX + index * 32;
       const y = 964;
       const isActive = gameState.activeMissionId === mission.id;
 
       context.fillStyle = state.completed ? "#7bdc6c" : isActive ? "#ff9b3d" : "#304f5d";
       context.beginPath();
-      context.arc(x, y, isActive ? 15 : 11, 0, Math.PI * 2);
+      context.arc(x, y, isActive ? 13 : 9, 0, Math.PI * 2);
       context.fill();
       context.strokeStyle = "rgba(237, 247, 251, 0.62)";
-      context.lineWidth = 3;
+      context.lineWidth = 2;
       context.stroke();
     });
   }
@@ -1492,18 +1567,21 @@
   }
 
   function updateMissionUi() {
+    const visibleMissionIds = new Set(getHudMissions().map((mission) => mission.id));
+
     MISSION_CONFIG.forEach((mission) => {
       const state = gameState.missions[mission.id];
       const missionUi = ui.missions[mission.id];
       missionUi.progress.textContent = state.completed ? "DONE" : `${state.progress}/${mission.required}`;
       missionUi.row.classList.toggle("is-complete", state.completed);
       missionUi.row.classList.toggle("is-active", gameState.activeMissionId === mission.id && !state.completed);
+      missionUi.row.hidden = !visibleMissionIds.has(mission.id);
     });
   }
 
   function syncInspectableState(physics) {
     window.ImpolPinball = {
-      phase: "12.2",
+      phase: "12.3",
       matterLoaded: Boolean(MatterLib),
       staticBodyCount: physics ? physics.staticBodies.length : 0,
       tableObjectCount: physics ? physics.bumperBodies.length + physics.targetBodies.length + physics.slingshotBodies.length : 0,
@@ -2713,6 +2791,7 @@
   if (physics) {
     resetBall(physics.ball, true);
   }
+  renderMissionList();
   updateHud();
   updateAudioUi();
   updateControlsUi();

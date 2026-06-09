@@ -795,13 +795,14 @@ Priority order:
   - Visible result: early unlucky drains feel fairer with very little physics risk.
   - Implemented first pass as one save per ball with a visible `BALL SAVE ACTIVE` timer and shooter-lane relaunch.
 
-- [ ] Phase 12.3 - More missions from existing targets - Status: planned
+- [x] Phase 12.3 - More missions from existing targets - Status: complete
   - Add additional missions that reuse existing table objects and hit events.
   - Candidate missions: e-Odprema, Green aluminium, Valjarna, Livarna, and Kosovnica.
   - Keep mission requirements small and readable for demo play.
   - Use the current mission panel style before designing a larger mission UI.
   - Combine with combo rules where useful, but keep mission completion independent.
   - Visible result: the table has more reasons to keep playing without adding new objects.
+  - Implemented as a config-driven mission list with new missions for Green aluminium, Coil collector, e-Odprema, ALCAD, Livarna, and Kosovnica.
 
 - [ ] Phase 12.4 - Company progress system - Status: planned
   - Turn the right-side company list into a lightweight progress/status panel.
