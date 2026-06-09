@@ -44,6 +44,7 @@ Supporting files:
 - `mission-stage-lamps.png` - mission-stage insert row for the active mission sequence.
 - `multiball-lock-release.png` - multiball lock / ball-release visual.
 - `jackpot-coil-insert.png`, `jackpot-furnace-insert.png`, `jackpot-final-insert.png` - jackpot insert candidates for future shot rules.
+- `innovation-label-plate.png` - cropped label plate from the secondary visual sheet, used on the lower playfield.
 
 ## Style Notes
 
@@ -66,3 +67,5 @@ Phase 9.3 adds lower playfield mechanical details, shooter lane housing art, and
 Phase 9.4 adds low-contrast industrial decals such as route curves, warning stripe plates, LED strips, circuit plates, and roller symbols. These remain decorative and should not read as scoring targets.
 
 Phase 12.5 adds a missing-visual-assets pack for upcoming rules work. `kosovnica-terminal-target.png` is integrated as a real target sprite; the mission-stage, multiball, and jackpot assets are integrated as low-alpha visual-only hints until Phase 13 gives them gameplay contracts.
+
+Phase 12.6 crops the useful `INNOVATION` label plate from `secondary-visual-asset-sheet-transparent.png`. The remaining rails, pipes, LEDs, and label plates stay in the source sheet until a rule or layout pass gives them a clear purpose.

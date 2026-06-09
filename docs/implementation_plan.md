@@ -773,12 +773,14 @@ Priority order:
   - Integrated `KOSOVNICA` as a real target sprite and added the mission-stage, multiball, and jackpot assets as low-alpha visual-only hints for upcoming Phase 13 rules.
   - Left company badges, richer inlane/outlane inserts, bitmap game-over panel, and optional audio files in the documented future backlog because the current rules/UI do not consume them yet.
 
-- [ ] Phase 12.6 - Secondary sheet leftovers polish - Status: planned
+- [x] Phase 12.6 - Secondary sheet leftovers polish - Status: complete
   - Review `secondary-visual-asset-sheet-transparent.png` for small, already-generated details that are worth cropping before new asset generation.
   - First candidate: crop and integrate the `INNOVATION` label plate to replace the current canvas-only lower playfield text.
   - Later candidates: small LED/button inserts for lane, company, or progress states once Phase 13/14 rules need them.
   - Avoid adding the remaining large rails, pipe pieces, and extra label plates until they have clear gameplay placement, because they can make the table visually noisy.
   - Visible result: useful existing art is harvested deliberately without decorating the table just because the sheet contains more objects.
+  - Cropped `innovation-label-plate.png` from the secondary visual sheet and integrated it as the lower playfield `INNOVATION` plate with a canvas-text fallback.
+  - Left the remaining LED/button, rail, pipe, and extra label assets in the source sheet until the lane, company progress, or route rules need them.
 
 ### Phase 13: Mission Progression, Multiball, And Endgame
 

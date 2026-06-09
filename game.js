@@ -71,7 +71,8 @@
     "decal-warning-stripe": { src: "assets/images/decal-warning-stripe.png", width: 126, height: 24 },
     "decal-led-strip": { src: "assets/images/decal-led-strip.png", width: 132, height: 28 },
     "decal-circuit-plate": { src: "assets/images/decal-circuit-plate.png", width: 132, height: 47 },
-    "decal-roller-symbol": { src: "assets/images/decal-roller-symbol.png", width: 74, height: 49 }
+    "decal-roller-symbol": { src: "assets/images/decal-roller-symbol.png", width: 74, height: 49 },
+    "innovation-label-plate": { src: "assets/images/innovation-label-plate.png", width: 232, height: 41 }
   };
   const TABLE_CONFIG = {
     bumpers: [
@@ -1984,7 +1985,14 @@
     context.arc(450, 1026, 18, 0, Math.PI * 2);
     context.fill();
 
-    drawLabel("INNOVATION", 450, 1084, "#31a8ff", 28);
+    if (!drawDecorAsset("innovation-label-plate", 450, 1084, 232, 41, {
+      alpha: 0.9,
+      shadowColor: "rgba(49, 168, 255, 0.28)",
+      shadowBlur: 8,
+      shadowOffsetY: 4
+    })) {
+      drawLabel("INNOVATION", 450, 1084, "#31a8ff", 28);
+    }
   }
 
   function createMatterWorld() {
