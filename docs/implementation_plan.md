@@ -814,11 +814,20 @@ Priority order:
 
 - [ ] Phase 12.5 - Hall of Fame UI - Status: planned
   - Add a small local Hall of Fame view for top scores.
-  - Store a few entries in localStorage with score, date, and optional initials.
+  - Store a few entries in localStorage with score, date, optional initials, and the game/ruleset version.
+  - Save Hall of Fame data as a small JSON structure, for example `{ version, rulesetVersion, entries }`, so old scores can be separated when scoring changes.
   - Keep the default flow simple: only ask for initials after a new high score.
   - Add a compact display that does not compete with the main playfield.
   - Preserve the current single high score as a fallback if localStorage is unavailable.
   - Visible result: quick demo games become more social and replayable.
+
+- [ ] Phase 12.6 - Mission sequencing - Status: planned
+  - Convert the expanded mission list into a staged sequence instead of making every mission available immediately.
+  - Unlock only a small active set at a time, for example core startup missions first, then production missions, then internal-joke missions.
+  - Avoid overlapping target ownership by assigning each stage a clear focus and letting inactive target hits score normally without advancing hidden missions.
+  - Show only active and recently completed missions in the HUD so the left panel remains readable.
+  - Consider a small `missionStage` / `unlockedMissionIds` state model so future modes can open doors, channels, or bonus objectives cleanly.
+  - Visible result: the table feels more intentional, and players understand what to aim for next without every target competing at once.
 
 ## 15. Post-MVP Backlog
 
@@ -842,6 +851,11 @@ Priority order:
   - HelpDesk tickets
 - Company progress system.
 - Hall of Fame UI.
+- Multiplayer / shared Hall of Fame:
+  - Start after local Hall of Fame is stable and scores include `rulesetVersion`.
+  - Prefer a tiny append-only score API first: initials, score, date, ruleset version, and optional build version.
+  - Add lightweight anti-spam before making it public: per-browser cooldown, score sanity checks, and a simple admin/reset path.
+  - Keep the local Hall of Fame as offline fallback when the shared score service is unavailable.
 - Generated playfield asset pack.
 - Local vendored Matter.js.
 - More mockup-like table art and lighting.
