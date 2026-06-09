@@ -759,7 +759,7 @@ Priority order:
   - Reworked game-over audio into a heavier low drop with impact noise, distinct from the ordinary drain sound.
   - Added a procedural `multiball-start` cue in the audio manager for the future multiball hook; no local audio files were needed.
 
-- [ ] Phase 12.5 - Missing visual assets backlog - Status: planned
+- [x] Phase 12.5 - Missing visual assets backlog - Status: complete
   - Create or source a dedicated `KOSOVNICA` terminal/target asset so the current label plate can become a real table object.
   - Add mission-stage lamps or inserts for the active mission sequence.
   - Add multiball lock / ball-release visual, even if the first implementation uses virtual spawning.
@@ -769,6 +769,16 @@ Priority order:
   - Add optional company badge assets for the right-side company progress system.
   - Add optional audio file assets for effects that procedural Web Audio cannot make satisfying enough.
   - Visible result: asset work is prioritized by future gameplay needs, not just screenshot decoration.
+  - Generated a Phase 12.5 missing-visual-assets sheet and cropped transparent PNGs for `KOSOVNICA`, mission-stage lamps, multiball lock / ball release, and `COIL` / `FURNACE` / final jackpot inserts.
+  - Integrated `KOSOVNICA` as a real target sprite and added the mission-stage, multiball, and jackpot assets as low-alpha visual-only hints for upcoming Phase 13 rules.
+  - Left company badges, richer inlane/outlane inserts, bitmap game-over panel, and optional audio files in the documented future backlog because the current rules/UI do not consume them yet.
+
+- [ ] Phase 12.6 - Secondary sheet leftovers polish - Status: planned
+  - Review `secondary-visual-asset-sheet-transparent.png` for small, already-generated details that are worth cropping before new asset generation.
+  - First candidate: crop and integrate the `INNOVATION` label plate to replace the current canvas-only lower playfield text.
+  - Later candidates: small LED/button inserts for lane, company, or progress states once Phase 13/14 rules need them.
+  - Avoid adding the remaining large rails, pipe pieces, and extra label plates until they have clear gameplay placement, because they can make the table visually noisy.
+  - Visible result: useful existing art is harvested deliberately without decorating the table just because the sheet contains more objects.
 
 ### Phase 13: Mission Progression, Multiball, And Endgame
 

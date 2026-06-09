@@ -37,6 +37,13 @@ Supporting files:
 - `decal-led-strip.png` - cropped blue LED strip plate.
 - `decal-circuit-plate.png` - cropped circuit/production route plate.
 - `decal-roller-symbol.png` - cropped roller/extrusion symbol decal.
+- `phase12-missing-visual-assets-sheet.png` - generated chroma-key source sheet for Phase 12.5 future gameplay assets.
+- `phase12-missing-visual-assets-sheet-transparent.png` - transparent working sheet after chroma-key removal.
+- `phase12-asset-preview.png` - local contact-sheet preview of the cropped Phase 12.5 assets.
+- `kosovnica-terminal-target.png` - dedicated KOSOVNICA terminal target asset.
+- `mission-stage-lamps.png` - mission-stage insert row for the active mission sequence.
+- `multiball-lock-release.png` - multiball lock / ball-release visual.
+- `jackpot-coil-insert.png`, `jackpot-furnace-insert.png`, `jackpot-final-insert.png` - jackpot insert candidates for future shot rules.
 
 ## Style Notes
 
@@ -57,3 +64,5 @@ Phase 9.2 adds a background/frame asset pass with a playfield floor texture, tab
 Phase 9.3 adds lower playfield mechanical details, shooter lane housing art, and small decorative post caps. These also remain visual-only layers.
 
 Phase 9.4 adds low-contrast industrial decals such as route curves, warning stripe plates, LED strips, circuit plates, and roller symbols. These remain decorative and should not read as scoring targets.
+
+Phase 12.5 adds a missing-visual-assets pack for upcoming rules work. `kosovnica-terminal-target.png` is integrated as a real target sprite; the mission-stage, multiball, and jackpot assets are integrated as low-alpha visual-only hints until Phase 13 gives them gameplay contracts.

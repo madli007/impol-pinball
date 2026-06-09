@@ -59,6 +59,12 @@
     "shooter-plunger-housing": { src: "assets/images/shooter-plunger-housing.png", width: 54, height: 246 },
     "mechanical-post-blue": { src: "assets/images/mechanical-post-blue.png", width: 32, height: 48 },
     "mechanical-post-orange": { src: "assets/images/mechanical-post-orange.png", width: 32, height: 51 },
+    "kosovnica": { src: "assets/images/kosovnica-terminal-target.png", width: 128, height: 160, yOffset: -20 },
+    "mission-stage-lamps": { src: "assets/images/mission-stage-lamps.png", width: 282, height: 50 },
+    "multiball-lock-release": { src: "assets/images/multiball-lock-release.png", width: 300, height: 134 },
+    "jackpot-coil-insert": { src: "assets/images/jackpot-coil-insert.png", width: 116, height: 102 },
+    "jackpot-furnace-insert": { src: "assets/images/jackpot-furnace-insert.png", width: 116, height: 102 },
+    "jackpot-final-insert": { src: "assets/images/jackpot-final-insert.png", width: 116, height: 102 },
     "decal-arrow-blue": { src: "assets/images/decal-arrow-blue.png", width: 34, height: 32 },
     "decal-arrow-orange": { src: "assets/images/decal-arrow-orange.png", width: 34, height: 32 },
     "decal-coil-route-blue": { src: "assets/images/decal-coil-route-blue.png", width: 126, height: 76 },
@@ -1214,6 +1220,12 @@
   function drawMissionLights() {
     const missions = getHudMissions(5);
     const startX = 450 - ((missions.length - 1) * 32) / 2;
+    const drewStageAsset = drawDecorAsset("mission-stage-lamps", 450, 964, 282, 50, {
+      alpha: 0.32,
+      shadowColor: "rgba(49, 168, 255, 0.16)",
+      shadowBlur: 7,
+      shadowOffsetY: 3
+    });
 
     missions.forEach((mission, index) => {
       const state = gameState.missions[mission.id];
@@ -1221,7 +1233,13 @@
       const y = 964;
       const isActive = gameState.activeMissionId === mission.id;
 
-      context.fillStyle = state.completed ? "#7bdc6c" : isActive ? "#ff9b3d" : "#304f5d";
+      context.fillStyle = state.completed
+        ? "rgba(123, 220, 108, 0.9)"
+        : isActive
+          ? "rgba(255, 155, 61, 0.94)"
+          : drewStageAsset
+            ? "rgba(48, 79, 93, 0.28)"
+            : "#304f5d";
       context.beginPath();
       context.arc(x, y, isActive ? 13 : 9, 0, Math.PI * 2);
       context.fill();
@@ -1463,6 +1481,33 @@
       alpha: 0.19,
       rotation: -0.18,
       shadowBlur: 5,
+      shadowOffsetY: 3
+    });
+  }
+
+  function drawFutureGameplayAssetHints() {
+    drawDecorAsset("multiball-lock-release", 450, 300, 260, 116, {
+      alpha: 0.08,
+      shadowColor: "rgba(49, 168, 255, 0.12)",
+      shadowBlur: 5,
+      shadowOffsetY: 4
+    });
+    drawDecorAsset("jackpot-furnace-insert", 568, 662, 102, 90, {
+      alpha: 0.11,
+      rotation: 0.08,
+      shadowBlur: 4,
+      shadowOffsetY: 3
+    });
+    drawDecorAsset("jackpot-coil-insert", 324, 876, 96, 84, {
+      alpha: 0.1,
+      rotation: -0.08,
+      shadowBlur: 4,
+      shadowOffsetY: 3
+    });
+    drawDecorAsset("jackpot-final-insert", 576, 876, 96, 84, {
+      alpha: 0.09,
+      rotation: 0.08,
+      shadowBlur: 4,
       shadowOffsetY: 3
     });
   }
@@ -1897,6 +1942,7 @@
     drawLabel("ALUMINIUM INDUSTRY", canvas.width / 2, 230, "#9ab3bf", 24);
 
     drawIndustrialDecorationAssets();
+    drawFutureGameplayAssetHints();
     drawMechanicalDetailAssets();
     drawLowerLanePolish();
 
