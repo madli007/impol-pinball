@@ -732,10 +732,12 @@ Priority order:
   - Keep intentional blue/orange/green gameplay indicators, but remove lines that read like accidental crop/debug artifacts.
   - Visible result: the table art looks intentional and no longer has unexplained purple streaks.
 
-- [ ] Phase 12.2 - Asset-first cleanup pass - Status: planned
+- [x] Phase 12.2 - Asset-first cleanup pass - Status: complete
   - Continue replacing procedural decorative strokes with existing PNG art when the asset is already available.
   - Keep procedural drawing only for gameplay feedback, labels, fallback rendering, and effects.
   - Re-check the shooter lane, side lanes, frame, drain, slingshots, and lower plastics after each change.
+  - Reduced redundant procedural overlays where the shooter housing, table frame, and lower plastic PNGs are already available.
+  - Kept labels and gameplay feedback readable while moving fallback-only rails, plates, bolts, and heavy strokes behind asset availability checks.
   - Visible result: the game trusts its visual assets instead of drawing extra outlines over them.
 
 - [ ] Phase 12.3 - Strong game-over presentation - Status: planned

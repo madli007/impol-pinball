@@ -1219,10 +1219,23 @@
     });
 
     drawDecorAsset("table-frame-trim", 450, 700, 900, 1344, {
-      alpha: 0.82,
-      shadowBlur: 20,
-      shadowOffsetY: 8
+      alpha: 0.84,
+      shadowColor: "rgba(0, 0, 0, 0.34)",
+      shadowBlur: 8,
+      shadowOffsetY: 4
     });
+  }
+
+  function drawFrameFringeMask() {
+    const maskGradient = context.createLinearGradient(0, 0, 0, canvas.height);
+    maskGradient.addColorStop(0, "#183d4d");
+    maskGradient.addColorStop(0.48, "#102733");
+    maskGradient.addColorStop(1, "#081016");
+
+    context.save();
+    context.fillStyle = maskGradient;
+    context.fillRect(72, 1372, 756, 8);
+    context.restore();
   }
 
   function drawMechanicalDetailAssets() {
@@ -1338,9 +1351,9 @@
     context.save();
 
     const laneGradient = context.createLinearGradient(laneX, 0, lane.outerX, 0);
-    laneGradient.addColorStop(0, "rgba(4, 11, 16, 0.86)");
-    laneGradient.addColorStop(0.45, "rgba(15, 42, 55, 0.92)");
-    laneGradient.addColorStop(1, "rgba(120, 148, 158, 0.32)");
+    laneGradient.addColorStop(0, hasHousingArt ? "rgba(4, 11, 16, 0.68)" : "rgba(4, 11, 16, 0.86)");
+    laneGradient.addColorStop(0.45, hasHousingArt ? "rgba(15, 42, 55, 0.74)" : "rgba(15, 42, 55, 0.92)");
+    laneGradient.addColorStop(1, hasHousingArt ? "rgba(120, 148, 158, 0.18)" : "rgba(120, 148, 158, 0.32)");
     fillRoundedRect(laneX, lane.topY, laneWidth, laneHeight, 28, laneGradient);
 
     if (!hasHousingArt) {
@@ -1394,9 +1407,16 @@
       shadowOffsetY: 5
     });
 
-    fillRoundedRect(lane.innerX - 96, lane.bottomY - 62, 82, 52, 12, "#0a1820");
-    strokeRoundedRect(lane.innerX - 96, lane.bottomY - 62, 82, 52, 12, "#ff9b3d", 4);
-    drawLabel("LAUNCH", lane.innerX - 55, lane.bottomY - 36, "#ff9b3d", 16);
+    if (hasHousingArt) {
+      context.save();
+      context.globalAlpha = 0.72;
+      drawLabel("LAUNCH", lane.innerX - 55, lane.bottomY - 36, "#ffb967", 15);
+      context.restore();
+    } else {
+      fillRoundedRect(lane.innerX - 96, lane.bottomY - 62, 82, 52, 12, "#0a1820");
+      strokeRoundedRect(lane.innerX - 96, lane.bottomY - 62, 82, 52, 12, "#ff9b3d", 4);
+      drawLabel("LAUNCH", lane.innerX - 55, lane.bottomY - 36, "#ff9b3d", 16);
+    }
 
     context.restore();
   }
@@ -1501,9 +1521,11 @@
       context.save();
       context.translate(lane.labelX, lane.labelY);
       context.rotate(lane.angle);
-      context.globalAlpha = hasLowerPlasticArt ? 0.48 : 1;
-      fillRoundedRect(-42, -12, 84, 24, 6, hasLowerPlasticArt ? "rgba(5, 11, 16, 0.34)" : "rgba(5, 11, 16, 0.68)");
-      context.fillStyle = hasLowerPlasticArt ? "rgba(154, 179, 191, 0.74)" : "#9ab3bf";
+      context.globalAlpha = hasLowerPlasticArt ? 0.36 : 1;
+      if (!hasLowerPlasticArt) {
+        fillRoundedRect(-42, -12, 84, 24, 6, "rgba(5, 11, 16, 0.68)");
+      }
+      context.fillStyle = hasLowerPlasticArt ? "rgba(154, 179, 191, 0.68)" : "#9ab3bf";
       context.font = "800 12px Arial, Helvetica, sans-serif";
       context.textAlign = "center";
       context.textBaseline = "middle";
@@ -1511,13 +1533,15 @@
       context.restore();
 
       const lampGlow = context.createRadialGradient(lane.lampX, lane.lampY, 2, lane.lampX, lane.lampY, 22);
-      lampGlow.addColorStop(0, "rgba(255, 155, 61, 0.9)");
+      lampGlow.addColorStop(0, hasLowerPlasticArt ? "rgba(255, 155, 61, 0.46)" : "rgba(255, 155, 61, 0.9)");
       lampGlow.addColorStop(1, "rgba(255, 155, 61, 0)");
       context.fillStyle = lampGlow;
       context.beginPath();
       context.arc(lane.lampX, lane.lampY, 22, 0, Math.PI * 2);
       context.fill();
-      drawRailBolt(lane.lampX, lane.lampY, 6);
+      if (!hasLowerPlasticArt) {
+        drawRailBolt(lane.lampX, lane.lampY, 6);
+      }
     });
 
     context.restore();
@@ -1608,7 +1632,7 @@
 
   function syncInspectableState(physics) {
     window.ImpolPinball = {
-      phase: "12.1",
+      phase: "12.2",
       matterLoaded: Boolean(MatterLib),
       staticBodyCount: physics ? physics.staticBodies.length : 0,
       tableObjectCount: physics ? physics.bumperBodies.length + physics.targetBodies.length + physics.slingshotBodies.length : 0,
@@ -1674,26 +1698,32 @@
         [112, 1284],
         [788, 1284]
       ].forEach(([x, y]) => drawRailBolt(x, y, 5));
+    } else {
+      drawFrameFringeMask();
     }
 
-    context.save();
-    context.strokeStyle = hasFrameArt ? "rgba(154, 179, 191, 0.42)" : "#6d8794";
-    context.lineWidth = hasFrameArt ? 5 : 8;
-    context.beginPath();
-    context.moveTo(150, 230);
-    context.quadraticCurveTo(196, 116, 450, 104);
-    context.quadraticCurveTo(704, 116, 750, 230);
-    context.stroke();
-    context.restore();
+    if (!hasFrameArt) {
+      context.save();
+      context.strokeStyle = "#6d8794";
+      context.lineWidth = 8;
+      context.beginPath();
+      context.moveTo(150, 230);
+      context.quadraticCurveTo(196, 116, 450, 104);
+      context.quadraticCurveTo(704, 116, 750, 230);
+      context.stroke();
+      context.restore();
+    }
 
-    context.fillStyle = "rgba(49, 168, 255, 0.08)";
-    context.beginPath();
-    context.moveTo(130, 238);
-    context.quadraticCurveTo(450, 30, 770, 238);
-    context.lineTo(714, 386);
-    context.quadraticCurveTo(450, 230, 186, 386);
-    context.closePath();
-    context.fill();
+    if (!hasFrameArt) {
+      context.fillStyle = "rgba(49, 168, 255, 0.08)";
+      context.beginPath();
+      context.moveTo(130, 238);
+      context.quadraticCurveTo(450, 30, 770, 238);
+      context.lineTo(714, 386);
+      context.quadraticCurveTo(450, 230, 186, 386);
+      context.closePath();
+      context.fill();
+    }
 
     drawLabel("IMPOL", canvas.width / 2, 178, "#edf7fb", 68);
     drawLabel("ALUMINIUM INDUSTRY", canvas.width / 2, 230, "#9ab3bf", 24);
