@@ -12,7 +12,8 @@
       outerX: 842,
       bottomY: 1190,
       topY: 160,
-      exitY: 214
+      exitY: 214,
+      plungerCenterX: 800
     },
     totalBalls: 3,
     flippers: {
@@ -1331,7 +1332,8 @@
     }
 
     const lane = TABLE.shooterLane;
-    const barX = lane.outerX - 39;
+    const plungerCenterX = lane.plungerCenterX || (lane.innerX + lane.outerX) / 2;
+    const barX = plungerCenterX + 7;
     const barY = lane.bottomY - 82;
     const barWidth = 14;
     const barHeight = 58;
@@ -1401,7 +1403,8 @@
       context.stroke();
     }
 
-    drawDecorAsset("shooter-plunger-housing", lane.outerX - 29, lane.bottomY - 115, 58, 264, {
+    const plungerCenterX = lane.plungerCenterX || (lane.innerX + lane.outerX) / 2;
+    drawDecorAsset("shooter-plunger-housing", plungerCenterX + 1, lane.bottomY - 115, 58, 264, {
       alpha: 0.96,
       shadowBlur: 14,
       shadowOffsetY: 5
@@ -1410,12 +1413,12 @@
     if (hasHousingArt) {
       context.save();
       context.globalAlpha = 0.72;
-      drawLabel("LAUNCH", lane.innerX - 55, lane.bottomY - 36, "#ffb967", 15);
+      drawLabel("LAUNCH", plungerCenterX - 48, lane.bottomY - 36, "#ffb967", 15);
       context.restore();
     } else {
-      fillRoundedRect(lane.innerX - 96, lane.bottomY - 62, 82, 52, 12, "#0a1820");
-      strokeRoundedRect(lane.innerX - 96, lane.bottomY - 62, 82, 52, 12, "#ff9b3d", 4);
-      drawLabel("LAUNCH", lane.innerX - 55, lane.bottomY - 36, "#ff9b3d", 16);
+      fillRoundedRect(plungerCenterX - 89, lane.bottomY - 62, 82, 52, 12, "#0a1820");
+      strokeRoundedRect(plungerCenterX - 89, lane.bottomY - 62, 82, 52, 12, "#ff9b3d", 4);
+      drawLabel("LAUNCH", plungerCenterX - 48, lane.bottomY - 36, "#ff9b3d", 16);
     }
 
     context.restore();
@@ -1895,7 +1898,8 @@
       return body;
     });
 
-    const ball = Bodies.circle(TABLE.ballStart.x, TABLE.ballStart.y, 26, {
+    const ballStartPosition = getBallStartPosition();
+    const ball = Bodies.circle(ballStartPosition.x, ballStartPosition.y, 26, {
       label: "pinball",
       restitution: 0.82,
       friction: 0.005,
@@ -1961,7 +1965,7 @@
     }
 
     MatterLib.Body.setStatic(ball, Boolean(holdForLaunch));
-    MatterLib.Body.setPosition(ball, TABLE.ballStart);
+    MatterLib.Body.setPosition(ball, getBallStartPosition());
     MatterLib.Body.setVelocity(ball, { x: 0, y: 0 });
     MatterLib.Body.setAngularVelocity(ball, 0);
   }
@@ -1972,9 +1976,17 @@
     }
 
     MatterLib.Body.setStatic(physics.ball, true);
-    MatterLib.Body.setPosition(physics.ball, TABLE.ballStart);
+    MatterLib.Body.setPosition(physics.ball, getBallStartPosition());
     MatterLib.Body.setVelocity(physics.ball, { x: 0, y: 0 });
     MatterLib.Body.setAngularVelocity(physics.ball, 0);
+  }
+
+  function getBallStartPosition() {
+    const lane = TABLE.shooterLane;
+    return {
+      x: lane.plungerCenterX || TABLE.ballStart.x,
+      y: TABLE.ballStart.y
+    };
   }
 
   function launchBall() {
