@@ -726,7 +726,7 @@ Priority order:
 3. Keep this phase low-risk: mostly rendering, audio, and feedback changes.
 4. Leave multiball and route mechanics for later phases.
 
-- [ ] Phase 12.1 - Purple line cleanup - Status: planned
+- [x] Phase 12.1 - Purple line cleanup - Status: complete
   - Find and remove or recolor the remaining purple/violet guide lines that do not belong to the final table art.
   - Check whether they come from the playfield/frame asset source, low-opacity decals, or leftover canvas strokes.
   - Keep intentional blue/orange/green gameplay indicators, but remove lines that read like accidental crop/debug artifacts.
