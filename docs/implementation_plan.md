@@ -674,162 +674,94 @@ Priority order:
   - Decision: keep the current Web Audio effects for now and document future file-based candidates in `assets/audio/README.md`.
   - Visible result: the project has a clear decision on whether it needs real audio assets.
 
-### Phase 11: Table Mechanics And Bonus Depth
+### Phase 11: Completed Gameplay Depth
 
-Goal: move from a polished MVP table toward a more classic pinball ruleset with lanes, locks, kickouts, timed shields, and bonus modes while keeping the table reliable enough for casual demo play.
-
-Priority order:
-
-1. Add small physical features that improve existing ball flow before adding new routes.
-2. Make every new visual element match a simple collision body or clearly mark it as decorative.
-3. Avoid full ramp/orbit/lane rewrites until the lower table is stable.
-4. Keep bonus modes short and optional so the base pinball game stays readable.
-5. Prefer one well-tuned mechanic per phase over several half-working features.
-
-Recommended simple-first order:
-
-1. Left/right slingshot bumpers near the flippers.
-2. Small lane lamps or rollover sensors that only score, not redirect.
-3. Timed ball-save as an invisible drain recovery, not a visible physical wall.
-4. A short internal-joke bonus mode such as BOM / Kosovnica Panic.
-5. Only then revisit outlanes, ramps, orbit channels, lock holes, and mini-games.
+Goal: record the gameplay-depth work that is already in the current build, so future phases start from the real state of the game instead of old post-MVP assumptions.
 
 - [x] Phase 11.1 - Left/right slingshot bumpers - Status: complete
   - Add one left and one right angled slingshot bumper above the flippers.
-  - Use simple triangular or narrow rectangular Matter bodies that bounce the ball back into play.
-  - Keep the visual footprint small and aligned with the existing lower plastic art.
+  - Use simple sensor bodies plus controlled impulses to avoid hidden walls around the flippers.
   - Award a small score bonus and use the existing bumper sound.
-  - Tune impulse carefully so the ball feels lively but does not rocket straight into the drain.
-  - First pass uses sensor bodies plus controlled impulses to avoid hidden walls around the flippers.
   - Visible result: the lower table feels more like real pinball without adding a complex new route.
 
-- [x] Phase 11.1a - Touch controls - Status: complete
+- [x] Phase 11.2 - Touch controls - Status: complete
   - Add mobile-friendly touch zones on the playfield canvas.
   - Let lower-left touches activate the left flipper and lower-right touches activate the right flipper.
   - Let the shooter area charge and launch the ball when the game is ready.
   - Preserve keyboard controls and the existing sidebar control buttons.
-  - Prevent page scrolling or text selection while touching the canvas.
-  - Release held controls on pointer cancel, lost pointer capture, tab blur, or page hide.
   - Visible result: the game is playable on a phone or tablet without needing a keyboard.
 
-- [ ] Phase 11.2 - Simple rollover lane lamps - Status: planned
-  - Add two or three small sensor-only rollover lanes or lamps in the lower/mid playfield.
-  - Award small points and combo progress when the ball passes over them.
-  - Keep them non-blocking so they cannot trap the ball.
-  - Use this as a low-risk way to add more things to aim for before complex ramps.
-  - Visible result: more activity and feedback without changing core physics much.
+- [x] Phase 11.3 - Combo shots - Status: complete
+  - Add a short combo window after every scoring target hit.
+  - Award escalating combo bonuses and show clear popups such as `3x COMBO +2500`.
+  - Reset combo cleanly on drain, next ball, ball-save, or timeout.
+  - Visible result: repeated accurate shots feel more rewarding without changing the table layout.
 
-- [ ] Phase 11.3 - Lane and outlane system - Status: planned
-  - Add clearer left/right inlanes and outlanes near the flippers.
-  - Add a temporary ball-save or side shield at the start of each ball.
-  - Let the shield open after a timer, first bumper hit, or first scoring sequence.
-  - Add lane labels and small indicators so the player understands when protection is active.
-  - Tune walls and rubber guides so the ball does not trap in lane corners.
-  - Consider an invisible ball-save sensor instead of a large physical gate so the lane art does not become an obstacle.
-  - Keep the previous lane/ball-save experiment in stash as a reference, but redesign the layout before implementing it again.
-  - Visible result: side drains feel fair and intentional instead of accidental.
+- [x] Phase 11.4 - Invisible ball save - Status: complete
+  - Enable ball save for a short period after launch.
+  - If the ball drains during that period, reset it to the shooter lane without reducing balls left.
+  - Show a visible `BALL SAVE ACTIVE` timer and relaunch from the shooter lane.
+  - Visible result: early unlucky drains feel fairer with very little physics risk.
 
-- [ ] Phase 11.4 - Upper orbit and return channel - Status: planned
-  - Add a left or right orbit/channel that carries the ball up and returns it down another path.
-  - Use guide rails and a simple sensor zone rather than a fully simulated ramp at first.
-  - Award a route/combo bonus when the ball completes the channel cleanly.
-  - Add industrial route art such as aluminium flow arrows, conveyor markings, or pipe rails.
-  - Keep the previous ramp/orbit experiment in stash as a reference, but redesign the entry so it is easy to hit and does not create a hidden wall.
-  - Visible result: the player can intentionally shoot a loop instead of only hitting central targets.
-
-- [ ] Phase 11.5 - Lock house / kickout opening - Status: planned
-  - Add a themed opening or "house" that can catch the ball.
-  - Keep it closed until the player hits required targets or lane switches.
-  - When open, let the ball enter, pause briefly, award a bonus, then kick it back into play.
-  - Add sound and light feedback for closed, opening, locked, and kickout states.
-  - Visible result: the table has a memorable feature that changes state during a ball.
+- [x] Phase 11.5 - More missions from existing targets - Status: complete
+  - Add additional missions that reuse existing table objects and hit events.
+  - Implement missions for Green aluminium, Coil collector, e-Odprema, ALCAD, Livarna, and Kosovnica.
+  - Keep mission completion independent from combo scoring.
+  - Visible result: the table has more reasons to keep playing without adding new objects.
 
 - [x] Phase 11.6 - BOM Panic / Kosovnica mode - Status: complete
-  - Add a "KOSOVNICA" target, terminal, or small indicator as an internal joke because nobody likes BOM cleanup.
-  - On hit, trigger a short timed mode such as "BOM ERROR: missing revision" or "MANJKA POZICIJA 0042".
-  - Reuse existing targets for the first pass: for example require `MES -> ERP -> COIL` within a short timer.
-  - Award a clear success bonus such as "KOSOVNICA USKLAJENA" and a small failure message such as "REVIZIJA ZAVRNJENA".
-  - Keep the mode funny but readable: no complex UI at first, just status text, flashing targets, score popups, and existing sounds.
-  - First pass uses a sensor-only `KOSOVNICA` terminal and a timed `MES -> ERP -> COIL` sequence.
+  - Add a `KOSOVNICA` target and timed `MES -> ERP -> COIL` sequence.
+  - Award a success bonus for `KOSOVNICA USKLAJENA` and show failure feedback for missed sequences.
   - Possible variants for later: revision counter R12/R13, random missing part number, multiplier freeze on failure, or opening a lock/kickout after approval.
-  - Visible result: the game gets a recognizable internal factory joke with a small rules payoff.
+  - Visible result: the game has a recognizable internal factory joke with a small rules payoff.
 
-- [ ] Phase 11.7 - Bonus mini-game hook - Status: planned
-  - Trigger a short top-screen bonus mode from the lock house or completed route sequence.
-  - Start with a very small overlay interaction, such as timing a press or dodging simple obstacles.
-  - Keep normal pinball paused or safely held while the mini-game runs.
-  - Award bonus points, multiplier progress, or ball save extension.
-  - Candidate theme: a tiny Flappy-style aluminium coil / delivery drone / factory route challenge.
-  - Visible result: completing table objectives can unlock a funny bonus moment without derailing the main game.
+### Phase 12: Immediate Cleanup And Presentation
 
-- [ ] Phase 11.8 - Advanced feature backlog breakdown - Status: planned
-  - Revisit multiball, jackpot, company progress, Hall of Fame, and extra missions after the first new table mechanics are stable.
-  - Decide which features belong in Phase 12 versus the long-term backlog.
-  - Visible result: the next roadmap stays grounded in tested gameplay instead of wish-list sprawl.
-
-### Phase 12: Low-risk Gameplay Depth
-
-Goal: add more pinball depth using rules, scoring, UI state, and existing targets before adding risky new physics routes.
+Goal: fix visible artifacts and sharpen the most noticeable feedback before adding bigger rules or new physical routes.
 
 Priority order:
 
-1. Prefer logic-only or sensor-only features over new physical geometry.
-2. Reuse existing target hit events, popups, sounds, and mission state.
-3. Keep each feature independently testable in one short play session.
-4. Add visible feedback for every new rule so players understand why they scored.
-5. Save complex features such as multiball, jackpot, and real ramps until these rules feel solid.
+1. Fix artifacts the player can already see.
+2. Make the end-of-game and core sound effects more obvious.
+3. Keep this phase low-risk: mostly rendering, audio, and feedback changes.
+4. Leave multiball and route mechanics for later phases.
 
-- [x] Phase 12.1 - Combo shots - Status: complete
-  - Add a short combo window after every scoring target hit.
-  - Increase combo count when the player hits another valid object before the window expires.
-  - Award escalating combo bonuses and show clear popups such as `3x COMBO +2500`.
-  - Reuse existing score popup and audio feedback instead of adding new physics.
-  - Reset combo cleanly on drain, next ball, or timeout.
-  - Visible result: repeated accurate shots feel more rewarding without changing the table layout.
-  - Implemented as a 1.8-second combo window with escalating 2x+ bonuses, clear `Nx COMBO +bonus` popups, and explicit timeout/drain/ball-save resets.
+- [ ] Phase 12.1 - Purple line cleanup - Status: planned
+  - Find and remove or recolor the remaining purple/violet guide lines that do not belong to the final table art.
+  - Check whether they come from the playfield/frame asset source, low-opacity decals, or leftover canvas strokes.
+  - Keep intentional blue/orange/green gameplay indicators, but remove lines that read like accidental crop/debug artifacts.
+  - Visible result: the table art looks intentional and no longer has unexplained purple streaks.
 
-- [x] Phase 12.2 - Invisible ball save - Status: complete
-  - Enable ball save for a short period after launch.
-  - If the ball drains during that period, reset it to the shooter lane without reducing balls left.
-  - Show a clear `BALL SAVE` message and play a short feedback sound.
-  - Avoid physical gates or shields in the first pass so there is no new trapping risk.
-  - Let future lane/outlane art display the ball-save state after the rule is stable.
-  - Visible result: early unlucky drains feel fairer with very little physics risk.
-  - Implemented first pass as one save per ball with a visible `BALL SAVE ACTIVE` timer and shooter-lane relaunch.
+- [ ] Phase 12.2 - Asset-first cleanup pass - Status: planned
+  - Continue replacing procedural decorative strokes with existing PNG art when the asset is already available.
+  - Keep procedural drawing only for gameplay feedback, labels, fallback rendering, and effects.
+  - Re-check the shooter lane, side lanes, frame, drain, slingshots, and lower plastics after each change.
+  - Visible result: the game trusts its visual assets instead of drawing extra outlines over them.
 
-- [x] Phase 12.3 - More missions from existing targets - Status: complete
-  - Add additional missions that reuse existing table objects and hit events.
-  - Candidate missions: e-Odprema, Green aluminium, Valjarna, Livarna, and Kosovnica.
-  - Keep mission requirements small and readable for demo play.
-  - Use the current mission panel style before designing a larger mission UI.
-  - Combine with combo rules where useful, but keep mission completion independent.
-  - Visible result: the table has more reasons to keep playing without adding new objects.
-  - Implemented as a config-driven mission list with new missions for Green aluminium, Coil collector, e-Odprema, ALCAD, Livarna, and Kosovnica.
+- [ ] Phase 12.3 - Strong game-over presentation - Status: planned
+  - Replace the current small game-over state with a larger visual effect: screen dim, table pulse, large `GAME OVER`, final score, and high-score/new-record callout.
+  - Add a short delay before accepting restart input so the end state is visible.
+  - Preserve quick restart after the effect finishes.
+  - Visible result: it is obvious that the game ended, even if the player is focused on the table instead of the HUD.
 
-- [ ] Phase 12.4 - Company progress system - Status: planned
-  - Turn the right-side company list into a lightweight progress/status panel.
-  - Update company states when related targets, missions, or combos are completed.
-  - Start with simple labels such as `Ready`, `Online`, `Complete`, or `Bonus`.
-  - Keep progress in-memory first; persistence can come later if it proves useful.
-  - Use the system to make IMPOL, SEVAL, ALCAD, TLM, IMPOL-PC, and RONDAL feel connected to gameplay.
-  - Visible result: the existing company panel becomes part of the ruleset instead of only decoration.
+- [ ] Phase 12.4 - Better plunge, bumper, and game-over audio - Status: planned
+  - Upgrade ball plunge from a simple tone into a stronger mechanical spring/rail launch effect.
+  - Upgrade bumper hits so MES/ERP/CO2 can have slightly different characters while sharing a coherent mix.
+  - Add a distinct game-over sound with more weight than an ordinary drain.
+  - Add a stronger multiball start sound once multiball exists.
+  - Keep sounds short and browser-safe; use local audio files only if procedural synthesis is not enough.
+  - Visible result: important game moments sound materially different, not just louder.
 
-- [ ] Phase 12.5 - Hall of Fame UI - Status: planned
-  - Add a small local Hall of Fame view for top scores.
-  - Store a few entries in localStorage with score, date, optional initials, and the game/ruleset version.
-  - Save Hall of Fame data as a small JSON structure, for example `{ version, rulesetVersion, entries }`, so old scores can be separated when scoring changes.
-  - Keep the default flow simple: only ask for initials after a new high score.
-  - Add a compact display that does not compete with the main playfield.
-  - Preserve the current single high score as a fallback if localStorage is unavailable.
-  - Visible result: quick demo games become more social and replayable.
-
-- [ ] Phase 12.6 - Mission sequencing - Status: planned
-  - Convert the expanded mission list into a staged sequence instead of making every mission available immediately.
-  - Unlock only a small active set at a time, for example core startup missions first, then production missions, then internal-joke missions.
-  - Avoid overlapping target ownership by assigning each stage a clear focus and letting inactive target hits score normally without advancing hidden missions.
-  - Show only active and recently completed missions in the HUD so the left panel remains readable.
-  - Consider a small `missionStage` / `unlockedMissionIds` state model so future modes can open doors, channels, or bonus objectives cleanly.
-  - Visible result: the table feels more intentional, and players understand what to aim for next without every target competing at once.
+- [ ] Phase 12.5 - Missing visual assets backlog - Status: planned
+  - Create or source a dedicated `KOSOVNICA` terminal/target asset so the current label plate can become a real table object.
+  - Add mission-stage lamps or inserts for the active mission sequence.
+  - Add multiball lock / ball-release visual, even if the first implementation uses virtual spawning.
+  - Add jackpot inserts for `COIL`, `FURNACE`, and final mission shots.
+  - Add richer inlane/outlane plastics or inserts once lane rules are implemented.
+  - Add a proper game-over / final-score overlay asset or bitmap panel if canvas text feels too flat.
+  - Add optional company badge assets for the right-side company progress system.
+  - Add optional audio file assets for effects that procedural Web Audio cannot make satisfying enough.
+  - Visible result: asset work is prioritized by future gameplay needs, not just screenshot decoration.
 
 ### Phase 13: Mission Progression, Multiball, And Endgame
 
@@ -849,14 +781,22 @@ Priority order:
   - Add small HUD state for current stage, next unlock, and recently completed mission.
   - Visible result: players know what to aim for next instead of seeing every mission compete at once.
 
-- [ ] Phase 13.2 - Mission-complete meta reward - Status: planned
+- [ ] Phase 13.2 - Company progress system - Status: planned
+  - Turn the right-side company list into a lightweight progress/status panel.
+  - Update company states when related targets, missions, or combos are completed.
+  - Start with simple labels such as `Ready`, `Online`, `Complete`, or `Bonus`.
+  - Keep progress in-memory first; persistence can come later if it proves useful.
+  - Use the system to make IMPOL, SEVAL, ALCAD, TLM, IMPOL-PC, and RONDAL feel connected to gameplay.
+  - Visible result: the existing company panel becomes part of the ruleset instead of only decoration.
+
+- [ ] Phase 13.3 - Mission-complete meta reward - Status: planned
   - Add a global completion tracker for all required missions in the active ruleset.
   - When all required missions are completed, trigger a major reward instead of only points.
   - First candidate reward: start multiball.
   - Backup reward if multiball is not ready yet: `INDUSTRY 4.0 JACKPOT` plus temporary 3x multiplier and ball-save extension.
   - Visible result: finishing missions has a memorable table-level payoff.
 
-- [ ] Phase 13.3 - Two-ball multiball foundation - Status: planned
+- [ ] Phase 13.4 - Two-ball multiball foundation - Status: planned
   - Extend ball management from one active ball to a small collection of active balls.
   - Start with two balls, a shared drain handler, and a rule that multiball ends when only one ball remains.
   - Add a short grace period / ball save when multiball starts so both balls survive long enough to be fun.
@@ -864,62 +804,72 @@ Priority order:
   - Tune collision and rendering so the balls remain readable and do not stack into unstable physics.
   - Visible result: mission completion can launch a stable, understandable multiball mode.
 
-- [ ] Phase 13.4 - Jackpot layer after multiball - Status: planned
+- [ ] Phase 13.5 - Jackpot layer after multiball - Status: planned
   - Add one or two jackpot shots only after basic multiball is stable.
   - Candidate jackpot shots: `COIL COLLECTOR`, `FURNACE`, and `KOSOVNICA` after the mission sequence is complete.
   - Add clear `JACKPOT LIT` / `SUPER JACKPOT` canvas feedback and sound.
   - Keep jackpot values modest until longer playtesting shows the score curve.
   - Visible result: multiball has a goal beyond chaos.
 
-- [ ] Phase 13.5 - Strong game-over presentation - Status: planned
-  - Replace the current small game-over state with a larger visual effect: screen dim, table pulse, large `GAME OVER`, final score, and high-score/new-record callout.
-  - Add a short delay before accepting restart input so the end state is visible.
-  - Preserve quick restart after the effect finishes.
-  - Visible result: it is obvious that the game ended, even if the player is focused on the table instead of the HUD.
+### Phase 14: Table Mechanics, Routes, And Long-Term Depth
 
-### Phase 14: Visual Cleanup, Missing Assets, And Audio Upgrade
-
-Goal: remove remaining visual artifacts, list the next useful assets, and upgrade the most noticeable sound effects without bloating the static app.
+Goal: add larger playfield mechanics after the mission/multiball rules have a stable foundation.
 
 Priority order:
 
-1. Fix visible artifacts before generating more art.
-2. Add assets only where they replace a remaining canvas-only or confusing visual.
-3. Improve the effects the player hears most often: plunge, bumpers, drain/game over, and mode rewards.
-4. Keep the current Web Audio fallback so the game still runs without external files.
+1. Prefer sensor-only or simple guide mechanics before fully simulated ramps.
+2. Make every new physical feature visible in the art and understandable from ball movement.
+3. Add one major route/mechanic at a time and retune drain fairness after each change.
+4. Keep bonus mini-games and long-term systems after core pinball routes are stable.
 
-- [ ] Phase 14.1 - Purple line cleanup - Status: planned
-  - Find and remove or recolor the remaining purple/violet guide lines that do not belong to the final table art.
-  - Check whether they come from the playfield/frame asset source, low-opacity decals, or leftover canvas strokes.
-  - Keep intentional blue/orange/green gameplay indicators, but remove lines that read like accidental crop/debug artifacts.
-  - Visible result: the table art looks intentional and no longer has unexplained purple streaks.
+- [ ] Phase 14.1 - Simple rollover lane lamps - Status: planned
+  - Add two or three small sensor-only rollover lanes or lamps in the lower/mid playfield.
+  - Award small points and combo progress when the ball passes over them.
+  - Keep them non-blocking so they cannot trap the ball.
+  - Use this as a low-risk way to add more things to aim for before complex ramps.
+  - Visible result: more activity and feedback without changing core physics much.
 
-- [ ] Phase 14.2 - Asset-first cleanup pass - Status: planned
-  - Continue replacing procedural decorative strokes with existing PNG art when the asset is already available.
-  - Keep procedural drawing only for gameplay feedback, labels, fallback rendering, and effects.
-  - Re-check the shooter lane, side lanes, frame, drain, slingshots, and lower plastics after each change.
-  - Visible result: the game trusts its visual assets instead of drawing extra outlines over them.
+- [ ] Phase 14.2 - Lane and outlane system - Status: planned
+  - Add clearer left/right inlanes and outlanes near the flippers.
+  - Add a temporary ball-save or side shield at the start of each ball.
+  - Let the shield open after a timer, first bumper hit, or first scoring sequence.
+  - Add lane labels and small indicators so the player understands when protection is active.
+  - Tune walls and rubber guides so the ball does not trap in lane corners.
+  - Consider an invisible ball-save sensor instead of a large physical gate so the lane art does not become an obstacle.
+  - Visible result: side drains feel fair and intentional instead of accidental.
 
-- [ ] Phase 14.3 - Missing visual assets backlog - Status: planned
-  - Create or source a dedicated `KOSOVNICA` terminal/target asset so the current label plate can become a real table object.
-  - Add mission-stage lamps or inserts for the active mission sequence.
-  - Add multiball lock / ball-release visual, even if the first implementation uses virtual spawning.
-  - Add jackpot inserts for `COIL`, `FURNACE`, and final mission shots.
-  - Add richer inlane/outlane plastics or inserts once lane rules are implemented.
-  - Add a proper game-over / final-score overlay asset or bitmap panel if canvas text feels too flat.
-  - Add optional company badge assets for the right-side company progress system.
-  - Add optional audio file assets for effects that procedural Web Audio cannot make satisfying enough.
-  - Visible result: asset work is prioritized by future gameplay needs, not just screenshot decoration.
+- [ ] Phase 14.3 - Upper orbit and return channel - Status: planned
+  - Add a left or right orbit/channel that carries the ball up and returns it down another path.
+  - Use guide rails and a simple sensor zone rather than a fully simulated ramp at first.
+  - Award a route/combo bonus when the ball completes the channel cleanly.
+  - Add industrial route art such as aluminium flow arrows, conveyor markings, or pipe rails.
+  - Redesign the entry so it is easy to hit and does not create a hidden wall.
+  - Visible result: the player can intentionally shoot a loop instead of only hitting central targets.
 
-- [ ] Phase 14.4 - Better plunge, bumper, and game-over audio - Status: planned
-  - Upgrade ball plunge from a simple tone into a stronger mechanical spring/rail launch effect.
-  - Upgrade bumper hits so MES/ERP/CO2 can have slightly different characters while sharing a coherent mix.
-  - Add a distinct game-over sound with more weight than an ordinary drain.
-  - Add a stronger multiball start sound once multiball exists.
-  - Keep sounds short and browser-safe; use local audio files only if procedural synthesis is not enough.
-  - Visible result: important game moments sound materially different, not just louder.
+- [ ] Phase 14.4 - Lock house / kickout opening - Status: planned
+  - Add a themed opening or "house" that can catch the ball.
+  - Keep it closed until the player hits required targets or lane switches.
+  - When open, let the ball enter, pause briefly, award a bonus, then kick it back into play.
+  - Add sound and light feedback for closed, opening, locked, and kickout states.
+  - Visible result: the table has a memorable feature that changes state during a ball.
 
-- [ ] Phase 14.5 - Additional ideas to evaluate - Status: planned
+- [ ] Phase 14.5 - Bonus mini-game hook - Status: planned
+  - Trigger a short top-screen bonus mode from the lock house or completed route sequence.
+  - Start with a very small overlay interaction, such as timing a press or dodging simple obstacles.
+  - Keep normal pinball paused or safely held while the mini-game runs.
+  - Award bonus points, multiplier progress, or ball save extension.
+  - Candidate theme: a tiny Flappy-style aluminium coil / delivery drone / factory route challenge.
+  - Visible result: completing table objectives can unlock a funny bonus moment without derailing the main game.
+
+- [ ] Phase 14.6 - Hall of Fame UI - Status: planned
+  - Add a small local Hall of Fame view for top scores.
+  - Store a few entries in localStorage with score, date, optional initials, and the game/ruleset version.
+  - Save Hall of Fame data as a small JSON structure, for example `{ version, rulesetVersion, entries }`, so old scores can be separated when scoring changes.
+  - Keep the default flow simple: only ask for initials after a new high score.
+  - Preserve the current single high score as a fallback if localStorage is unavailable.
+  - Visible result: quick demo games become more social and replayable.
+
+- [ ] Phase 14.7 - Additional ideas to evaluate - Status: planned
   - Add mode callouts such as `QUALITY MODE`, `ERP FREEZE`, `GREEN BONUS`, and `KOSOVNICA PANIC` with small table lighting changes.
   - Add a temporary `ERP ERROR` hurry-up where the player must hit MES/ERP before a timer expires.
   - Add a `COIL FLOW` orbit/combo where sequential route hits increase a rolling bonus.
@@ -928,40 +878,21 @@ Priority order:
   - Add a rules/help overlay that can be opened outside active play, not as in-game explanatory text.
   - Visible result: future work has a ranked idea pool without distracting the current implementation.
 
-## 15. Post-MVP Backlog
+## 15. Parking Lot
 
-- Already completed and removed from the active backlog: touch/mobile controls, ball save, combo shots, slingshots, BOM/Kosovnica first pass, generated playfield assets, sound foundation, and first-pass table art.
+These ideas are intentionally not part of the next ordered phases yet. Promote them into a numbered phase only after Phase 12-14 work proves the table can support them cleanly.
+
 - Combo shot follow-up tuning:
   - Revisit bonus values after longer playtesting.
   - Consider showing the active combo count in the side HUD if the canvas badge is not readable enough during fast play.
-- Mission sequencing and all-mission completion reward.
-- Multiball foundation.
-- Jackpot layer after multiball.
-- Larger game-over visual and audio effect.
-- Purple/violet line cleanup.
-- Better ball plunge, bumper, multiball, and game-over sound effects.
-- Missing gameplay-driven visual assets:
-  - Kosovnica terminal/target asset.
-  - Mission-stage lamps/inserts.
-  - Multiball lock / ball-release visual.
-  - Jackpot inserts.
-  - Lane/outlane inserts after lane rules are implemented.
-  - Game-over/final-score overlay art.
-  - Company badge/progress assets.
-- Side outlane shields that open during play.
-- Upper orbit and return channels.
-- Lock house / kickout opening.
-- Short bonus mini-games triggered by table objectives.
-- More missions:
-  - Valjarna
-  - Excel posast
-  - HelpDesk tickets
-- Company progress system.
-- Hall of Fame UI.
+- More missions after the staged mission system exists:
+  - Valjarna.
+  - Excel posast.
+  - HelpDesk tickets.
 - Multiplayer / shared Hall of Fame:
   - Start after local Hall of Fame is stable and scores include `rulesetVersion`.
   - Prefer a tiny append-only score API first: initials, score, date, ruleset version, and optional build version.
   - Add lightweight anti-spam before making it public: per-browser cooldown, score sanity checks, and a simple admin/reset path.
   - Keep the local Hall of Fame as offline fallback when the shared score service is unavailable.
-- Local vendored Matter.js.
-- More mockup-like table art and lighting after artifact cleanup.
+- Local vendored Matter.js if CDN availability becomes a deployment issue.
+- Additional mockup-like table art and lighting after artifact cleanup, mission sequencing, and route mechanics are stable.
