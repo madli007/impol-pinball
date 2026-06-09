@@ -25,6 +25,7 @@
   const HIGH_SCORE_KEY = "impol-pinball.high-score";
   const AUDIO_MUTED_KEY = "impol-pinball.audio-muted";
   const COMBO_WINDOW_MS = 1800;
+  const GAME_OVER_RESTART_DELAY_MS = 1400;
   const COMBO_BONUS_BY_COUNT = {
     2: 1000,
     3: 2500,
@@ -188,6 +189,7 @@
     ballsLeft: TABLE.totalBalls,
     multiplier: 1,
     highScore: loadHighScore(),
+    previousHighScore: 0,
     status: "ready",
     resetAt: 0,
     drainCount: 0,
@@ -195,6 +197,11 @@
     lastEvent: "",
     feedback: "",
     feedbackUntil: 0,
+    gameOverStartedAt: 0,
+    gameOverRestartAt: 0,
+    finalScore: 0,
+    finalHighScore: 0,
+    finalWasRecord: false,
     hitCounts: {},
     hitEffects: [],
     floatingTexts: [],
@@ -214,6 +221,7 @@
     activeMissionId: "measurement",
     missions: createMissionState()
   };
+  gameState.previousHighScore = gameState.highScore;
   const inputState = {
     left: false,
     right: false,
@@ -965,6 +973,75 @@
     context.fillText(gameState.feedback, 450, 1070);
   }
 
+  function drawGameOverPresentation() {
+    if (gameState.status !== "game-over") {
+      return;
+    }
+
+    const now = performance.now();
+    const elapsed = Math.max(0, now - gameState.gameOverStartedAt);
+    const introProgress = Math.min(1, elapsed / GAME_OVER_RESTART_DELAY_MS);
+    const pulse = 0.5 + Math.sin(elapsed / 155) * 0.5;
+    const score = gameState.finalScore || gameState.score;
+    const highScore = gameState.finalHighScore || gameState.highScore;
+    const scoreLabel = score.toLocaleString("sl-SI");
+    const highScoreLabel = highScore.toLocaleString("sl-SI");
+    const restartReady = now >= gameState.gameOverRestartAt;
+
+    context.save();
+    context.globalAlpha = 0.56 + introProgress * 0.22;
+    context.fillStyle = "#020609";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.restore();
+
+    context.save();
+    context.globalAlpha = 0.18 + pulse * 0.18;
+    context.strokeStyle = gameState.finalWasRecord ? "#7bdc6c" : "#ff7567";
+    context.lineWidth = 16 + pulse * 10;
+    roundedRect(66, 72, canvas.width - 132, canvas.height - 144, 32);
+    context.stroke();
+    context.restore();
+
+    context.save();
+    context.shadowColor = gameState.finalWasRecord ? "rgba(123, 220, 108, 0.72)" : "rgba(255, 79, 61, 0.72)";
+    context.shadowBlur = 28 + pulse * 18;
+    context.fillStyle = gameState.finalWasRecord ? "#7bdc6c" : "#ff7567";
+    context.font = "900 86px Arial, Helvetica, sans-serif";
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillText("GAME OVER", canvas.width / 2, 504);
+    context.restore();
+
+    fillRoundedRect(184, 592, 532, 230, 8, "rgba(5, 11, 16, 0.86)");
+    strokeRoundedRect(
+      184,
+      592,
+      532,
+      230,
+      8,
+      gameState.finalWasRecord ? "rgba(123, 220, 108, 0.72)" : "rgba(255, 155, 61, 0.64)",
+      4
+    );
+
+    context.fillStyle = "#9ab3bf";
+    context.font = "800 22px Arial, Helvetica, sans-serif";
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillText("FINAL SCORE", canvas.width / 2, 636);
+
+    context.fillStyle = "#edf7fb";
+    context.font = "900 56px Arial, Helvetica, sans-serif";
+    context.fillText(scoreLabel, canvas.width / 2, 698);
+
+    context.fillStyle = gameState.finalWasRecord ? "#7bdc6c" : "#31a8ff";
+    context.font = "900 25px Arial, Helvetica, sans-serif";
+    context.fillText(gameState.finalWasRecord ? "NEW RECORD" : `HIGH SCORE ${highScoreLabel}`, canvas.width / 2, 760);
+
+    context.fillStyle = restartReady ? "#ffb967" : "#9ab3bf";
+    context.font = "800 20px Arial, Helvetica, sans-serif";
+    context.fillText(restartReady ? "PRESS SPACE OR RESTART" : "SCORE LOCKING...", canvas.width / 2, 870);
+  }
+
   function drawHitEffects() {
     const now = performance.now();
 
@@ -1333,9 +1410,9 @@
 
     const lane = TABLE.shooterLane;
     const plungerCenterX = lane.plungerCenterX || (lane.innerX + lane.outerX) / 2;
-    const barX = plungerCenterX + 7;
-    const barY = lane.bottomY - 82;
     const barWidth = 14;
+    const barX = plungerCenterX - barWidth / 2;
+    const barY = lane.bottomY - 82;
     const barHeight = 58;
     const filled = barHeight * gameState.plungerPower;
     fillRoundedRect(barX, barY, barWidth, barHeight, 7, "rgba(5, 11, 16, 0.58)");
@@ -1404,7 +1481,7 @@
     }
 
     const plungerCenterX = lane.plungerCenterX || (lane.innerX + lane.outerX) / 2;
-    drawDecorAsset("shooter-plunger-housing", plungerCenterX + 1, lane.bottomY - 115, 58, 264, {
+    drawDecorAsset("shooter-plunger-housing", plungerCenterX, lane.bottomY - 115, 58, 264, {
       alpha: 0.96,
       shadowBlur: 14,
       shadowOffsetY: 5
@@ -1618,6 +1695,21 @@
     ui.multiplier.textContent = `${gameState.multiplier}x`;
     ui.highScore.textContent = gameState.highScore.toLocaleString("sl-SI");
     updateMissionUi();
+    updateRestartUi();
+  }
+
+  function canRestartGameOver() {
+    return gameState.status !== "game-over" || performance.now() >= gameState.gameOverRestartAt;
+  }
+
+  function updateRestartUi() {
+    if (!ui.restartButton) {
+      return;
+    }
+
+    const isWaiting = gameState.status === "game-over" && !canRestartGameOver();
+    ui.restartButton.disabled = isWaiting;
+    ui.restartButton.textContent = isWaiting ? "Game Over" : "Restart";
   }
 
   function updateMissionUi() {
@@ -1635,7 +1727,7 @@
 
   function syncInspectableState(physics) {
     window.ImpolPinball = {
-      phase: "12.2",
+      phase: "12.3",
       matterLoaded: Boolean(MatterLib),
       staticBodyCount: physics ? physics.staticBodies.length : 0,
       tableObjectCount: physics ? physics.bumperBodies.length + physics.targetBodies.length + physics.slingshotBodies.length : 0,
@@ -1661,6 +1753,15 @@
       },
       bomMode: gameState.bomMode,
       skillShotAwarded: gameState.skillShotAwarded,
+      gameOver: {
+        startedAt: gameState.gameOverStartedAt,
+        restartReady: canRestartGameOver(),
+        restartRemainingMs:
+          gameState.status === "game-over" ? Math.max(0, Math.round(gameState.gameOverRestartAt - performance.now())) : 0,
+        finalScore: gameState.finalScore,
+        finalHighScore: gameState.finalHighScore,
+        finalWasRecord: gameState.finalWasRecord
+      },
       activeMissionId: gameState.activeMissionId,
       missions: gameState.missions,
       audio: {
@@ -2408,9 +2509,7 @@
     setHighScore(gameState.score);
 
     if (gameState.ballsLeft === 0) {
-      gameState.status = "game-over";
-      resetBall(ball, true);
-      audio.play("game-over");
+      startGameOver(ball);
     } else {
       gameState.status = "between-balls";
       gameState.ballNumber += 1;
@@ -2423,7 +2522,30 @@
     syncInspectableState(physics);
   }
 
+  function startGameOver(ball) {
+    const now = performance.now();
+
+    gameState.status = "game-over";
+    gameState.gameOverStartedAt = now;
+    gameState.gameOverRestartAt = now + GAME_OVER_RESTART_DELAY_MS;
+    gameState.finalScore = gameState.score;
+    gameState.finalHighScore = gameState.highScore;
+    gameState.finalWasRecord = gameState.score > gameState.previousHighScore;
+    gameState.feedback = "";
+    gameState.feedbackUntil = 0;
+    inputState.space = false;
+    inputState.chargingSince = 0;
+    resetBall(ball, true);
+    audio.play("game-over");
+  }
+
   function restartGame() {
+    if (!canRestartGameOver()) {
+      updateRestartUi();
+      return;
+    }
+
+    gameState.previousHighScore = gameState.highScore;
     gameState.score = 0;
     gameState.ballNumber = 1;
     gameState.ballsLeft = TABLE.totalBalls;
@@ -2435,6 +2557,11 @@
     gameState.lastEvent = "";
     gameState.feedback = "";
     gameState.feedbackUntil = 0;
+    gameState.gameOverStartedAt = 0;
+    gameState.gameOverRestartAt = 0;
+    gameState.finalScore = 0;
+    gameState.finalHighScore = gameState.highScore;
+    gameState.finalWasRecord = false;
     gameState.hitCounts = {};
     gameState.hitEffects = [];
     gameState.floatingTexts = [];
@@ -2565,14 +2692,16 @@
 
       if (!inputState.space) {
         if (gameState.status === "game-over") {
-          restartGame();
+          if (canRestartGameOver()) {
+            restartGame();
+            inputState.space = true;
+          }
         } else if (gameState.status === "ready") {
           gameState.status = "charging";
           inputState.chargingSince = performance.now();
+          inputState.space = true;
         }
       }
-
-      inputState.space = true;
     }
 
     updateControlsUi();
@@ -2621,13 +2750,15 @@
 
     if (control === "space") {
       if (gameState.status === "game-over") {
-        restartGame();
+        if (canRestartGameOver()) {
+          restartGame();
+          inputState.space = true;
+        }
       } else if (gameState.status === "ready") {
         gameState.status = "charging";
         inputState.chargingSince = performance.now();
+        inputState.space = true;
       }
-
-      inputState.space = true;
     }
 
     updateControlsUi();
@@ -2954,11 +3085,16 @@
       drawBallSaveBadge();
       drawBomModeBadge();
       drawHitEffects();
+      drawGameOverPresentation();
     } else {
       fillRoundedRect(104, 100, 210, 44, 6, "rgba(120, 36, 28, 0.76)");
       drawLabel("MATTER.JS NOT LOADED", 209, 123, "#ff7567", 16);
     }
 
+    updateRestartUi();
+    if (gameState.status === "game-over") {
+      syncInspectableState(physics);
+    }
     window.requestAnimationFrame(update);
   }
 

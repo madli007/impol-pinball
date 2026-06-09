@@ -740,10 +740,11 @@ Priority order:
   - Kept labels and gameplay feedback readable while moving fallback-only rails, plates, bolts, and heavy strokes behind asset availability checks.
   - Visible result: the game trusts its visual assets instead of drawing extra outlines over them.
 
-- [ ] Phase 12.3 - Strong game-over presentation - Status: planned
+- [x] Phase 12.3 - Strong game-over presentation - Status: complete
   - Replace the current small game-over state with a larger visual effect: screen dim, table pulse, large `GAME OVER`, final score, and high-score/new-record callout.
   - Add a short delay before accepting restart input so the end state is visible.
   - Preserve quick restart after the effect finishes.
+  - Added a canvas-level game-over presentation with dimming, pulse frame, final-score panel, high-score/new-record text, and delayed restart availability.
   - Visible result: it is obvious that the game ended, even if the player is focused on the table instead of the HUD.
 
 - [ ] Phase 12.4 - Better plunge, bumper, and game-over audio - Status: planned

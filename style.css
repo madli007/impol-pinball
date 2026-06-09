@@ -237,6 +237,13 @@ h1 {
   cursor: pointer;
 }
 
+.control-button:disabled {
+  border-color: rgba(109, 135, 148, 0.38);
+  color: #9ab3bf;
+  background: rgba(8, 18, 25, 0.8);
+  cursor: default;
+}
+
 .controls-hint {
   margin-top: auto;
   display: grid;
