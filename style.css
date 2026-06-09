@@ -285,9 +285,10 @@ h1 {
   max-height: calc(100vh - 64px);
   aspect-ratio: 9 / 14;
   display: block;
-  border: 2px solid #395f70;
+  border: 0;
   border-radius: 8px;
   background: linear-gradient(180deg, #122f3d 0%, #0a1820 100%);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.32);
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;

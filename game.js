@@ -669,26 +669,26 @@
     const baseHeight = Math.max(height * 0.26, 26);
 
     context.save();
-    context.fillStyle = "rgba(0, 0, 0, 0.34)";
+    context.fillStyle = "rgba(0, 0, 0, 0.2)";
     context.beginPath();
     context.ellipse(x, baseY + 12, baseWidth * 0.58, baseHeight * 0.58, 0, 0, Math.PI * 2);
     context.fill();
 
     const baseGradient = context.createLinearGradient(x, baseY - baseHeight / 2, x, baseY + baseHeight / 2);
-    baseGradient.addColorStop(0, "rgba(126, 147, 156, 0.42)");
-    baseGradient.addColorStop(0.5, "rgba(16, 39, 54, 0.92)");
-    baseGradient.addColorStop(1, "rgba(5, 11, 16, 0.9)");
+    baseGradient.addColorStop(0, "rgba(126, 147, 156, 0.24)");
+    baseGradient.addColorStop(0.5, "rgba(16, 39, 54, 0.58)");
+    baseGradient.addColorStop(1, "rgba(5, 11, 16, 0.68)");
     context.fillStyle = baseGradient;
     context.beginPath();
     context.ellipse(x, baseY, baseWidth / 2, baseHeight / 2, 0, 0, Math.PI * 2);
     context.fill();
 
-    context.strokeStyle = isLit ? "#edf7fb" : "rgba(126, 147, 156, 0.86)";
-    context.lineWidth = isLit ? 4 : 3;
+    context.strokeStyle = isLit ? "rgba(237, 247, 251, 0.86)" : "rgba(126, 147, 156, 0.32)";
+    context.lineWidth = isLit ? 4 : 2;
     context.stroke();
 
-    context.strokeStyle = isLit ? accent : `${accent}99`;
-    context.lineWidth = 4;
+    context.strokeStyle = isLit ? accent : `${accent}42`;
+    context.lineWidth = isLit ? 4 : 2;
     context.beginPath();
     context.ellipse(x, baseY - 1, baseWidth * 0.42, baseHeight * 0.28, 0, 0, Math.PI);
     context.stroke();
@@ -728,6 +728,10 @@
     context.restore();
 
     return true;
+  }
+
+  function isAssetReady(id) {
+    return Boolean(assets[id]?.loaded);
   }
 
   function drawDecorAsset(id, x, y, width, height, options = {}) {
@@ -1209,36 +1213,36 @@
 
   function drawTableArtAssets() {
     drawDecorAsset("playfield-floor-texture", 450, 700, 900, 1374, {
-      alpha: 0.68,
+      alpha: 0.86,
       shadowBlur: 0,
       shadowOffsetY: 0
     });
 
     drawDecorAsset("table-frame-trim", 450, 700, 900, 1344, {
-      alpha: 0.3,
-      shadowBlur: 18,
-      shadowOffsetY: 7
+      alpha: 0.82,
+      shadowBlur: 20,
+      shadowOffsetY: 8
     });
   }
 
   function drawMechanicalDetailAssets() {
     drawDecorAsset("lower-plastic-left", 194, 1216, 204, 171, {
-      alpha: 0.34,
-      shadowBlur: 10,
-      shadowOffsetY: 5
+      alpha: 0.82,
+      shadowBlur: 13,
+      shadowOffsetY: 6
     });
     drawDecorAsset("lower-plastic-right", 706, 1216, 204, 169, {
-      alpha: 0.34,
-      shadowBlur: 10,
-      shadowOffsetY: 5
+      alpha: 0.82,
+      shadowBlur: 13,
+      shadowOffsetY: 6
     });
     drawDecorAsset("mechanical-post-blue", 132, 1138, 32, 48, {
-      alpha: 0.54,
+      alpha: 0.86,
       shadowBlur: 8,
       shadowOffsetY: 4
     });
     drawDecorAsset("mechanical-post-orange", 768, 1138, 32, 51, {
-      alpha: 0.54,
+      alpha: 0.86,
       shadowBlur: 8,
       shadowOffsetY: 4
     });
@@ -1329,6 +1333,7 @@
     const laneWidth = lane.outerX - lane.innerX;
     const laneX = lane.innerX;
     const laneHeight = lane.bottomY - lane.topY;
+    const hasHousingArt = isAssetReady("shooter-plunger-housing");
 
     context.save();
 
@@ -1338,51 +1343,53 @@
     laneGradient.addColorStop(1, "rgba(120, 148, 158, 0.32)");
     fillRoundedRect(laneX, lane.topY, laneWidth, laneHeight, 28, laneGradient);
 
-    context.strokeStyle = "rgba(237, 247, 251, 0.5)";
-    context.lineWidth = 7;
-    context.beginPath();
-    context.moveTo(lane.innerX, lane.bottomY);
-    context.lineTo(lane.innerX, lane.topY + 88);
-    context.quadraticCurveTo(lane.innerX - 12, lane.exitY + 2, lane.innerX - 78, lane.exitY + 8);
-    context.stroke();
+    if (!hasHousingArt) {
+      context.strokeStyle = "rgba(237, 247, 251, 0.5)";
+      context.lineWidth = 7;
+      context.beginPath();
+      context.moveTo(lane.innerX, lane.bottomY);
+      context.lineTo(lane.innerX, lane.topY + 88);
+      context.quadraticCurveTo(lane.innerX - 12, lane.exitY + 2, lane.innerX - 78, lane.exitY + 8);
+      context.stroke();
 
-    context.strokeStyle = "rgba(49, 168, 255, 0.92)";
-    context.lineWidth = 4;
-    context.beginPath();
-    context.moveTo(lane.innerX + 17, lane.bottomY - 24);
-    context.lineTo(lane.innerX + 17, lane.topY + 40);
-    context.stroke();
+      context.strokeStyle = "rgba(49, 168, 255, 0.92)";
+      context.lineWidth = 4;
+      context.beginPath();
+      context.moveTo(lane.innerX + 17, lane.bottomY - 24);
+      context.lineTo(lane.innerX + 17, lane.topY + 40);
+      context.stroke();
 
-    context.strokeStyle = "rgba(126, 147, 156, 0.9)";
-    context.lineWidth = 12;
-    context.beginPath();
-    context.moveTo(lane.outerX, lane.bottomY);
-    context.lineTo(lane.outerX, lane.topY);
-    context.stroke();
+      context.strokeStyle = "rgba(126, 147, 156, 0.9)";
+      context.lineWidth = 12;
+      context.beginPath();
+      context.moveTo(lane.outerX, lane.bottomY);
+      context.lineTo(lane.outerX, lane.topY);
+      context.stroke();
 
-    context.strokeStyle = "rgba(237, 247, 251, 0.34)";
-    context.lineWidth = 3;
-    context.beginPath();
-    context.moveTo(lane.outerX - 18, lane.bottomY - 30);
-    context.lineTo(lane.outerX - 18, lane.topY + 40);
-    context.stroke();
+      context.strokeStyle = "rgba(237, 247, 251, 0.34)";
+      context.lineWidth = 3;
+      context.beginPath();
+      context.moveTo(lane.outerX - 18, lane.bottomY - 30);
+      context.lineTo(lane.outerX - 18, lane.topY + 40);
+      context.stroke();
 
-    context.strokeStyle = "rgba(49, 168, 255, 0.72)";
-    context.lineWidth = 6;
-    context.beginPath();
-    context.moveTo(lane.innerX + 16, lane.topY + 42);
-    context.quadraticCurveTo(lane.innerX - 12, lane.exitY - 6, lane.innerX - 94, lane.exitY + 14);
-    context.stroke();
+      context.strokeStyle = "rgba(49, 168, 255, 0.72)";
+      context.lineWidth = 6;
+      context.beginPath();
+      context.moveTo(lane.innerX + 16, lane.topY + 42);
+      context.quadraticCurveTo(lane.innerX - 12, lane.exitY - 6, lane.innerX - 94, lane.exitY + 14);
+      context.stroke();
 
-    context.strokeStyle = "rgba(126, 147, 156, 0.64)";
-    context.lineWidth = 5;
-    context.beginPath();
-    context.moveTo(lane.innerX + 48, lane.topY + 22);
-    context.quadraticCurveTo(lane.innerX + 4, lane.exitY + 46, lane.innerX - 78, lane.exitY + 54);
-    context.stroke();
+      context.strokeStyle = "rgba(126, 147, 156, 0.64)";
+      context.lineWidth = 5;
+      context.beginPath();
+      context.moveTo(lane.innerX + 48, lane.topY + 22);
+      context.quadraticCurveTo(lane.innerX + 4, lane.exitY + 46, lane.innerX - 78, lane.exitY + 54);
+      context.stroke();
+    }
 
     drawDecorAsset("shooter-plunger-housing", lane.outerX - 29, lane.bottomY - 115, 58, 264, {
-      alpha: 0.86,
+      alpha: 0.96,
       shadowBlur: 14,
       shadowOffsetY: 5
     });
@@ -1433,6 +1440,8 @@
   }
 
   function drawLowerLanePolish() {
+    const hasLowerPlasticArt = isAssetReady("lower-plastic-left") && isAssetReady("lower-plastic-right");
+
     context.save();
 
     const lanes = [
@@ -1465,33 +1474,36 @@
     ];
 
     lanes.forEach((lane) => {
-      context.strokeStyle = "rgba(3, 9, 13, 0.55)";
-      context.lineWidth = 18;
-      context.lineCap = "round";
-      context.beginPath();
-      context.moveTo(lane.rail[0][0], lane.rail[0][1]);
-      context.quadraticCurveTo(lane.rail[1][0], lane.rail[1][1], lane.rail[2][0], lane.rail[2][1]);
-      context.stroke();
+      if (!hasLowerPlasticArt) {
+        context.strokeStyle = "rgba(3, 9, 13, 0.55)";
+        context.lineWidth = 18;
+        context.lineCap = "round";
+        context.beginPath();
+        context.moveTo(lane.rail[0][0], lane.rail[0][1]);
+        context.quadraticCurveTo(lane.rail[1][0], lane.rail[1][1], lane.rail[2][0], lane.rail[2][1]);
+        context.stroke();
 
-      context.strokeStyle = "rgba(126, 147, 156, 0.82)";
-      context.lineWidth = 10;
-      context.beginPath();
-      context.moveTo(lane.rail[0][0], lane.rail[0][1]);
-      context.quadraticCurveTo(lane.rail[1][0], lane.rail[1][1], lane.rail[2][0], lane.rail[2][1]);
-      context.stroke();
+        context.strokeStyle = "rgba(126, 147, 156, 0.82)";
+        context.lineWidth = 10;
+        context.beginPath();
+        context.moveTo(lane.rail[0][0], lane.rail[0][1]);
+        context.quadraticCurveTo(lane.rail[1][0], lane.rail[1][1], lane.rail[2][0], lane.rail[2][1]);
+        context.stroke();
 
-      context.strokeStyle = "rgba(49, 168, 255, 0.45)";
-      context.lineWidth = 4;
-      context.beginPath();
-      context.moveTo(lane.rail[0][0] + (lane.angle > 0 ? 8 : -8), lane.rail[0][1] + 3);
-      context.quadraticCurveTo(lane.rail[1][0], lane.rail[1][1] + 4, lane.rail[2][0], lane.rail[2][1] - 4);
-      context.stroke();
+        context.strokeStyle = "rgba(49, 168, 255, 0.45)";
+        context.lineWidth = 4;
+        context.beginPath();
+        context.moveTo(lane.rail[0][0] + (lane.angle > 0 ? 8 : -8), lane.rail[0][1] + 3);
+        context.quadraticCurveTo(lane.rail[1][0], lane.rail[1][1] + 4, lane.rail[2][0], lane.rail[2][1] - 4);
+        context.stroke();
+      }
 
       context.save();
       context.translate(lane.labelX, lane.labelY);
       context.rotate(lane.angle);
-      fillRoundedRect(-42, -12, 84, 24, 6, "rgba(5, 11, 16, 0.68)");
-      context.fillStyle = "#9ab3bf";
+      context.globalAlpha = hasLowerPlasticArt ? 0.48 : 1;
+      fillRoundedRect(-42, -12, 84, 24, 6, hasLowerPlasticArt ? "rgba(5, 11, 16, 0.34)" : "rgba(5, 11, 16, 0.68)");
+      context.fillStyle = hasLowerPlasticArt ? "rgba(154, 179, 191, 0.74)" : "#9ab3bf";
       context.font = "800 12px Arial, Helvetica, sans-serif";
       context.textAlign = "center";
       context.textBaseline = "middle";
@@ -1514,11 +1526,17 @@
   function drawDrainAssembly() {
     context.save();
 
-    drawDecorAsset("drain-apron", 450, 1330, 336, 102, {
-      alpha: 0.84,
+    const drewApron = drawDecorAsset("drain-apron", 450, 1330, 336, 102, {
+      alpha: 0.96,
       shadowBlur: 18,
       shadowOffsetY: 8
     });
+
+    if (drewApron) {
+      drawLabel("DRAIN", 450, 1338, "#ff7567", 22);
+      context.restore();
+      return;
+    }
 
     const base = context.createLinearGradient(0, 1288, 0, 1378);
     base.addColorStop(0, "rgba(126, 147, 156, 0.32)");
@@ -1629,6 +1647,8 @@
 
   function drawPlayfieldFrame() {
     context.clearRect(0, 0, canvas.width, canvas.height);
+    const hasFrameArt = isAssetReady("table-frame-trim");
+    const hasSideTargetArt = isAssetReady("alcad") && isAssetReady("e-odprema");
 
     const gradient = context.createLinearGradient(0, 0, 0, canvas.height);
     gradient.addColorStop(0, "#183d4d");
@@ -1639,24 +1659,26 @@
 
     drawTableArtAssets();
 
-    strokeRoundedRect(34, 34, canvas.width - 68, canvas.height - 68, 34, "#203946", 36);
-    strokeRoundedRect(58, 58, canvas.width - 116, canvas.height - 116, 28, "#7e939c", 10);
-    strokeRoundedRect(86, 88, canvas.width - 172, canvas.height - 176, 24, "#183541", 6);
+    if (!hasFrameArt) {
+      strokeRoundedRect(34, 34, canvas.width - 68, canvas.height - 68, 34, "#203946", 36);
+      strokeRoundedRect(58, 58, canvas.width - 116, canvas.height - 116, 28, "#7e939c", 10);
+      strokeRoundedRect(86, 88, canvas.width - 172, canvas.height - 176, 24, "#183541", 6);
 
-    [
-      [74, 96],
-      [826, 96],
-      [74, 1302],
-      [826, 1302],
-      [112, 116],
-      [788, 116],
-      [112, 1284],
-      [788, 1284]
-    ].forEach(([x, y]) => drawRailBolt(x, y, 5));
+      [
+        [74, 96],
+        [826, 96],
+        [74, 1302],
+        [826, 1302],
+        [112, 116],
+        [788, 116],
+        [112, 1284],
+        [788, 1284]
+      ].forEach(([x, y]) => drawRailBolt(x, y, 5));
+    }
 
     context.save();
-    context.strokeStyle = "#6d8794";
-    context.lineWidth = 8;
+    context.strokeStyle = hasFrameArt ? "rgba(154, 179, 191, 0.42)" : "#6d8794";
+    context.lineWidth = hasFrameArt ? 5 : 8;
     context.beginPath();
     context.moveTo(150, 230);
     context.quadraticCurveTo(196, 116, 450, 104);
@@ -1680,26 +1702,28 @@
     drawMechanicalDetailAssets();
     drawLowerLanePolish();
 
-    context.fillStyle = "#1b3541";
-    context.strokeStyle = "rgba(126, 147, 156, 0.72)";
-    context.lineWidth = 6;
-    context.beginPath();
-    context.moveTo(190, 775);
-    context.lineTo(320, 728);
-    context.lineTo(306, 794);
-    context.lineTo(206, 836);
-    context.closePath();
-    context.fill();
-    context.stroke();
+    if (!hasSideTargetArt) {
+      context.fillStyle = "#1b3541";
+      context.strokeStyle = "rgba(126, 147, 156, 0.72)";
+      context.lineWidth = 6;
+      context.beginPath();
+      context.moveTo(190, 775);
+      context.lineTo(320, 728);
+      context.lineTo(306, 794);
+      context.lineTo(206, 836);
+      context.closePath();
+      context.fill();
+      context.stroke();
 
-    context.beginPath();
-    context.moveTo(710, 775);
-    context.lineTo(580, 728);
-    context.lineTo(594, 794);
-    context.lineTo(694, 836);
-    context.closePath();
-    context.fill();
-    context.stroke();
+      context.beginPath();
+      context.moveTo(710, 775);
+      context.lineTo(580, 728);
+      context.lineTo(594, 794);
+      context.lineTo(694, 836);
+      context.closePath();
+      context.fill();
+      context.stroke();
+    }
 
     drawConfiguredBumpers();
     drawConfiguredTargets();
