@@ -69,7 +69,8 @@
       { id: "furnace", label: "FURNACE", x: 450, y: 696, width: 200, height: 56, accent: "#ff9b3d", event: "hit:FURNACE", points: 750 },
       { id: "coil", label: "COIL COLLECTOR", x: 450, y: 899, width: 234, height: 58, accent: "#7bdc6c", event: "hit:COIL", points: 750 },
       { id: "alcad", label: "ALCAD", x: 254, y: 784, width: 128, height: 48, accent: "#9ab3bf", event: "hit:ALCAD", points: 500 },
-      { id: "e-odprema", label: "E-ODPREMA", x: 646, y: 784, width: 156, height: 48, accent: "#9ab3bf", event: "hit:EODPREMA", points: 500 }
+      { id: "e-odprema", label: "E-ODPREMA", x: 646, y: 784, width: 156, height: 48, accent: "#9ab3bf", event: "hit:EODPREMA", points: 500 },
+      { id: "kosovnica", label: "KOSOVNICA", x: 450, y: 508, width: 168, height: 34, accent: "#ff9b3d", event: "hit:KOSOVNICA", points: 700 }
     ],
     slingshots: [
       { id: "left-slingshot", label: "SEVAL", x: 286, y: 1098, width: 100, height: 22, angle: 0.72, visualX: 258, visualY: 1098, visualWidth: 108, visualHeight: 115, visualAngle: 0, accent: "#31a8ff", event: "hit:LEFT_SLINGSHOT", points: 350, impulse: { x: 6.8, y: -7.8 } },
@@ -103,6 +104,12 @@
       reward: "2x multiplier"
     }
   ];
+  const BOM_MODE = {
+    sequence: ["hit:MES", "hit:ERP", "hit:COIL"],
+    labels: ["MES", "ERP", "COIL"],
+    duration: 10000,
+    successBonus: 15000
+  };
   const ui = {
     score: document.getElementById("score-value"),
     ball: document.getElementById("ball-value"),
@@ -150,6 +157,11 @@
     lowerTrapSince: 0,
     skillShotAvailableUntil: 0,
     skillShotAwarded: false,
+    bomMode: {
+      active: false,
+      step: 0,
+      deadline: 0
+    },
     activeMissionId: "measurement",
     missions: createMissionState()
   };
@@ -929,6 +941,25 @@
     context.fillRect(354, 1034, 192 * remaining, 4);
   }
 
+  function drawBomModeBadge() {
+    if (!gameState.bomMode.active) {
+      return;
+    }
+
+    const remaining = Math.max(0, gameState.bomMode.deadline - performance.now()) / BOM_MODE.duration;
+    const label = BOM_MODE.labels[gameState.bomMode.step] || "APPROVE";
+
+    fillRoundedRect(292, 928, 316, 48, 8, "rgba(5, 11, 16, 0.78)");
+    context.fillStyle = "#ff9b3d";
+    context.font = "800 16px Arial, Helvetica, sans-serif";
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillText(`BOM ERROR: HIT ${label}`, 450, 946);
+
+    context.fillStyle = "rgba(49, 168, 255, 0.88)";
+    context.fillRect(326, 968, 248 * remaining, 4);
+  }
+
   function drawMissionLights() {
     MISSION_CONFIG.forEach((mission, index) => {
       const state = gameState.missions[mission.id];
@@ -1448,7 +1479,7 @@
 
   function syncInspectableState(physics) {
     window.ImpolPinball = {
-      phase: "11.1",
+      phase: "11.6",
       matterLoaded: Boolean(MatterLib),
       staticBodyCount: physics ? physics.staticBodies.length : 0,
       tableObjectCount: physics ? physics.bumperBodies.length + physics.targetBodies.length + physics.slingshotBodies.length : 0,
@@ -1463,6 +1494,7 @@
       score: gameState.score,
       lastEvent: gameState.lastEvent,
       comboCount: gameState.comboCount,
+      bomMode: gameState.bomMode,
       skillShotAwarded: gameState.skillShotAwarded,
       activeMissionId: gameState.activeMissionId,
       missions: gameState.missions,
@@ -1887,6 +1919,7 @@
 
     if (object.type !== "slingshot") {
       advanceMissions(object.event);
+      updateBomMode(object.event);
     }
     updateHud();
     syncInspectableState(physics);
@@ -1930,6 +1963,92 @@
     }
 
     return Math.min(4000, 350 * (gameState.comboCount - 2)) * gameState.multiplier;
+  }
+
+  function startBomMode() {
+    gameState.bomMode.active = true;
+    gameState.bomMode.step = 0;
+    gameState.bomMode.deadline = performance.now() + BOM_MODE.duration;
+    gameState.feedback = "BOM ERROR: MANJKA REVIZIJA";
+    gameState.feedbackUntil = performance.now() + 1400;
+    audio.play("mission-progress");
+  }
+
+  function updateBomMode(eventName) {
+    if (eventName === "hit:KOSOVNICA") {
+      startBomMode();
+      return;
+    }
+
+    if (!gameState.bomMode.active) {
+      return;
+    }
+
+    if (performance.now() > gameState.bomMode.deadline) {
+      failBomMode("REVIZIJA ZAVRNJENA");
+      return;
+    }
+
+    const expectedEvent = BOM_MODE.sequence[gameState.bomMode.step];
+
+    if (eventName !== expectedEvent) {
+      failBomMode("NAPAČNA POZICIJA");
+      return;
+    }
+
+    gameState.bomMode.step += 1;
+    gameState.bomMode.deadline = performance.now() + BOM_MODE.duration;
+
+    if (gameState.bomMode.step >= BOM_MODE.sequence.length) {
+      completeBomMode();
+      return;
+    }
+
+    const nextLabel = BOM_MODE.labels[gameState.bomMode.step];
+    gameState.feedback = `KOSOVNICA ${gameState.bomMode.step}/${BOM_MODE.sequence.length}: ${nextLabel}`;
+    gameState.feedbackUntil = performance.now() + 1000;
+    audio.play("mission-progress");
+  }
+
+  function completeBomMode() {
+    const bonus = BOM_MODE.successBonus * gameState.multiplier;
+    gameState.bomMode.active = false;
+    gameState.bomMode.step = 0;
+    gameState.bomMode.deadline = 0;
+    gameState.score += bonus;
+    setHighScore(gameState.score);
+    gameState.feedback = `KOSOVNICA USKLAJENA +${bonus.toLocaleString("sl-SI")}`;
+    gameState.feedbackUntil = performance.now() + 1600;
+    addHitFeedback({
+      id: "kosovnica-complete",
+      x: 450,
+      y: 1040,
+      accent: "#7bdc6c",
+      label: `BOM OK +${bonus.toLocaleString("sl-SI")}`,
+      color: "#7bdc6c"
+    });
+    audio.play("mission-complete");
+  }
+
+  function failBomMode(label) {
+    gameState.bomMode.active = false;
+    gameState.bomMode.step = 0;
+    gameState.bomMode.deadline = 0;
+    gameState.feedback = label;
+    gameState.feedbackUntil = performance.now() + 1100;
+    audio.play("target");
+  }
+
+  function updateBomModeTimeout() {
+    if (!gameState.bomMode.active || gameState.status !== "playing") {
+      return;
+    }
+
+    if (performance.now() > gameState.bomMode.deadline) {
+      failBomMode("REVIZIJA ZAVRNJENA");
+      updateHud();
+      syncInspectableState(physics);
+    }
   }
 
   function advanceMissions(eventName) {
@@ -2026,6 +2145,9 @@
     }
 
     gameState.drainCount += 1;
+    gameState.bomMode.active = false;
+    gameState.bomMode.step = 0;
+    gameState.bomMode.deadline = 0;
     gameState.ballsLeft = Math.max(0, gameState.ballsLeft - 1);
     setHighScore(gameState.score);
 
@@ -2065,6 +2187,11 @@
     gameState.lowerTrapSince = 0;
     gameState.skillShotAvailableUntil = 0;
     gameState.skillShotAwarded = false;
+    gameState.bomMode = {
+      active: false,
+      step: 0,
+      deadline: 0
+    };
     gameState.activeMissionId = "measurement";
     gameState.missions = createMissionState();
 
@@ -2521,6 +2648,7 @@
     if (physics) {
       updatePlungerPower();
       updateFlippers();
+      updateBomModeTimeout();
       holdBallInLaunchLane();
       MatterLib.Engine.update(physics.engine, physicsClock.step * physicsClock.simulationScale);
       maybeGuideShooterLaneExit();
@@ -2563,6 +2691,7 @@
       drawStatusBadge();
       drawScoreFeedback();
       drawComboBadge();
+      drawBomModeBadge();
       drawHitEffects();
     } else {
       fillRoundedRect(104, 100, 210, 44, 6, "rgba(120, 36, 28, 0.76)");

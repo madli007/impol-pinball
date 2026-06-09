@@ -743,12 +743,13 @@ Recommended simple-first order:
   - Add sound and light feedback for closed, opening, locked, and kickout states.
   - Visible result: the table has a memorable feature that changes state during a ball.
 
-- [ ] Phase 11.6 - BOM Panic / Kosovnica mode - Status: planned
+- [x] Phase 11.6 - BOM Panic / Kosovnica mode - Status: complete
   - Add a "KOSOVNICA" target, terminal, or small indicator as an internal joke because nobody likes BOM cleanup.
   - On hit, trigger a short timed mode such as "BOM ERROR: missing revision" or "MANJKA POZICIJA 0042".
   - Reuse existing targets for the first pass: for example require `MES -> ERP -> COIL` within a short timer.
   - Award a clear success bonus such as "KOSOVNICA USKLAJENA" and a small failure message such as "REVIZIJA ZAVRNJENA".
   - Keep the mode funny but readable: no complex UI at first, just status text, flashing targets, score popups, and existing sounds.
+  - First pass uses a sensor-only `KOSOVNICA` terminal and a timed `MES -> ERP -> COIL` sequence.
   - Possible variants for later: revision counter R12/R13, random missing part number, multiplier freeze on failure, or opening a lock/kickout after approval.
   - Visible result: the game gets a recognizable internal factory joke with a small rules payoff.
 
