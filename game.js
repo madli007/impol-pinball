@@ -23,6 +23,14 @@
   const DEBUG_PHYSICS = false;
   const HIGH_SCORE_KEY = "impol-pinball.high-score";
   const AUDIO_MUTED_KEY = "impol-pinball.audio-muted";
+  const COMBO_WINDOW_MS = 1800;
+  const COMBO_BONUS_BY_COUNT = {
+    2: 1000,
+    3: 2500,
+    4: 4500,
+    5: 7000
+  };
+  const MAX_COMBO_BONUS = 10000;
   const ASSET_CONFIG = {
     furnace: { src: "assets/images/furnace-target.png", width: 154, height: 132, yOffset: -8 },
     coil: { src: "assets/images/coil-collector.png", width: 184, height: 120, yOffset: -8 },
@@ -191,6 +199,7 @@
     floatingTexts: [],
     comboCount: 0,
     comboUntil: 0,
+    comboLastObjectId: "",
     lowerTrapSince: 0,
     skillShotAvailableUntil: 0,
     skillShotAwarded: false,
@@ -1004,7 +1013,7 @@
       return;
     }
 
-    const remaining = Math.max(0, gameState.comboUntil - performance.now()) / 1800;
+    const remaining = Math.max(0, gameState.comboUntil - performance.now()) / COMBO_WINDOW_MS;
     fillRoundedRect(332, 1000, 236, 40, 8, "rgba(5, 11, 16, 0.74)");
     context.fillStyle = "#31a8ff";
     context.font = "800 18px Arial, Helvetica, sans-serif";
@@ -1581,7 +1590,7 @@
 
   function syncInspectableState(physics) {
     window.ImpolPinball = {
-      phase: "12.3",
+      phase: "12.1",
       matterLoaded: Boolean(MatterLib),
       staticBodyCount: physics ? physics.staticBodies.length : 0,
       tableObjectCount: physics ? physics.bumperBodies.length + physics.targetBodies.length + physics.slingshotBodies.length : 0,
@@ -1596,6 +1605,10 @@
       score: gameState.score,
       lastEvent: gameState.lastEvent,
       comboCount: gameState.comboCount,
+      comboUntil: gameState.comboUntil,
+      comboLastObjectId: gameState.comboLastObjectId,
+      comboActive: gameState.status === "playing" && gameState.comboUntil > performance.now(),
+      comboRemainingMs: Math.max(0, Math.round(gameState.comboUntil - performance.now())),
       ballSave: {
         active: gameState.status === "playing" && !gameState.ballSaveUsed && performance.now() <= gameState.ballSaveUntil,
         used: gameState.ballSaveUsed,
@@ -1993,12 +2006,12 @@
     }
 
     const points = object.points * gameState.multiplier;
-    const comboBonus = registerComboHit(object);
-    gameState.score += points + comboBonus;
+    const combo = registerComboHit(object);
+    gameState.score += points + combo.bonus;
     setHighScore(gameState.score);
     gameState.lastEvent = object.event;
-    gameState.feedback = comboBonus
-      ? `COMBO +${(points + comboBonus).toLocaleString("sl-SI")} ${object.label}`
+    gameState.feedback = combo.bonus
+      ? `${combo.count}x COMBO +${combo.bonus.toLocaleString("sl-SI")}`
       : `+${points.toLocaleString("sl-SI")} ${object.label}`;
     gameState.feedbackUntil = performance.now() + 700;
     gameState.hitCounts[object.id] = performance.now();
@@ -2007,11 +2020,11 @@
       x: object.x,
       y: object.y,
       accent: object.accent,
-      label: comboBonus ? `+${points.toLocaleString("sl-SI")}  COMBO +${comboBonus.toLocaleString("sl-SI")}` : `+${points.toLocaleString("sl-SI")}`,
-      color: comboBonus ? "#ffb967" : "#edf7fb"
+      label: combo.bonus ? `${combo.count}x COMBO +${combo.bonus.toLocaleString("sl-SI")}` : `+${points.toLocaleString("sl-SI")}`,
+      color: combo.bonus ? "#ffb967" : "#edf7fb"
     });
 
-    if (comboBonus) {
+    if (combo.bonus) {
       audio.play("combo");
     }
 
@@ -2057,20 +2070,45 @@
 
   function registerComboHit(object) {
     const now = performance.now();
+    const isWithinComboWindow = now <= gameState.comboUntil;
+    const isSameObject = object.id === gameState.comboLastObjectId;
+    const isContinuation = isWithinComboWindow && !isSameObject;
 
-    if (now <= gameState.comboUntil) {
-      gameState.comboCount += 1;
-    } else {
+    if (!isWithinComboWindow) {
       gameState.comboCount = 1;
+    } else if (isContinuation) {
+      gameState.comboCount += 1;
     }
 
-    gameState.comboUntil = now + 1800;
+    gameState.comboUntil = now + COMBO_WINDOW_MS;
+    gameState.comboLastObjectId = object.id;
 
-    if (gameState.comboCount < 3) {
-      return 0;
+    if (!isContinuation || gameState.comboCount < 2) {
+      return {
+        count: gameState.comboCount,
+        bonus: 0
+      };
     }
 
-    return Math.min(4000, 350 * (gameState.comboCount - 2)) * gameState.multiplier;
+    const baseBonus = COMBO_BONUS_BY_COUNT[gameState.comboCount] || Math.min(MAX_COMBO_BONUS, COMBO_BONUS_BY_COUNT[5] + (gameState.comboCount - 5) * 1000);
+
+    return {
+      count: gameState.comboCount,
+      bonus: baseBonus * gameState.multiplier
+    };
+  }
+
+  function resetCombo() {
+    gameState.comboCount = 0;
+    gameState.comboUntil = 0;
+    gameState.comboLastObjectId = "";
+  }
+
+  function updateComboTimeout() {
+    if (gameState.comboUntil && performance.now() > gameState.comboUntil) {
+      resetCombo();
+      syncInspectableState(physics);
+    }
   }
 
   function startBomMode() {
@@ -2266,6 +2304,7 @@
     gameState.bomMode.active = false;
     gameState.bomMode.step = 0;
     gameState.bomMode.deadline = 0;
+    resetCombo();
     resetBall(ball, true);
     gameState.feedback = "BALL SAVE";
     gameState.feedbackUntil = performance.now() + 1400;
@@ -2298,6 +2337,7 @@
     gameState.bomMode.active = false;
     gameState.bomMode.step = 0;
     gameState.bomMode.deadline = 0;
+    resetCombo();
     gameState.ballsLeft = Math.max(0, gameState.ballsLeft - 1);
     setHighScore(gameState.score);
 
@@ -2332,8 +2372,7 @@
     gameState.hitCounts = {};
     gameState.hitEffects = [];
     gameState.floatingTexts = [];
-    gameState.comboCount = 0;
-    gameState.comboUntil = 0;
+    resetCombo();
     gameState.lowerTrapSince = 0;
     gameState.skillShotAvailableUntil = 0;
     gameState.skillShotAwarded = false;
@@ -2802,6 +2841,7 @@
       updatePlungerPower();
       updateFlippers();
       updateBomModeTimeout();
+      updateComboTimeout();
       updateBallSaveTimeout();
       holdBallInLaunchLane();
       MatterLib.Engine.update(physics.engine, physicsClock.step * physicsClock.simulationScale);

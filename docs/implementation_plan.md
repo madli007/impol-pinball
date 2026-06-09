@@ -778,13 +778,14 @@ Priority order:
 4. Add visible feedback for every new rule so players understand why they scored.
 5. Save complex features such as multiball, jackpot, and real ramps until these rules feel solid.
 
-- [ ] Phase 12.1 - Combo shots - Status: planned
+- [x] Phase 12.1 - Combo shots - Status: complete
   - Add a short combo window after every scoring target hit.
   - Increase combo count when the player hits another valid object before the window expires.
   - Award escalating combo bonuses and show clear popups such as `3x COMBO +2500`.
   - Reuse existing score popup and audio feedback instead of adding new physics.
   - Reset combo cleanly on drain, next ball, or timeout.
   - Visible result: repeated accurate shots feel more rewarding without changing the table layout.
+  - Implemented as a 1.8-second combo window with escalating 2x+ bonuses, clear `Nx COMBO +bonus` popups, and explicit timeout/drain/ball-save resets.
 
 - [x] Phase 12.2 - Invisible ball save - Status: complete
   - Enable ball save for a short period after launch.
@@ -833,7 +834,9 @@ Priority order:
 
 - Touch/mobile controls.
 - Ball save.
-- Combo shots.
+- Combo shot follow-up tuning:
+  - Revisit bonus values after longer playtesting.
+  - Consider showing the active combo count in the side HUD if the canvas badge is not readable enough during fast play.
 - Multiball.
 - Jackpot.
 - Left and right lane bumpers / slingshots.
