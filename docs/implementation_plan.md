@@ -844,12 +844,18 @@ Priority order:
   - Keep jackpot values modest until longer playtesting shows the score curve.
   - Visible result: multiball has a goal beyond chaos.
 
-- [ ] Phase 13.6 - Extra ball reward candidates - Status: planned
-  - Explore whether selected missions, late-stage mission chains, or high-value combo streaks should award an extra ball.
-  - Define clear limits before implementation, such as one extra ball per game or one per completed ruleset, so the reward feels special without breaking game length.
-  - Candidate triggers: completing `KOSOVNICA MIRNA`, finishing all required missions, or reaching a demanding combo threshold.
-  - Add obvious HUD/canvas feedback such as `EXTRA BALL LIT` and `EXTRA BALL AWARDED` before adding the reward to scoring balance.
-  - Visible result: elite mission or combo play can extend a run in a controlled, readable way.
+- [x] Phase 13.6 - Progressive multiball access tuning - Status: complete
+  - Make the first multiball reachable much earlier in normal play.
+  - Increase the lock requirement after each successful multiball start so repeat multiballs still feel earned.
+  - Keep mission and company meta rewards meaningful by letting them continue to launch immediate multiball.
+  - Show multiball mission progress clearly enough that players understand they are building toward a payoff.
+  - Visible result: the player can reach multiball early, then has a rising challenge for repeat starts.
+  - Implemented progressive mission-gated multiball instead of extra-ball awards for this pass because playtesting showed multiball access needed a clearer progression hook.
+  - Completed missions now fill multiball progress and start two-ball multiball after 2 mission completions for the first run, then 3, 4, and later capped scaling requirements.
+  - Multiball adds and grace saves now launch balls from the standard shooter lane instead of spawning them into the upper playfield.
+  - Restored normal pinball-to-pinball collisions and added a delayed upper-playfield rescue nudge for near-stationary balls trapped around the top object cluster.
+  - Meta rewards still launch multiball immediately, and every successful multiball start advances the next requirement so repeat multiballs get harder over the same game.
+  - Exposed multiball lock progress, next requirement, start count, and last source through HUD status copy and `window.ImpolPinball`.
 
 ### Phase 14: Table Mechanics, Routes, And Long-Term Depth
 

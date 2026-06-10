@@ -30,10 +30,10 @@
     maxBalls: 2,
     multiplier: 2,
     graceMs: 9000,
-    launchPositions: [
-      { x: 386, y: 326, velocity: { x: -5.4, y: 4.8 } },
-      { x: 514, y: 326, velocity: { x: 5.4, y: 4.8 } }
-    ]
+    progressRequirements: [2, 3, 4],
+    requirementStep: 1,
+    maxRequirement: 5,
+    launchVelocity: { x: 0, y: -36 }
   };
   const FLIPPER_TIP_EXTENSION = 0.16;
   const COMBO_BONUS_BY_COUNT = {
@@ -316,17 +316,13 @@
     comboUntil: 0,
     comboLastObjectId: "",
     lowerTrapSince: 0,
+    upperTrapSince: 0,
+    upperTrapBallId: "",
     skillShotAvailableUntil: 0,
     skillShotAwarded: false,
     ballSaveUntil: 0,
     ballSaveUsed: false,
-    multiball: {
-      active: false,
-      startedAt: 0,
-      endedAt: 0,
-      graceUntil: 0,
-      peakBalls: 1
-    },
+    multiball: createMultiballState(),
     bomMode: {
       active: false,
       step: 0,
@@ -395,6 +391,20 @@
       multiplierUntil: 0,
       multiplierRemainingMs: 0,
       lastAwardLabel: ""
+    };
+  }
+
+  function createMultiballState() {
+    return {
+      active: false,
+      startedAt: 0,
+      endedAt: 0,
+      graceUntil: 0,
+      peakBalls: 1,
+      progress: 0,
+      starts: 0,
+      nextRequirement: MULTIBALL.progressRequirements[0],
+      lastStartSource: ""
     };
   }
 
@@ -2275,7 +2285,10 @@
     if (ui.statusCopy && activeCompany) {
       const activeState = gameState.companies[activeCompany.id];
       const metaLabel = gameState.metaRewards.lastAwardLabel ? ` Last reward: ${gameState.metaRewards.lastAwardLabel}.` : "";
-      ui.statusCopy.textContent = `${activeCompany.label}: ${activeState.detail}. Group bonus ${bonusCompanyCount}/${COMPANY_CONFIG.length}.${metaLabel}`;
+      const multiballStatus = gameState.multiball.active
+        ? " Multiball active."
+        : ` Multiball missions ${gameState.multiball.progress}/${gameState.multiball.nextRequirement}.`;
+      ui.statusCopy.textContent = `${activeCompany.label}: ${activeState.detail}. Group bonus ${bonusCompanyCount}/${COMPANY_CONFIG.length}.${multiballStatus}${metaLabel}`;
     }
   }
 
@@ -2283,7 +2296,7 @@
     const activeBalls = physics ? getActiveBalls() : [];
 
     window.ImpolPinball = {
-      phase: "13.4",
+      phase: "13.6",
       matterLoaded: Boolean(MatterLib),
       staticBodyCount: physics ? physics.staticBodies.length : 0,
       tableObjectCount: physics ? physics.bumperBodies.length + physics.targetBodies.length + physics.slingshotBodies.length : 0,
@@ -2320,6 +2333,10 @@
         active: gameState.multiball.active,
         multiplier: gameState.multiball.active ? MULTIBALL.multiplier : 1,
         peakBalls: gameState.multiball.peakBalls,
+        progress: gameState.multiball.progress,
+        nextRequirement: gameState.multiball.nextRequirement,
+        starts: gameState.multiball.starts,
+        lastStartSource: gameState.multiball.lastStartSource,
         graceRemainingMs: Math.max(0, Math.round(gameState.multiball.graceUntil - performance.now())),
         startedAt: gameState.multiball.startedAt,
         endedAt: gameState.multiball.endedAt
@@ -2751,6 +2768,16 @@
     return ball;
   }
 
+  function addLaunchedMultiball() {
+    const ball = addActiveBall(getBallStartPosition(), MULTIBALL.launchVelocity);
+
+    if (ball) {
+      MatterLib.Body.setStatic(ball, false);
+    }
+
+    return ball;
+  }
+
   function removeActiveBall(ball) {
     if (!physics || !ball) {
       return;
@@ -2775,6 +2802,23 @@
     physics.ball = primaryBall;
   }
 
+  function getMultiballRequirement() {
+    const starts = gameState.multiball.starts || 0;
+    const configuredRequirement = MULTIBALL.progressRequirements[starts];
+
+    if (configuredRequirement) {
+      return configuredRequirement;
+    }
+
+    const lastConfiguredRequirement = MULTIBALL.progressRequirements[MULTIBALL.progressRequirements.length - 1];
+    const overflowStarts = starts - MULTIBALL.progressRequirements.length + 1;
+    return Math.min(MULTIBALL.maxRequirement, lastConfiguredRequirement + overflowStarts * MULTIBALL.requirementStep);
+  }
+
+  function syncMultiballRequirement() {
+    gameState.multiball.nextRequirement = getMultiballRequirement();
+  }
+
   function resetMultiballState() {
     gameState.multiball.active = false;
     gameState.multiball.startedAt = 0;
@@ -2783,17 +2827,17 @@
     gameState.multiball.peakBalls = 1;
   }
 
-  function startMultiball(sourceLabel) {
+  function startMultiball(sourceLabel, options = {}) {
     if (!physics || gameState.status !== "playing") {
       return;
     }
 
+    const wasActive = gameState.multiball.active;
     const activeBalls = getActiveBalls();
     const missingBalls = Math.max(0, MULTIBALL.maxBalls - activeBalls.length);
 
     for (let index = 0; index < missingBalls; index += 1) {
-      const launch = MULTIBALL.launchPositions[(activeBalls.length + index) % MULTIBALL.launchPositions.length];
-      addActiveBall({ x: launch.x, y: launch.y }, launch.velocity);
+      addLaunchedMultiball();
     }
 
     const now = performance.now();
@@ -2802,6 +2846,14 @@
     gameState.multiball.endedAt = 0;
     gameState.multiball.graceUntil = now + MULTIBALL.graceMs;
     gameState.multiball.peakBalls = getActiveBalls().length;
+    gameState.multiball.lastStartSource = sourceLabel;
+
+    if (!wasActive && options.advanceDifficulty !== false) {
+      gameState.multiball.starts += 1;
+      gameState.multiball.progress = 0;
+      syncMultiballRequirement();
+    }
+
     gameState.ballSaveUsed = false;
     gameState.ballSaveUntil = Math.max(gameState.ballSaveUntil, gameState.multiball.graceUntil);
     gameState.feedback = `${sourceLabel}: TWO-BALL MULTIBALL`;
@@ -2816,6 +2868,27 @@
     });
     updateHud();
     syncInspectableState(physics);
+  }
+
+  function advanceMultiballProgressFromMission(mission) {
+    if (gameState.status !== "playing" || gameState.multiball.active) {
+      return;
+    }
+
+    syncMultiballRequirement();
+    gameState.multiball.progress = Math.min(gameState.multiball.nextRequirement, gameState.multiball.progress + 1);
+
+    if (gameState.multiball.progress >= gameState.multiball.nextRequirement) {
+      startMultiball(`${mission.label} REWARD`);
+      audio.play("multiball-start");
+      return;
+    }
+
+    const remaining = gameState.multiball.nextRequirement - gameState.multiball.progress;
+    if (remaining <= 1) {
+      gameState.feedback = `MULTIBALL MISSIONS ${gameState.multiball.progress}/${gameState.multiball.nextRequirement}`;
+      gameState.feedbackUntil = performance.now() + 850;
+    }
   }
 
   function endMultiball() {
@@ -2843,12 +2916,10 @@
       return false;
     }
 
-    const index = getActiveBalls().indexOf(ball);
-    const launch = MULTIBALL.launchPositions[Math.max(0, index) % MULTIBALL.launchPositions.length];
     MatterLib.Body.setStatic(ball, false);
-    MatterLib.Body.setPosition(ball, { x: launch.x, y: launch.y });
-    MatterLib.Body.setVelocity(ball, launch.velocity);
-    MatterLib.Body.setAngularVelocity(ball, launch.velocity.x * 0.04);
+    MatterLib.Body.setPosition(ball, getBallStartPosition());
+    MatterLib.Body.setVelocity(ball, MULTIBALL.launchVelocity);
+    MatterLib.Body.setAngularVelocity(ball, 0);
     gameState.feedback = "MULTIBALL BALL SAVE";
     gameState.feedbackUntil = performance.now() + 1200;
     addHitFeedback({
@@ -3245,6 +3316,7 @@
 
     gameState.feedback = `${mission.label} COMPLETE +${mission.bonus.toLocaleString("sl-SI")}`;
     gameState.feedbackUntil = performance.now() + 1300;
+    advanceMultiballProgressFromMission(mission);
     maybeAwardMissionMetaReward();
   }
 
@@ -3424,11 +3496,13 @@
     gameState.floatingTexts = [];
     resetCombo();
     gameState.lowerTrapSince = 0;
+    gameState.upperTrapSince = 0;
+    gameState.upperTrapBallId = "";
     gameState.skillShotAvailableUntil = 0;
     gameState.skillShotAwarded = false;
     gameState.ballSaveUntil = 0;
     gameState.ballSaveUsed = false;
-    resetMultiballState();
+    gameState.multiball = createMultiballState();
     gameState.bomMode = {
       active: false,
       step: 0,
@@ -3506,6 +3580,46 @@
       y: -2.8
     });
     gameState.lowerTrapSince = 0;
+  }
+
+  function maybeRescueUpperPlayfieldTrap() {
+    if (!physics || gameState.status !== "playing") {
+      return;
+    }
+
+    const trappedBall = getActiveBalls().find((ball) => {
+      const speed = Math.hypot(ball.velocity.x, ball.velocity.y);
+      const inUpperPocket =
+        ball.position.x > 255 &&
+        ball.position.x < 660 &&
+        ball.position.y > 210 &&
+        ball.position.y < 470;
+      return inUpperPocket && speed <= 0.28;
+    });
+
+    if (!trappedBall) {
+      gameState.upperTrapSince = 0;
+      gameState.upperTrapBallId = "";
+      return;
+    }
+
+    if (gameState.upperTrapBallId !== trappedBall.gameBallId) {
+      gameState.upperTrapBallId = trappedBall.gameBallId;
+      gameState.upperTrapSince = performance.now();
+      return;
+    }
+
+    if (performance.now() - gameState.upperTrapSince < 850) {
+      return;
+    }
+
+    const direction = trappedBall.position.x < TABLE.width / 2 ? 1 : -1;
+    MatterLib.Body.setVelocity(trappedBall, {
+      x: direction * 2.4,
+      y: 4.2
+    });
+    gameState.upperTrapSince = 0;
+    gameState.upperTrapBallId = "";
   }
 
   function maybeGuideShooterLaneExit() {
@@ -3958,6 +4072,7 @@
       maybeGuideShooterLaneExit();
       maybeCatchLostBall();
       maybeRescueLowerFlipperTrap();
+      maybeRescueUpperPlayfieldTrap();
       maybeFinishBetweenBalls();
     }
   }
