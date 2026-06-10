@@ -515,6 +515,10 @@
     const status = COMPANY_STATUS[statusKey];
     const state = gameState.companies[companyId];
 
+    if (gameState.multiball.active) {
+      return false;
+    }
+
     if (!company || !status || !state || status.rank < state.rank) {
       return false;
     }
@@ -2286,7 +2290,7 @@
       const activeState = gameState.companies[activeCompany.id];
       const metaLabel = gameState.metaRewards.lastAwardLabel ? ` Last reward: ${gameState.metaRewards.lastAwardLabel}.` : "";
       const multiballStatus = gameState.multiball.active
-        ? " Multiball active."
+        ? " Multiball active: 2x scoring, missions and companies paused."
         : ` Multiball missions ${gameState.multiball.progress}/${gameState.multiball.nextRequirement}.`;
       ui.statusCopy.textContent = `${activeCompany.label}: ${activeState.detail}. Group bonus ${bonusCompanyCount}/${COMPANY_CONFIG.length}.${multiballStatus}${metaLabel}`;
     }
@@ -2332,6 +2336,8 @@
       multiball: {
         active: gameState.multiball.active,
         multiplier: gameState.multiball.active ? MULTIBALL.multiplier : 1,
+        missionProgressPaused: gameState.multiball.active,
+        companyProgressPaused: gameState.multiball.active,
         peakBalls: gameState.multiball.peakBalls,
         progress: gameState.multiball.progress,
         nextRequirement: gameState.multiball.nextRequirement,
@@ -3229,6 +3235,10 @@
   }
 
   function advanceMissions(eventName) {
+    if (gameState.multiball.active) {
+      return;
+    }
+
     const activeStageMissionIds = new Set(MISSION_STAGES[gameState.missionStageIndex] || []);
     let didAdvance = false;
 

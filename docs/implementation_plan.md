@@ -855,6 +855,7 @@ Priority order:
   - Multiball adds and grace saves now launch balls from the standard shooter lane instead of spawning them into the upper playfield.
   - Restored normal pinball-to-pinball collisions and added a delayed upper-playfield rescue nudge for near-stationary balls trapped around the top object cluster.
   - Meta rewards still launch multiball immediately, and every successful multiball start advances the next requirement so repeat multiballs get harder over the same game.
+  - Mission and company progress now pause while multiball is active, while scoring and combos keep running at the multiball multiplier.
   - Exposed multiball lock progress, next requirement, start count, and last source through HUD status copy and `window.ImpolPinball`.
 
 ### Phase 14: Table Mechanics, Routes, And Long-Term Depth
