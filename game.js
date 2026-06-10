@@ -288,7 +288,8 @@
     companyList: document.getElementById("company-list"),
     groupReward: document.getElementById("group-reward-value"),
     companies: {},
-    statusCopy: document.querySelector(".status-copy")
+    statusCopy: document.querySelector(".status-copy"),
+    scoreFeed: document.getElementById("score-feed-value")
   };
   const gameState = {
     score: 0,
@@ -311,7 +312,6 @@
     finalWasRecord: false,
     hitCounts: {},
     hitEffects: [],
-    floatingTexts: [],
     comboCount: 0,
     comboUntil: 0,
     comboLastObjectId: "",
@@ -1398,19 +1398,6 @@
     context.fillText(label, 695, 121);
   }
 
-  function drawScoreFeedback() {
-    if (!gameState.feedback || performance.now() > gameState.feedbackUntil) {
-      return;
-    }
-
-    fillRoundedRect(300, 1048, 300, 44, 8, "rgba(5, 11, 16, 0.72)");
-    context.fillStyle = "#ff9b3d";
-    context.font = "800 20px Arial, Helvetica, sans-serif";
-    context.textAlign = "center";
-    context.textBaseline = "middle";
-    context.fillText(gameState.feedback, 450, 1070);
-  }
-
   function drawGameOverPresentation() {
     if (gameState.status !== "game-over") {
       return;
@@ -1484,7 +1471,6 @@
     const now = performance.now();
 
     gameState.hitEffects = gameState.hitEffects.filter((effect) => now < effect.until);
-    gameState.floatingTexts = gameState.floatingTexts.filter((text) => now < text.until);
 
     gameState.hitEffects.forEach((effect) => {
       const progress = 1 - (effect.until - now) / effect.duration;
@@ -1506,24 +1492,6 @@
       context.beginPath();
       context.ellipse(effect.x, effect.y, radius * 0.95, radius * 0.55, 0, 0, Math.PI * 2);
       context.fill();
-      context.restore();
-    });
-
-    gameState.floatingTexts.forEach((text) => {
-      const progress = 1 - (text.until - now) / text.duration;
-      const alpha = Math.max(0, 1 - progress);
-      const y = text.y - progress * 42;
-
-      context.save();
-      context.globalAlpha = alpha;
-      context.font = `800 ${text.size}px Arial, Helvetica, sans-serif`;
-      context.textAlign = "center";
-      context.textBaseline = "middle";
-      context.lineWidth = 5;
-      context.strokeStyle = "rgba(5, 11, 16, 0.82)";
-      context.strokeText(text.label, text.x, y);
-      context.fillStyle = text.color;
-      context.fillText(text.label, text.x, y);
       context.restore();
     });
   }
@@ -2220,6 +2188,31 @@
     updateMissionUi();
     updateCompanyUi();
     updateRestartUi();
+  }
+
+  function updateScoreFeed() {
+    if (!ui.scoreFeed) {
+      return;
+    }
+
+    const now = performance.now();
+
+    if (gameState.feedback && now <= gameState.feedbackUntil) {
+      ui.scoreFeed.textContent = gameState.feedback;
+      return;
+    }
+
+    if (gameState.comboCount >= 2 && now <= gameState.comboUntil) {
+      ui.scoreFeed.textContent = `${gameState.comboCount}x COMBO`;
+      return;
+    }
+
+    if (gameState.status === "game-over") {
+      ui.scoreFeed.textContent = "Game over";
+      return;
+    }
+
+    ui.scoreFeed.textContent = gameState.status === "playing" ? "Ready for next hit" : "Ready";
   }
 
   function canRestartGameOver() {
@@ -3047,7 +3040,7 @@
     syncInspectableState(physics);
   }
 
-  function addHitFeedback({ id, x, y, accent, label, color }) {
+  function addHitFeedback({ id, x, y, accent }) {
     const now = performance.now();
     gameState.hitEffects.push({
       id,
@@ -3057,15 +3050,6 @@
       radius: 26,
       duration: 520,
       until: now + 520
-    });
-    gameState.floatingTexts.push({
-      label,
-      x,
-      y: y - 36,
-      color,
-      size: label.length > 20 ? 17 : 19,
-      duration: 820,
-      until: now + 820
     });
   }
 
@@ -3503,7 +3487,6 @@
     gameState.finalWasRecord = false;
     gameState.hitCounts = {};
     gameState.hitEffects = [];
-    gameState.floatingTexts = [];
     resetCombo();
     gameState.lowerTrapSince = 0;
     gameState.upperTrapSince = 0;
@@ -4118,7 +4101,6 @@
       drawPlungerCharge();
       getActiveBalls().forEach((ball) => drawBall(ball));
       drawStatusBadge();
-      drawScoreFeedback();
       drawComboBadge();
       drawMetaRewardBadge();
       drawMultiballBadge();
@@ -4132,6 +4114,7 @@
     }
 
     updateRestartUi();
+    updateScoreFeed();
     if (gameState.status === "game-over") {
       syncInspectableState(physics);
     }

@@ -366,6 +366,44 @@ h1 {
   padding: 14px;
 }
 
+.score-feed {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  z-index: 2;
+  width: min(500px, calc(100% - 28px));
+  min-height: 54px;
+  padding: 9px 14px;
+  display: grid;
+  grid-template-columns: 88px 1fr;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid rgba(255, 155, 61, 0.5);
+  border-radius: 8px;
+  background: rgba(5, 11, 16, 0.86);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.34);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.score-feed span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.score-feed strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #ffb967;
+  font-size: 1rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 #game-canvas {
   width: min(100%, 560px);
   max-height: calc(100vh - 64px);
@@ -389,6 +427,10 @@ h1 {
   .game-stage {
     min-height: 560px;
     order: -1;
+  }
+
+  .score-feed {
+    grid-template-columns: 76px 1fr;
   }
 
   .controls-hint {
