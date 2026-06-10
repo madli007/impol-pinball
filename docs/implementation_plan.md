@@ -837,12 +837,15 @@ Priority order:
   - Mission and company meta rewards now launch a two-ball multiball, apply simple 2x scoring while active, and expose multiball state through `window.ImpolPinball`.
   - Added multiball grace save, canvas feedback, active-ball badge, and drain handling that ends multiball when only one ball remains without consuming a normal ball.
 
-- [ ] Phase 13.5 - Jackpot layer after multiball - Status: planned
+- [x] Phase 13.5 - Jackpot layer after multiball - Status: complete
   - Add one or two jackpot shots only after basic multiball is stable.
   - Candidate jackpot shots: `COIL COLLECTOR`, `FURNACE`, and `KOSOVNICA` after the mission sequence is complete.
   - Add clear `JACKPOT LIT` / `SUPER JACKPOT` canvas feedback and sound.
   - Keep jackpot values modest until longer playtesting shows the score curve.
   - Visible result: multiball has a goal beyond chaos.
+  - Implemented a modest multiball-only jackpot layer with `COIL COLLECTOR` and `FURNACE` lit at multiball start, plus `KOSOVNICA` as the super jackpot after a jackpot hit or after the full mission sequence is complete.
+  - Added jackpot/super-jackpot scoring, audio, canvas badges, lit insert behavior, status-copy text, and inspectable `window.ImpolPinball.jackpot` state.
+  - Fixed multiball hit handling so target rebound logic uses the actual colliding ball instead of always using the primary ball.
 
 - [x] Phase 13.6 - Progressive multiball access tuning - Status: complete
   - Make the first multiball reachable much earlier in normal play.

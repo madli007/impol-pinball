@@ -66,6 +66,6 @@ Phase 9.3 adds lower playfield mechanical details, shooter lane housing art, and
 
 Phase 9.4 adds low-contrast industrial decals such as route curves, warning stripe plates, LED strips, circuit plates, and roller symbols. These remain decorative and should not read as scoring targets.
 
-Phase 12.5 adds a missing-visual-assets pack for upcoming rules work. `kosovnica-terminal-target.png` is integrated as a real target sprite; the mission-stage, multiball, and jackpot assets are integrated as low-alpha visual-only hints until Phase 13 gives them gameplay contracts.
+Phase 12.5 adds a missing-visual-assets pack for upcoming rules work. `kosovnica-terminal-target.png` is integrated as a real target sprite; the mission-stage and multiball assets are integrated as low-alpha visual-only hints until Phase 13 gives them gameplay contracts. Phase 13.5 turns the jackpot insert assets into lit gameplay indicators during multiball.
 
 Phase 12.6 crops the useful `INNOVATION` label plate from `secondary-visual-asset-sheet-transparent.png`. The remaining rails, pipes, LEDs, and label plates stay in the source sheet until a rule or layout pass gives them a clear purpose.

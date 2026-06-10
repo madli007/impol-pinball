@@ -35,6 +35,12 @@
     maxRequirement: 5,
     launchVelocity: { x: 0, y: -36 }
   };
+  const JACKPOT = {
+    normalTargetIds: ["coil", "furnace"],
+    superTargetId: "kosovnica",
+    normalValue: 12000,
+    superValue: 25000
+  };
   const FLIPPER_TIP_EXTENSION = 0.16;
   const COMBO_BONUS_BY_COUNT = {
     2: 1000,
@@ -323,6 +329,7 @@
     ballSaveUntil: 0,
     ballSaveUsed: false,
     multiball: createMultiballState(),
+    jackpot: createJackpotState(),
     bomMode: {
       active: false,
       step: 0,
@@ -405,6 +412,20 @@
       starts: 0,
       nextRequirement: MULTIBALL.progressRequirements[0],
       lastStartSource: ""
+    };
+  }
+
+  function createJackpotState() {
+    return {
+      active: false,
+      litTargetIds: [],
+      collectedTargetIds: [],
+      superLit: false,
+      superCollected: false,
+      lastAwardLabel: "",
+      lastAwardValue: 0,
+      startedAt: 0,
+      endedAt: 0
     };
   }
 
@@ -946,6 +967,8 @@
         "mission-complete": 650,
         multiplier: 650,
         "multiball-start": 900,
+        jackpot: 360,
+        "super-jackpot": 750,
         "game-over": 900
       };
 
@@ -988,6 +1011,15 @@
         playTone({ frequency: 1040, endFrequency: 1560, duration: 0.12, type: "triangle", volume: 0.032, startOffset: 0.12 });
       } else if (effectName === "multiball-start") {
         playMultiballStart();
+      } else if (effectName === "jackpot") {
+        playTone({ frequency: 620, endFrequency: 1240, duration: 0.12, type: "triangle", volume: 0.046 });
+        playTone({ frequency: 930, endFrequency: 1560, duration: 0.13, type: "sine", volume: 0.036, startOffset: 0.08 });
+        playNoise({ duration: 0.06, volume: 0.015, filterFrequency: 2600, type: "bandpass", q: 3.2, startOffset: 0.03 });
+      } else if (effectName === "super-jackpot") {
+        playTone({ frequency: 520, endFrequency: 1040, duration: 0.1, type: "sawtooth", volume: 0.043 });
+        playTone({ frequency: 780, endFrequency: 1560, duration: 0.15, type: "triangle", volume: 0.04, startOffset: 0.08 });
+        playTone({ frequency: 1040, endFrequency: 2080, duration: 0.18, type: "sine", volume: 0.034, startOffset: 0.18 });
+        playNoise({ duration: 0.12, volume: 0.018, filterFrequency: 3200, type: "bandpass", q: 3.6, startOffset: 0.06 });
       } else if (effectName === "game-over") {
         playGameOver();
       }
@@ -1598,6 +1630,36 @@
     }
   }
 
+  function drawJackpotBadge() {
+    const litLabels = getJackpotLitLabels();
+
+    if (!gameState.jackpot.active || litLabels.length === 0) {
+      return;
+    }
+
+    const isSuperOnly = litLabels.length === 1 && litLabels[0].includes("SUPER");
+    fillRoundedRect(284, 826, 332, 44, 8, "rgba(5, 11, 16, 0.78)");
+    context.fillStyle = isSuperOnly ? "#ffb967" : "#31a8ff";
+    const label = `${isSuperOnly ? "SUPER JACKPOT" : "JACKPOT LIT"}: ${litLabels.join(" / ")}`;
+    context.font = `800 ${label.length > 38 ? 12 : 15}px Arial, Helvetica, sans-serif`;
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillText(label, 450, 848);
+  }
+
+  function drawLastJackpotAward() {
+    if (!gameState.jackpot.lastAwardLabel || performance.now() > gameState.feedbackUntil) {
+      return;
+    }
+
+    fillRoundedRect(312, 716, 276, 44, 8, "rgba(5, 11, 16, 0.76)");
+    context.fillStyle = gameState.jackpot.lastAwardLabel === "SUPER JACKPOT" ? "#ffb967" : "#edf7fb";
+    context.font = "900 17px Arial, Helvetica, sans-serif";
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillText(`${gameState.jackpot.lastAwardLabel} +${gameState.jackpot.lastAwardValue.toLocaleString("sl-SI")}`, 450, 738);
+  }
+
   function drawMissionLights() {
     const missions = getHudMissions(5);
     const activeStageMissionIds = new Set(MISSION_STAGES[gameState.missionStageIndex] || []);
@@ -1868,6 +1930,8 @@
   }
 
   function drawFutureGameplayAssetHints() {
+    const litTargetIds = new Set(gameState.jackpot.active ? gameState.jackpot.litTargetIds : []);
+    const isSuperLit = gameState.jackpot.active && gameState.jackpot.superLit && !gameState.jackpot.superCollected;
     drawDecorAsset("multiball-lock-release", 450, 300, 260, 116, {
       alpha: 0.08,
       shadowColor: "rgba(49, 168, 255, 0.12)",
@@ -1875,21 +1939,24 @@
       shadowOffsetY: 4
     });
     drawDecorAsset("jackpot-furnace-insert", 568, 662, 102, 90, {
-      alpha: 0.11,
+      alpha: litTargetIds.has("furnace") ? 0.7 : 0.11,
       rotation: 0.08,
-      shadowBlur: 4,
+      shadowColor: "rgba(255, 155, 61, 0.42)",
+      shadowBlur: litTargetIds.has("furnace") ? 14 : 4,
       shadowOffsetY: 3
     });
     drawDecorAsset("jackpot-coil-insert", 324, 876, 96, 84, {
-      alpha: 0.1,
+      alpha: litTargetIds.has("coil") ? 0.68 : 0.1,
       rotation: -0.08,
-      shadowBlur: 4,
+      shadowColor: "rgba(49, 168, 255, 0.42)",
+      shadowBlur: litTargetIds.has("coil") ? 14 : 4,
       shadowOffsetY: 3
     });
     drawDecorAsset("jackpot-final-insert", 576, 876, 96, 84, {
-      alpha: 0.09,
+      alpha: isSuperLit ? 0.72 : 0.09,
       rotation: 0.08,
-      shadowBlur: 4,
+      shadowColor: "rgba(255, 185, 103, 0.48)",
+      shadowBlur: isSuperLit ? 16 : 4,
       shadowOffsetY: 3
     });
   }
@@ -2282,10 +2349,12 @@
     if (ui.statusCopy && activeCompany) {
       const activeState = gameState.companies[activeCompany.id];
       const metaLabel = gameState.metaRewards.lastAwardLabel ? ` Last reward: ${gameState.metaRewards.lastAwardLabel}.` : "";
+      const litJackpots = getJackpotLitLabels();
+      const jackpotStatus = litJackpots.length ? ` Jackpot lit: ${litJackpots.join(" / ")}.` : "";
       const multiballStatus = gameState.multiball.active
         ? " Multiball active: 2x scoring, missions and companies paused."
         : ` Multiball missions ${gameState.multiball.progress}/${gameState.multiball.nextRequirement}.`;
-      ui.statusCopy.textContent = `${activeCompany.label}: ${activeState.detail}. Group bonus ${bonusCompanyCount}/${COMPANY_CONFIG.length}.${multiballStatus}${metaLabel}`;
+      ui.statusCopy.textContent = `${activeCompany.label}: ${activeState.detail}. Group bonus ${bonusCompanyCount}/${COMPANY_CONFIG.length}.${multiballStatus}${jackpotStatus}${metaLabel}`;
     }
   }
 
@@ -2293,7 +2362,7 @@
     const activeBalls = physics ? getActiveBalls() : [];
 
     window.ImpolPinball = {
-      phase: "13.6",
+      phase: "13.6+13.5",
       matterLoaded: Boolean(MatterLib),
       staticBodyCount: physics ? physics.staticBodies.length : 0,
       tableObjectCount: physics ? physics.bumperBodies.length + physics.targetBodies.length + physics.slingshotBodies.length : 0,
@@ -2339,6 +2408,20 @@
         graceRemainingMs: Math.max(0, Math.round(gameState.multiball.graceUntil - performance.now())),
         startedAt: gameState.multiball.startedAt,
         endedAt: gameState.multiball.endedAt
+      },
+      jackpot: {
+        active: gameState.jackpot.active,
+        litTargetIds: [...gameState.jackpot.litTargetIds],
+        litLabels: getJackpotLitLabels(),
+        collectedTargetIds: [...gameState.jackpot.collectedTargetIds],
+        superLit: gameState.jackpot.superLit,
+        superCollected: gameState.jackpot.superCollected,
+        normalValue: JACKPOT.normalValue,
+        superValue: JACKPOT.superValue,
+        lastAwardLabel: gameState.jackpot.lastAwardLabel,
+        lastAwardValue: gameState.jackpot.lastAwardValue,
+        startedAt: gameState.jackpot.startedAt,
+        endedAt: gameState.jackpot.endedAt
       },
       ballSave: {
         active: gameState.status === "playing" && !gameState.ballSaveUsed && performance.now() <= gameState.ballSaveUntil,
@@ -2634,7 +2717,7 @@
 
         const hitObject = getHitObject(pair);
         if (hitObject) {
-          handleTableHit(hitObject, ball);
+          handleTableHit(hitObject, pairBall);
         }
       });
     });
@@ -2824,6 +2907,93 @@
     gameState.multiball.endedAt = 0;
     gameState.multiball.graceUntil = 0;
     gameState.multiball.peakBalls = 1;
+    clearJackpots();
+  }
+
+  function lightJackpots() {
+    const now = performance.now();
+    gameState.jackpot = createJackpotState();
+    gameState.jackpot.active = true;
+    gameState.jackpot.startedAt = now;
+    gameState.jackpot.litTargetIds = [...JACKPOT.normalTargetIds];
+    gameState.jackpot.superLit = areAllRequiredMissionsComplete();
+  }
+
+  function clearJackpots() {
+    if (!gameState.jackpot.active && !gameState.jackpot.startedAt) {
+      return;
+    }
+
+    const endedAt = performance.now();
+    gameState.jackpot.active = false;
+    gameState.jackpot.litTargetIds = [];
+    gameState.jackpot.superLit = false;
+    gameState.jackpot.endedAt = endedAt;
+  }
+
+  function isJackpotLitForObject(object) {
+    if (!object || !gameState.jackpot.active || !gameState.multiball.active) {
+      return false;
+    }
+
+    if (object.id === JACKPOT.superTargetId) {
+      return gameState.jackpot.superLit && !gameState.jackpot.superCollected;
+    }
+
+    return gameState.jackpot.litTargetIds.includes(object.id);
+  }
+
+  function getJackpotLitLabels() {
+    if (!gameState.jackpot.active) {
+      return [];
+    }
+
+    const normalLabels = gameState.jackpot.litTargetIds
+      .map((targetId) => TABLE_CONFIG.targets.find((target) => target.id === targetId))
+      .filter(Boolean)
+      .map((target) => target.label);
+
+    if (gameState.jackpot.superLit && !gameState.jackpot.superCollected) {
+      normalLabels.push("KOSOVNICA SUPER");
+    }
+
+    return normalLabels;
+  }
+
+  function maybeAwardJackpot(object) {
+    if (!isJackpotLitForObject(object)) {
+      return false;
+    }
+
+    const isSuper = object.id === JACKPOT.superTargetId;
+    const value = (isSuper ? JACKPOT.superValue : JACKPOT.normalValue) * getActiveMultiplier();
+    gameState.score += value;
+    setHighScore(gameState.score);
+
+    if (isSuper) {
+      gameState.jackpot.superCollected = true;
+      gameState.jackpot.superLit = false;
+    } else {
+      gameState.jackpot.collectedTargetIds.push(object.id);
+      gameState.jackpot.litTargetIds = gameState.jackpot.litTargetIds.filter((targetId) => targetId !== object.id);
+      gameState.jackpot.superLit = true;
+    }
+
+    const label = isSuper ? "SUPER JACKPOT" : "JACKPOT";
+    gameState.jackpot.lastAwardLabel = label;
+    gameState.jackpot.lastAwardValue = value;
+    gameState.feedback = `${label} +${value.toLocaleString("sl-SI")}`;
+    gameState.feedbackUntil = performance.now() + (isSuper ? 1800 : 1350);
+    addHitFeedback({
+      id: `${label.toLowerCase().replace(" ", "-")}-${object.id}`,
+      x: object.x,
+      y: object.y,
+      accent: isSuper ? "#ffb967" : "#31a8ff",
+      label,
+      color: isSuper ? "#ffb967" : "#edf7fb"
+    });
+    audio.play(isSuper ? "super-jackpot" : "jackpot");
+    return true;
   }
 
   function startMultiball(sourceLabel, options = {}) {
@@ -2846,6 +3016,7 @@
     gameState.multiball.graceUntil = now + MULTIBALL.graceMs;
     gameState.multiball.peakBalls = getActiveBalls().length;
     gameState.multiball.lastStartSource = sourceLabel;
+    lightJackpots();
 
     if (!wasActive && options.advanceDifficulty !== false) {
       gameState.multiball.starts += 1;
@@ -2898,6 +3069,7 @@
     gameState.multiball.active = false;
     gameState.multiball.endedAt = performance.now();
     gameState.multiball.graceUntil = 0;
+    clearJackpots();
     gameState.feedback = "MULTIBALL COMPLETE";
     gameState.feedbackUntil = performance.now() + 1300;
     addHitFeedback({
@@ -3014,8 +3186,9 @@
       label: combo.bonus ? `${combo.count}x COMBO +${combo.bonus.toLocaleString("sl-SI")}` : `+${points.toLocaleString("sl-SI")}`,
       color: combo.bonus ? "#ffb967" : "#edf7fb"
     });
+    const jackpotWillAward = isJackpotLitForObject(object);
 
-    if (combo.bonus) {
+    if (!jackpotWillAward && combo.bonus) {
       audio.play("combo");
     }
 
@@ -3036,6 +3209,7 @@
       advanceMissions(object.event);
       updateBomMode(object.event);
     }
+    maybeAwardJackpot(object);
     updateHud();
     syncInspectableState(physics);
   }
@@ -3496,6 +3670,7 @@
     gameState.ballSaveUntil = 0;
     gameState.ballSaveUsed = false;
     gameState.multiball = createMultiballState();
+    gameState.jackpot = createJackpotState();
     gameState.bomMode = {
       active: false,
       step: 0,
@@ -4104,6 +4279,8 @@
       drawComboBadge();
       drawMetaRewardBadge();
       drawMultiballBadge();
+      drawJackpotBadge();
+      drawLastJackpotAward();
       drawBallSaveBadge();
       drawBomModeBadge();
       drawHitEffects();
