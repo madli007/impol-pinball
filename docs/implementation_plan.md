@@ -826,13 +826,16 @@ Priority order:
   - Implemented one-time all-company `Bonus` tracking with a separate `IMPOL GROUP SYNERGY` reward, score burst, temporary 4x scoring, ball-save extension, and right-HUD `Group reward` progress.
   - Tuned company `Bonus` status so it requires stronger post-mission play instead of ordinary early combos, and changed meta reward timers to count down only while a ball is actively in play.
 
-- [ ] Phase 13.4 - Two-ball multiball foundation - Status: planned
+- [x] Phase 13.4 - Two-ball multiball foundation - Status: complete
   - Extend ball management from one active ball to a small collection of active balls.
   - Start with two balls, a shared drain handler, and a rule that multiball ends when only one ball remains.
   - Add a short grace period / ball save when multiball starts so both balls survive long enough to be fun.
   - Keep scoring simple at first: all scoring during multiball is 2x, with no extra jackpot rules yet.
   - Tune collision and rendering so the balls remain readable and do not stack into unstable physics.
   - Visible result: mission completion can launch a stable, understandable multiball mode.
+  - Implemented active ball collection management on top of the existing primary plunger ball, with collision/drain/render/flipper helpers updated to handle multiple balls.
+  - Mission and company meta rewards now launch a two-ball multiball, apply simple 2x scoring while active, and expose multiball state through `window.ImpolPinball`.
+  - Added multiball grace save, canvas feedback, active-ball badge, and drain handling that ends multiball when only one ball remains without consuming a normal ball.
 
 - [ ] Phase 13.5 - Jackpot layer after multiball - Status: planned
   - Add one or two jackpot shots only after basic multiball is stable.

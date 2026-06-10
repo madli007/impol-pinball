@@ -17,8 +17,8 @@
     },
     totalBalls: 3,
     flippers: {
-      left: { pivotX: 244, pivotY: 1218, length: 166, height: 32, restAngle: 0.22, activeAngle: -0.58 },
-      right: { pivotX: 656, pivotY: 1218, length: 166, height: 32, restAngle: Math.PI - 0.22, activeAngle: Math.PI + 0.58 }
+      left: { pivotX: 254, pivotY: 1218, length: 166, height: 32, restAngle: 0.22, activeAngle: -0.58 },
+      right: { pivotX: 646, pivotY: 1218, length: 166, height: 32, restAngle: Math.PI - 0.22, activeAngle: Math.PI + 0.58 }
     }
   };
   const DEBUG_PHYSICS = false;
@@ -26,6 +26,15 @@
   const AUDIO_MUTED_KEY = "impol-pinball.audio-muted";
   const COMBO_WINDOW_MS = 1800;
   const GAME_OVER_RESTART_DELAY_MS = 1400;
+  const MULTIBALL = {
+    maxBalls: 2,
+    multiplier: 2,
+    graceMs: 9000,
+    launchPositions: [
+      { x: 386, y: 326, velocity: { x: -5.4, y: 4.8 } },
+      { x: 514, y: 326, velocity: { x: 5.4, y: 4.8 } }
+    ]
+  };
   const COMBO_BONUS_BY_COUNT = {
     2: 1000,
     3: 2500,
@@ -310,6 +319,13 @@
     skillShotAwarded: false,
     ballSaveUntil: 0,
     ballSaveUsed: false,
+    multiball: {
+      active: false,
+      startedAt: 0,
+      endedAt: 0,
+      graceUntil: 0,
+      peakBalls: 1
+    },
     bomMode: {
       active: false,
       step: 0,
@@ -564,6 +580,10 @@
   }
 
   function getActiveMultiplier() {
+    if (gameState.multiball.active) {
+      return MULTIBALL.multiplier;
+    }
+
     const metaMultiplier = getMetaMultiplierRemainingMs() > 0 ? gameState.metaRewards.multiplierValue : 1;
     return Math.max(gameState.multiplier, metaMultiplier);
   }
@@ -606,6 +626,7 @@
       label: `${reward.multiplier}x ${reward.label}`,
       color: reward.color
     });
+    startMultiball(reward.label);
     audio.play("multiball-start");
   }
 
@@ -1550,6 +1571,10 @@
   }
 
   function drawMetaRewardBadge() {
+    if (gameState.multiball.active) {
+      return;
+    }
+
     const remainingMs = getMetaMultiplierRemainingMs();
 
     if (remainingMs <= 0) {
@@ -1567,6 +1592,27 @@
 
     context.fillStyle = "rgba(255, 155, 61, 0.88)";
     context.fillRect(326, 870, 248 * Math.min(1, remaining), 4);
+  }
+
+  function drawMultiballBadge() {
+    if (!gameState.multiball.active) {
+      return;
+    }
+
+    const graceRemaining = Math.max(0, gameState.multiball.graceUntil - performance.now());
+    const activeBallCount = getActiveBalls().length;
+    fillRoundedRect(318, 774, 264, 46, 8, "rgba(5, 11, 16, 0.78)");
+    context.fillStyle = "#edf7fb";
+    context.font = "800 16px Arial, Helvetica, sans-serif";
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillText(`MULTIBALL ${activeBallCount} BALLS / ${MULTIBALL.multiplier}x`, 450, 792);
+
+    if (graceRemaining > 0) {
+      const remaining = graceRemaining / MULTIBALL.graceMs;
+      context.fillStyle = "rgba(123, 220, 108, 0.9)";
+      context.fillRect(344, 812, 212 * remaining, 4);
+    }
   }
 
   function drawMissionLights() {
@@ -2233,14 +2279,23 @@
   }
 
   function syncInspectableState(physics) {
+    const activeBalls = physics ? getActiveBalls() : [];
+
     window.ImpolPinball = {
-      phase: "13.3",
+      phase: "13.4",
       matterLoaded: Boolean(MatterLib),
       staticBodyCount: physics ? physics.staticBodies.length : 0,
       tableObjectCount: physics ? physics.bumperBodies.length + physics.targetBodies.length + physics.slingshotBodies.length : 0,
       slingshotCount: physics ? physics.slingshotBodies.length : 0,
       assetLoadedCount: Object.values(assets).filter((asset) => asset.loaded).length,
       ballSpawned: Boolean(physics && physics.ball),
+      activeBallCount: activeBalls.length,
+      activeBalls: activeBalls.map((ball) => ({
+        id: ball.gameBallId,
+        x: Math.round(ball.position.x),
+        y: Math.round(ball.position.y),
+        speed: Number(Math.hypot(ball.velocity.x, ball.velocity.y).toFixed(2))
+      })),
       ballsLeft: gameState.ballsLeft,
       ballNumber: gameState.ballNumber,
       status: gameState.status,
@@ -2259,6 +2314,14 @@
         missionCompletion: `${getCompletedMissionCount()}/${MISSION_CONFIG.length}`,
         companyCompletion: `${getBonusCompanyCount()}/${COMPANY_CONFIG.length}`,
         multiplierRemainingMs: Math.round(getMetaMultiplierRemainingMs())
+      },
+      multiball: {
+        active: gameState.multiball.active,
+        multiplier: gameState.multiball.active ? MULTIBALL.multiplier : 1,
+        peakBalls: gameState.multiball.peakBalls,
+        graceRemainingMs: Math.max(0, Math.round(gameState.multiball.graceUntil - performance.now())),
+        startedAt: gameState.multiball.startedAt,
+        endedAt: gameState.multiball.endedAt
       },
       ballSave: {
         active: gameState.status === "playing" && !gameState.ballSaveUsed && performance.now() <= gameState.ballSaveUntil,
@@ -2525,14 +2588,7 @@
       return body;
     });
 
-    const ballStartPosition = getBallStartPosition();
-    const ball = Bodies.circle(ballStartPosition.x, ballStartPosition.y, 26, {
-      label: "pinball",
-      restitution: 0.82,
-      friction: 0.005,
-      frictionAir: 0.0008,
-      density: 0.0011
-    });
+    const ball = createBallBody("ball-1", getBallStartPosition());
 
     Composite.add(engine.world, [...staticBodies, ...bumperBodies, ...targetBodies, ...slingshotBodies, flippers.left, flippers.right, ball]);
 
@@ -2546,12 +2602,13 @@
     Events.on(engine, "collisionStart", (event) => {
       event.pairs.forEach((pair) => {
         const labels = [pair.bodyA.label, pair.bodyB.label];
-        if (labels.includes("drain-sensor") && labels.includes("pinball")) {
-          drainBall(ball);
+        const pairBall = getPairBall(pair);
+        if (pairBall && labels.includes("drain-sensor") && labels.includes("pinball")) {
+          drainBall(pairBall);
         }
 
-        if (labels.includes("launch-lane-top-exit") && labels.includes("pinball")) {
-          guideBallOutOfShooterLane(ball);
+        if (pairBall && labels.includes("launch-lane-top-exit") && labels.includes("pinball")) {
+          guideBallOutOfShooterLane(pairBall);
         }
 
         if (labels.includes("skill-shot-sensor") && labels.includes("pinball")) {
@@ -2572,11 +2629,51 @@
       targetBodies,
       slingshotBodies,
       flippers,
-      ball
+      ball,
+      activeBalls: [ball],
+      nextBallId: 2
     };
   }
 
   const physics = createMatterWorld();
+
+  function createBallBody(id, position) {
+    const ball = MatterLib.Bodies.circle(position.x, position.y, 26, {
+      label: "pinball",
+      restitution: 0.82,
+      friction: 0.005,
+      frictionAir: 0.0008,
+      density: 0.0011
+    });
+    ball.gameBallId = id;
+    return ball;
+  }
+
+  function getPairBall(pair) {
+    if (pair.bodyA.label === "pinball") {
+      return pair.bodyA;
+    }
+
+    if (pair.bodyB.label === "pinball") {
+      return pair.bodyB;
+    }
+
+    return null;
+  }
+
+  function getActiveBalls() {
+    return physics ? physics.activeBalls.filter((ball) => ball && !ball.isRemoved) : [];
+  }
+
+  function syncPrimaryBall() {
+    if (!physics) {
+      return;
+    }
+
+    const activeBalls = getActiveBalls();
+    physics.activeBalls = activeBalls;
+    physics.ball = activeBalls[0] || physics.ball;
+  }
 
   function positionFlipper(body, config, angle) {
     const centerX = config.pivotX + Math.cos(angle) * config.length * 0.5;
@@ -2636,6 +2733,134 @@
     updateMetaRewardTimeout();
     audio.play("launch", { power });
     syncInspectableState(physics);
+  }
+
+  function addActiveBall(position, velocity) {
+    if (!physics) {
+      return null;
+    }
+
+    const ball = createBallBody(`ball-${physics.nextBallId}`, position);
+    physics.nextBallId += 1;
+    MatterLib.Composite.add(physics.engine.world, ball);
+    physics.activeBalls.push(ball);
+    MatterLib.Body.setVelocity(ball, velocity);
+    MatterLib.Body.setAngularVelocity(ball, (velocity.x || 0) * 0.04);
+    syncPrimaryBall();
+    return ball;
+  }
+
+  function removeActiveBall(ball) {
+    if (!physics || !ball) {
+      return;
+    }
+
+    ball.isRemoved = true;
+    MatterLib.Composite.remove(physics.engine.world, ball);
+    physics.activeBalls = physics.activeBalls.filter((activeBall) => activeBall !== ball && !activeBall.isRemoved);
+    syncPrimaryBall();
+  }
+
+  function removeExtraBalls() {
+    if (!physics) {
+      return;
+    }
+
+    const primaryBall = physics.ball || physics.activeBalls[0];
+    physics.activeBalls
+      .filter((ball) => ball !== primaryBall)
+      .forEach((ball) => removeActiveBall(ball));
+    physics.activeBalls = primaryBall ? [primaryBall] : [];
+    physics.ball = primaryBall;
+  }
+
+  function resetMultiballState() {
+    gameState.multiball.active = false;
+    gameState.multiball.startedAt = 0;
+    gameState.multiball.endedAt = 0;
+    gameState.multiball.graceUntil = 0;
+    gameState.multiball.peakBalls = 1;
+  }
+
+  function startMultiball(sourceLabel) {
+    if (!physics || gameState.status !== "playing") {
+      return;
+    }
+
+    const activeBalls = getActiveBalls();
+    const missingBalls = Math.max(0, MULTIBALL.maxBalls - activeBalls.length);
+
+    for (let index = 0; index < missingBalls; index += 1) {
+      const launch = MULTIBALL.launchPositions[(activeBalls.length + index) % MULTIBALL.launchPositions.length];
+      addActiveBall({ x: launch.x, y: launch.y }, launch.velocity);
+    }
+
+    const now = performance.now();
+    gameState.multiball.active = true;
+    gameState.multiball.startedAt = now;
+    gameState.multiball.endedAt = 0;
+    gameState.multiball.graceUntil = now + MULTIBALL.graceMs;
+    gameState.multiball.peakBalls = getActiveBalls().length;
+    gameState.ballSaveUsed = false;
+    gameState.ballSaveUntil = Math.max(gameState.ballSaveUntil, gameState.multiball.graceUntil);
+    gameState.feedback = `${sourceLabel}: TWO-BALL MULTIBALL`;
+    gameState.feedbackUntil = now + 2200;
+    addHitFeedback({
+      id: "multiball-start",
+      x: 450,
+      y: 300,
+      accent: "#31a8ff",
+      label: "TWO-BALL MULTIBALL",
+      color: "#edf7fb"
+    });
+    updateHud();
+    syncInspectableState(physics);
+  }
+
+  function endMultiball() {
+    if (!gameState.multiball.active) {
+      return;
+    }
+
+    gameState.multiball.active = false;
+    gameState.multiball.endedAt = performance.now();
+    gameState.multiball.graceUntil = 0;
+    gameState.feedback = "MULTIBALL COMPLETE";
+    gameState.feedbackUntil = performance.now() + 1300;
+    addHitFeedback({
+      id: "multiball-end",
+      x: 450,
+      y: 948,
+      accent: "#ffb967",
+      label: "MULTIBALL ENDED",
+      color: "#ffb967"
+    });
+  }
+
+  function tryMultiballSave(ball) {
+    if (!gameState.multiball.active || performance.now() > gameState.multiball.graceUntil) {
+      return false;
+    }
+
+    const index = getActiveBalls().indexOf(ball);
+    const launch = MULTIBALL.launchPositions[Math.max(0, index) % MULTIBALL.launchPositions.length];
+    MatterLib.Body.setStatic(ball, false);
+    MatterLib.Body.setPosition(ball, { x: launch.x, y: launch.y });
+    MatterLib.Body.setVelocity(ball, launch.velocity);
+    MatterLib.Body.setAngularVelocity(ball, launch.velocity.x * 0.04);
+    gameState.feedback = "MULTIBALL BALL SAVE";
+    gameState.feedbackUntil = performance.now() + 1200;
+    addHitFeedback({
+      id: `multiball-save-${ball.gameBallId || "ball"}`,
+      x: 450,
+      y: 322,
+      accent: "#7bdc6c",
+      label: "MULTIBALL SAVE",
+      color: "#7bdc6c"
+    });
+    audio.play("mission-progress");
+    syncInspectableState(physics);
+    return true;
   }
 
   function guideBallOutOfShooterLane(ball) {
@@ -3099,7 +3324,25 @@
   }
 
   function drainBall(ball) {
-    if (gameState.status !== "playing") {
+    if (gameState.status !== "playing" || !ball || ball.isRemoved) {
+      return;
+    }
+
+    if (tryMultiballSave(ball)) {
+      return;
+    }
+
+    if (gameState.multiball.active && getActiveBalls().length > 1) {
+      removeActiveBall(ball);
+      gameState.drainCount += 1;
+      resetCombo();
+
+      if (getActiveBalls().length <= 1) {
+        endMultiball();
+      }
+
+      updateHud();
+      syncInspectableState(physics);
       return;
     }
 
@@ -3123,6 +3366,8 @@
       gameState.status = "between-balls";
       gameState.ballNumber += 1;
       gameState.resetAt = performance.now() + 900;
+      endMultiball();
+      removeExtraBalls();
       resetBall(ball, true);
       audio.play("drain");
     }
@@ -3144,6 +3389,8 @@
     gameState.feedbackUntil = 0;
     inputState.space = false;
     inputState.chargingSince = 0;
+    resetMultiballState();
+    removeExtraBalls();
     resetBall(ball, true);
     audio.play("game-over");
   }
@@ -3180,6 +3427,7 @@
     gameState.skillShotAwarded = false;
     gameState.ballSaveUntil = 0;
     gameState.ballSaveUsed = false;
+    resetMultiballState();
     gameState.bomMode = {
       active: false,
       step: 0,
@@ -3194,6 +3442,7 @@
     gameState.metaRewards = createMetaRewardState();
 
     if (physics) {
+      removeExtraBalls();
       resetBall(physics.ball, true);
     }
 
@@ -3215,9 +3464,11 @@
       return;
     }
 
-    if (physics.ball.position.y > TABLE.height + 80) {
-      drainBall(physics.ball);
-    }
+    getActiveBalls().forEach((ball) => {
+      if (ball.position.y > TABLE.height + 80) {
+        drainBall(ball);
+      }
+    });
   }
 
   function maybeRescueLowerFlipperTrap() {
@@ -3225,14 +3476,16 @@
       return;
     }
 
-    const ball = physics.ball;
-    const speed = Math.hypot(ball.velocity.x, ball.velocity.y);
-    const inLowerTrap =
-      ball.position.y > 1090 &&
-      ball.position.y < 1290 &&
-      ((ball.position.x > 72 && ball.position.x < 330) || (ball.position.x > 570 && ball.position.x < 828));
+    const trappedBall = getActiveBalls().find((ball) => {
+      const speed = Math.hypot(ball.velocity.x, ball.velocity.y);
+      const inLowerTrap =
+        ball.position.y > 1090 &&
+        ball.position.y < 1290 &&
+        ((ball.position.x > 72 && ball.position.x < 330) || (ball.position.x > 570 && ball.position.x < 828));
+      return inLowerTrap && speed <= 0.34;
+    });
 
-    if (!inLowerTrap || speed > 0.34) {
+    if (!trappedBall) {
       gameState.lowerTrapSince = 0;
       return;
     }
@@ -3246,8 +3499,8 @@
       return;
     }
 
-    const direction = ball.position.x < TABLE.width / 2 ? 1 : -1;
-    MatterLib.Body.setVelocity(ball, {
+    const direction = trappedBall.position.x < TABLE.width / 2 ? 1 : -1;
+    MatterLib.Body.setVelocity(trappedBall, {
       x: direction * 1.35,
       y: -2.8
     });
@@ -3260,13 +3513,14 @@
     }
 
     const lane = TABLE.shooterLane;
-    const ball = physics.ball;
-    const isInShooterLane = ball.position.x > lane.innerX + 8 && ball.position.x < lane.outerX + 12;
-    const reachedExit = ball.position.y < lane.exitY + 98;
+    getActiveBalls().forEach((ball) => {
+      const isInShooterLane = ball.position.x > lane.innerX + 8 && ball.position.x < lane.outerX + 12;
+      const reachedExit = ball.position.y < lane.exitY + 98;
 
-    if (isInShooterLane && reachedExit && ball.velocity.y < 0) {
-      guideBallOutOfShooterLane(ball);
-    }
+      if (isInShooterLane && reachedExit && ball.velocity.y < 0) {
+        guideBallOutOfShooterLane(ball);
+      }
+    });
   }
 
   function setControlActive(element, isActive) {
@@ -3567,37 +3821,40 @@
   }
 
   function applyFlipperKick() {
-    if (gameState.status !== "playing" || !physics.ball) {
+    const activeBalls = getActiveBalls();
+
+    if (gameState.status !== "playing" || activeBalls.length === 0) {
       inputState.leftPulse = false;
       inputState.rightPulse = false;
       return;
     }
 
-    const ball = physics.ball;
-    const leftContact = getFlipperContact(ball, physics.flippers.left, TABLE.flippers.left, false);
-    const rightContact = getFlipperContact(ball, physics.flippers.right, TABLE.flippers.right, true);
+    activeBalls.forEach((ball) => {
+      const leftContact = getFlipperContact(ball, physics.flippers.left, TABLE.flippers.left, false);
+      const rightContact = getFlipperContact(ball, physics.flippers.right, TABLE.flippers.right, true);
 
-    if (inputState.leftPulse && leftContact.isValid && ball.velocity.y > -12) {
-      const tipFactor = leftContact.tipFactor;
-      const lift = 11.6 + tipFactor * 11.2;
-      const push = 3.1 + tipFactor * 5.1;
+      if (inputState.leftPulse && leftContact.isValid && ball.velocity.y > -12) {
+        const tipFactor = leftContact.tipFactor;
+        const lift = 11.6 + tipFactor * 11.2;
+        const push = 3.1 + tipFactor * 5.1;
 
-      MatterLib.Body.setVelocity(ball, {
-        x: Math.max(ball.velocity.x + push, push),
-        y: -lift
-      });
-    }
+        MatterLib.Body.setVelocity(ball, {
+          x: Math.max(ball.velocity.x + push, push),
+          y: -lift
+        });
+      }
 
-    if (inputState.rightPulse && rightContact.isValid && ball.velocity.y > -12) {
-      const tipFactor = rightContact.tipFactor;
-      const lift = 11.6 + tipFactor * 11.2;
-      const push = 3.1 + tipFactor * 5.1;
+      if (inputState.rightPulse && rightContact.isValid && ball.velocity.y > -12) {
+        const tipFactor = rightContact.tipFactor;
+        const lift = 11.6 + tipFactor * 11.2;
+        const push = 3.1 + tipFactor * 5.1;
 
-      MatterLib.Body.setVelocity(ball, {
-        x: Math.min(ball.velocity.x - push, -push),
-        y: -lift
-      });
-    }
+        MatterLib.Body.setVelocity(ball, {
+          x: Math.min(ball.velocity.x - push, -push),
+          y: -lift
+        });
+      }
+    });
 
     inputState.leftPulse = false;
     inputState.rightPulse = false;
@@ -3694,11 +3951,12 @@
       drawFlipper(physics.flippers.left, inputState.left);
       drawFlipper(physics.flippers.right, inputState.right);
       drawPlungerCharge();
-      drawBall(physics.ball);
+      getActiveBalls().forEach((ball) => drawBall(ball));
       drawStatusBadge();
       drawScoreFeedback();
       drawComboBadge();
       drawMetaRewardBadge();
+      drawMultiballBadge();
       drawBallSaveBadge();
       drawBomModeBadge();
       drawHitEffects();
