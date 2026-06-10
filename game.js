@@ -35,6 +35,7 @@
       { x: 514, y: 326, velocity: { x: 5.4, y: 4.8 } }
     ]
   };
+  const FLIPPER_TIP_EXTENSION = 0.16;
   const COMBO_BONUS_BY_COUNT = {
     2: 1000,
     3: 2500,
@@ -3835,7 +3836,8 @@
 
       if (inputState.leftPulse && leftContact.isValid && ball.velocity.y > -12) {
         const tipFactor = leftContact.tipFactor;
-        const lift = 11.6 + tipFactor * 11.2;
+        const tipLift = leftContact.isTipContact ? 3.4 : 0;
+        const lift = 11.6 + tipFactor * 11.2 + tipLift;
         const push = 3.1 + tipFactor * 5.1;
 
         MatterLib.Body.setVelocity(ball, {
@@ -3846,7 +3848,8 @@
 
       if (inputState.rightPulse && rightContact.isValid && ball.velocity.y > -12) {
         const tipFactor = rightContact.tipFactor;
-        const lift = 11.6 + tipFactor * 11.2;
+        const tipLift = rightContact.isTipContact ? 3.4 : 0;
+        const lift = 11.6 + tipFactor * 11.2 + tipLift;
         const push = 3.1 + tipFactor * 5.1;
 
         MatterLib.Body.setVelocity(ball, {
@@ -3856,8 +3859,42 @@
       }
     });
 
+    stabilizeFlipperTipContact(activeBalls);
+
     inputState.leftPulse = false;
     inputState.rightPulse = false;
+  }
+
+  function stabilizeFlipperTipContact(activeBalls) {
+    if (!inputState.left && !inputState.right) {
+      return;
+    }
+
+    activeBalls.forEach((ball) => {
+      if (inputState.left) {
+        const leftContact = getFlipperContact(ball, physics.flippers.left, TABLE.flippers.left, false);
+        if (leftContact.isValid && leftContact.isTipContact && ball.velocity.y > 0.6) {
+          const lift = 6.2 + leftContact.tipFactor * 5.4;
+          const push = 2.2 + leftContact.tipFactor * 3.8;
+          MatterLib.Body.setVelocity(ball, {
+            x: Math.max(ball.velocity.x, push),
+            y: -lift
+          });
+        }
+      }
+
+      if (inputState.right) {
+        const rightContact = getFlipperContact(ball, physics.flippers.right, TABLE.flippers.right, true);
+        if (rightContact.isValid && rightContact.isTipContact && ball.velocity.y > 0.6) {
+          const lift = 6.2 + rightContact.tipFactor * 5.4;
+          const push = 2.2 + rightContact.tipFactor * 3.8;
+          MatterLib.Body.setVelocity(ball, {
+            x: Math.min(ball.velocity.x, -push),
+            y: -lift
+          });
+        }
+      }
+    });
   }
 
   function getFlipperContact(ball, flipperBody, config, isRight) {
@@ -3868,17 +3905,20 @@
     const localX = dx * cos + dy * sin;
     const localY = -dx * sin + dy * cos;
     const tipFactor = localX / config.length;
+    const clampedTipFactor = Math.max(0, Math.min(1, tipFactor));
     const playfieldSideDistance = isRight ? localY : -localY;
     const isValid =
       tipFactor > 0.08 &&
-      tipFactor < 0.98 &&
+      tipFactor < 1 + FLIPPER_TIP_EXTENSION &&
       playfieldSideDistance > -8 &&
       playfieldSideDistance < 48 &&
       Math.abs(localY) < 52;
 
     return {
       isValid,
-      tipFactor: Math.max(0, Math.min(1, tipFactor))
+      isTipContact: tipFactor > 0.9,
+      tipFactor: clampedTipFactor,
+      playfieldSideDistance
     };
   }
 
