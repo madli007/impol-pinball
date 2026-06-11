@@ -81,6 +81,15 @@ Opening `index.html` directly can still work for quick checks, but the local ser
 
 Matter.js is loaded from CDN, so internet access is currently required for physics.
 
+## Verification Notes
+
+In the current Codex desktop environment, browser smoke testing is limited:
+
+- the in-app Browser can fail to start with a Windows sandbox `CreateProcessAsUserW failed: 5` error
+- the bundled Node runtime may expose `playwright` without `playwright-core`, so local Playwright smoke checks can fail before loading the app
+
+When that happens, avoid retrying the same browser path. Use `node --check game.js`, `git diff --check`, and the local server HTTP status check above, then verify visual/gameplay changes manually in a normal browser.
+
 ## Documentation
 
 - Implementation plan: `docs/implementation_plan.md`

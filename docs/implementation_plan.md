@@ -872,12 +872,16 @@ Priority order:
 3. Add one major route/mechanic at a time and retune drain fairness after each change.
 4. Keep bonus mini-games and long-term systems after core pinball routes are stable.
 
-- [ ] Phase 14.1 - Simple rollover lane lamps - Status: planned
+- [x] Phase 14.1 - Simple rollover lane lamps - Status: completed
   - Add two or three small sensor-only rollover lanes or lamps in the lower/mid playfield.
   - Award small points and combo progress when the ball passes over them.
   - Keep them non-blocking so they cannot trap the ball.
   - Use this as a low-risk way to add more things to aim for before complex ramps.
   - Visible result: more activity and feedback without changing core physics much.
+  - Added three lower/mid playfield sensor-only rollover lamps: FLOW, ALLOY, and SCAN.
+  - Each rollover awards small points, participates in combo chains, and lights its insert without advancing missions or BOM mode.
+  - Completing all three lamps awards a small set bonus, flashes feedback, and resets the lamps for another set.
+  - Exposed rollover count, lit state, completed sets, and bonus value through `window.ImpolPinball`.
 
 - [ ] Phase 14.2 - Lane and outlane system - Status: planned
   - Add clearer left/right inlanes and outlanes near the flippers.

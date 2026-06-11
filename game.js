@@ -49,6 +49,7 @@
     5: 7000
   };
   const MAX_COMBO_BONUS = 10000;
+  const ROLLOVER_COMPLETE_BONUS = 3000;
   const ASSET_CONFIG = {
     furnace: { src: "assets/images/furnace-target.png", width: 154, height: 132, yOffset: -8 },
     coil: { src: "assets/images/coil-collector.png", width: 184, height: 120, yOffset: -8 },
@@ -108,6 +109,11 @@
     slingshots: [
       { id: "left-slingshot", label: "SEVAL", x: 286, y: 1098, width: 100, height: 22, angle: 0.72, visualX: 258, visualY: 1098, visualWidth: 108, visualHeight: 115, visualAngle: 0, accent: "#31a8ff", event: "hit:LEFT_SLINGSHOT", points: 350, impulse: { x: 6.8, y: -7.8 } },
       { id: "right-slingshot", label: "IMPOL-PC", x: 614, y: 1098, width: 100, height: 22, angle: -0.72, visualX: 642, visualY: 1098, visualWidth: 108, visualHeight: 115, visualAngle: 0, accent: "#31a8ff", event: "hit:RIGHT_SLINGSHOT", points: 350, impulse: { x: -6.8, y: -7.8 } }
+    ],
+    rollovers: [
+      { id: "rollover-flow", label: "FLOW", x: 348, y: 1008, radius: 22, accent: "#31a8ff", event: "hit:ROLLOVER", points: 250 },
+      { id: "rollover-alloy", label: "ALLOY", x: 450, y: 986, radius: 22, accent: "#ff9b3d", event: "hit:ROLLOVER", points: 250 },
+      { id: "rollover-scan", label: "SCAN", x: 552, y: 1008, radius: 22, accent: "#7bdc6c", event: "hit:ROLLOVER", points: 250 }
     ]
   };
   const MISSION_CONFIG = [
@@ -335,6 +341,7 @@
       step: 0,
       deadline: 0
     },
+    rollovers: createRolloverState(),
     missionStageIndex: 0,
     activeMissionId: "measurement",
     lastCompletedMissionId: "",
@@ -426,6 +433,17 @@
       lastAwardValue: 0,
       startedAt: 0,
       endedAt: 0
+    };
+  }
+
+  function createRolloverState() {
+    return {
+      lit: TABLE_CONFIG.rollovers.reduce((lit, rollover) => {
+        lit[rollover.id] = false;
+        return lit;
+      }, {}),
+      completedSets: 0,
+      lastCompletedAt: 0
     };
   }
 
@@ -1365,6 +1383,42 @@
         12,
         isLit ? "rgba(49, 168, 255, 0.72)" : "rgba(126, 147, 156, 0.52)"
       );
+      context.restore();
+    });
+  }
+
+  function drawConfiguredRollovers() {
+    TABLE_CONFIG.rollovers.forEach((rollover) => {
+      const isLit = Boolean(gameState.rollovers.lit[rollover.id]);
+      const wasHit = wasRecentlyHit(rollover.id);
+      const pulse = wasHit ? 1 : isLit ? 0.58 + Math.sin(performance.now() / 170) * 0.18 : 0;
+      const glowRadius = rollover.radius + 14 + pulse * 10;
+
+      context.save();
+      if (isLit || wasHit) {
+        const glow = context.createRadialGradient(rollover.x, rollover.y, 3, rollover.x, rollover.y, glowRadius);
+        glow.addColorStop(0, `${rollover.accent}${wasHit ? "cc" : "88"}`);
+        glow.addColorStop(0.45, `${rollover.accent}42`);
+        glow.addColorStop(1, "rgba(0, 0, 0, 0)");
+        context.fillStyle = glow;
+        context.beginPath();
+        context.arc(rollover.x, rollover.y, glowRadius, 0, Math.PI * 2);
+        context.fill();
+      }
+
+      context.fillStyle = isLit ? `${rollover.accent}d8` : "rgba(8, 18, 25, 0.88)";
+      context.strokeStyle = isLit ? "#edf7fb" : "rgba(126, 147, 156, 0.78)";
+      context.lineWidth = isLit ? 4 : 3;
+      context.beginPath();
+      context.arc(rollover.x, rollover.y, rollover.radius, 0, Math.PI * 2);
+      context.fill();
+      context.stroke();
+
+      context.fillStyle = isLit ? "#061017" : rollover.accent;
+      context.font = "900 11px Arial, Helvetica, sans-serif";
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.fillText(rollover.label, rollover.x, rollover.y + 1);
       context.restore();
     });
   }
@@ -2362,11 +2416,12 @@
     const activeBalls = physics ? getActiveBalls() : [];
 
     window.ImpolPinball = {
-      phase: "13.6+13.5",
+      phase: "14.1",
       matterLoaded: Boolean(MatterLib),
       staticBodyCount: physics ? physics.staticBodies.length : 0,
-      tableObjectCount: physics ? physics.bumperBodies.length + physics.targetBodies.length + physics.slingshotBodies.length : 0,
+      tableObjectCount: physics ? physics.bumperBodies.length + physics.targetBodies.length + physics.slingshotBodies.length + physics.rolloverBodies.length : 0,
       slingshotCount: physics ? physics.slingshotBodies.length : 0,
+      rolloverCount: physics ? physics.rolloverBodies.length : 0,
       assetLoadedCount: Object.values(assets).filter((asset) => asset.loaded).length,
       ballSpawned: Boolean(physics && physics.ball),
       activeBallCount: activeBalls.length,
@@ -2429,6 +2484,12 @@
         remainingMs: Math.max(0, Math.round(gameState.ballSaveUntil - performance.now()))
       },
       bomMode: gameState.bomMode,
+      rollovers: {
+        lit: { ...gameState.rollovers.lit },
+        completedSets: gameState.rollovers.completedSets,
+        lastCompletedAt: gameState.rollovers.lastCompletedAt,
+        completeBonus: ROLLOVER_COMPLETE_BONUS
+      },
       skillShotAwarded: gameState.skillShotAwarded,
       gameOver: {
         startedAt: gameState.gameOverStartedAt,
@@ -2543,6 +2604,7 @@
 
     drawConfiguredBumpers();
     drawConfiguredTargets();
+    drawConfiguredRollovers();
     drawDecorativeLamps();
     drawConfiguredSlingshots();
 
@@ -2687,12 +2749,30 @@
       body.gameObject = { ...slingshot, type: "slingshot" };
       return body;
     });
+    const rolloverBodies = TABLE_CONFIG.rollovers.map((rollover) => {
+      const body = Bodies.circle(rollover.x, rollover.y, rollover.radius, {
+        isStatic: true,
+        isSensor: true,
+        label: `rollover:${rollover.id}`
+      });
+      body.gameObject = { ...rollover, type: "rollover" };
+      return body;
+    });
 
     const ball = createBallBody("ball-1", getBallStartPosition());
 
-    Composite.add(engine.world, [...staticBodies, ...bumperBodies, ...targetBodies, ...slingshotBodies, flippers.left, flippers.right, ball]);
+    Composite.add(engine.world, [
+      ...staticBodies,
+      ...bumperBodies,
+      ...targetBodies,
+      ...slingshotBodies,
+      ...rolloverBodies,
+      flippers.left,
+      flippers.right,
+      ball
+    ]);
 
-    [...staticBodies, ...bumperBodies, ...targetBodies, ...slingshotBodies, flippers.left, flippers.right].forEach((body) => {
+    [...staticBodies, ...bumperBodies, ...targetBodies, ...slingshotBodies, ...rolloverBodies, flippers.left, flippers.right].forEach((body) => {
       Body.setStatic(body, true);
     });
 
@@ -2728,6 +2808,7 @@
       bumperBodies,
       targetBodies,
       slingshotBodies,
+      rolloverBodies,
       flippers,
       ball,
       activeBalls: [ball],
@@ -3205,13 +3286,45 @@
       audio.play("target");
     }
 
-    if (object.type !== "slingshot") {
+    if (object.type !== "slingshot" && object.type !== "rollover") {
       advanceMissions(object.event);
       updateBomMode(object.event);
+    }
+    if (object.type === "rollover") {
+      updateRolloverLamps(object);
     }
     maybeAwardJackpot(object);
     updateHud();
     syncInspectableState(physics);
+  }
+
+  function updateRolloverLamps(rollover) {
+    gameState.rollovers.lit[rollover.id] = true;
+
+    const allLit = TABLE_CONFIG.rollovers.every((rolloverConfig) => gameState.rollovers.lit[rolloverConfig.id]);
+    if (!allLit) {
+      return;
+    }
+
+    const bonus = ROLLOVER_COMPLETE_BONUS * getActiveMultiplier();
+    gameState.score += bonus;
+    setHighScore(gameState.score);
+    gameState.rollovers.completedSets += 1;
+    gameState.rollovers.lastCompletedAt = performance.now();
+    TABLE_CONFIG.rollovers.forEach((rolloverConfig) => {
+      gameState.rollovers.lit[rolloverConfig.id] = false;
+    });
+    gameState.feedback = `ROLLOVERS COMPLETE +${bonus.toLocaleString("sl-SI")}`;
+    gameState.feedbackUntil = performance.now() + 950;
+    addHitFeedback({
+      id: "rollover-complete",
+      x: 450,
+      y: 1000,
+      accent: "#ffb967",
+      label: `ROLL +${bonus.toLocaleString("sl-SI")}`,
+      color: "#ffb967"
+    });
+    audio.play("combo");
   }
 
   function addHitFeedback({ id, x, y, accent }) {
@@ -3676,6 +3789,7 @@
       step: 0,
       deadline: 0
     };
+    gameState.rollovers = createRolloverState();
     gameState.missionStageIndex = 0;
     gameState.activeMissionId = "measurement";
     gameState.lastCompletedMissionId = "";
@@ -4270,7 +4384,7 @@
     drawPlayfieldFrame();
 
     if (physics) {
-      drawPhysicsOverlay([...physics.staticBodies, ...physics.bumperBodies, ...physics.targetBodies]);
+      drawPhysicsOverlay([...physics.staticBodies, ...physics.bumperBodies, ...physics.targetBodies, ...physics.rolloverBodies]);
       drawFlipper(physics.flippers.left, inputState.left);
       drawFlipper(physics.flippers.right, inputState.right);
       drawPlungerCharge();
