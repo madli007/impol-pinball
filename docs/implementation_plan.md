@@ -883,7 +883,7 @@ Priority order:
   - Completing all three lamps awards a small set bonus, flashes feedback, and resets the lamps for another set.
   - Exposed rollover count, lit state, completed sets, and bonus value through `window.ImpolPinball`.
 
-- [ ] Phase 14.2 - Lane and outlane system - Status: planned
+- [x] Phase 14.2 - Lane and outlane system - Status: completed
   - Add clearer left/right inlanes and outlanes near the flippers.
   - Add a temporary ball-save or side shield at the start of each ball.
   - Let the shield open after a timer, first bumper hit, or first scoring sequence.
@@ -891,6 +891,11 @@ Priority order:
   - Tune walls and rubber guides so the ball does not trap in lane corners.
   - Consider an invisible ball-save sensor instead of a large physical gate so the lane art does not become an obstacle.
   - Visible result: side drains feel fair and intentional instead of accidental.
+  - Added four sensor-only lower lane zones: left/right inlanes and left/right outlanes.
+  - Lane hits now award small points, participate in combos, light local indicators, and complete a four-lane set bonus.
+  - Added an invisible start-of-ball side shield that saves one early outlane drain, then opens after a timer, first bumper hit, first scoring sequence, or shield save.
+  - Added canvas lane labels, outlane shield glow, a side-shield badge, HUD status copy, and inspectable `window.ImpolPinball.lanes` state.
+  - Kept the shield sensor-only so the lane art communicates protection without adding a physical gate that can trap the ball.
 
 - [ ] Phase 14.3 - Upper orbit and return channel - Status: planned
   - Add a left or right orbit/channel that carries the ball up and returns it down another path.

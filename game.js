@@ -50,6 +50,8 @@
   };
   const MAX_COMBO_BONUS = 10000;
   const ROLLOVER_COMPLETE_BONUS = 3000;
+  const LANE_SET_BONUS = 1800;
+  const SIDE_SHIELD_DURATION = 6500;
   const ASSET_CONFIG = {
     furnace: { src: "assets/images/furnace-target.png", width: 154, height: 132, yOffset: -8 },
     coil: { src: "assets/images/coil-collector.png", width: 184, height: 120, yOffset: -8 },
@@ -114,6 +116,12 @@
       { id: "rollover-flow", label: "FLOW", x: 348, y: 1008, radius: 22, accent: "#31a8ff", event: "hit:ROLLOVER", points: 250 },
       { id: "rollover-alloy", label: "ALLOY", x: 450, y: 986, radius: 22, accent: "#ff9b3d", event: "hit:ROLLOVER", points: 250 },
       { id: "rollover-scan", label: "SCAN", x: 552, y: 1008, radius: 22, accent: "#7bdc6c", event: "hit:ROLLOVER", points: 250 }
+    ],
+    lanes: [
+      { id: "left-outlane", label: "LEFT OUT", shortLabel: "OUT", side: "left", type: "outlane", x: 142, y: 1214, width: 72, height: 150, angle: -0.42, points: 150, accent: "#ff7567", returnX: 268, returnY: 1168, returnVelocity: { x: 5.8, y: -7.4 } },
+      { id: "left-inlane", label: "LEFT RETURN", shortLabel: "IN", side: "left", type: "inlane", x: 286, y: 1200, width: 76, height: 136, angle: 0.54, points: 300, accent: "#31a8ff" },
+      { id: "right-inlane", label: "RIGHT RETURN", shortLabel: "IN", side: "right", type: "inlane", x: 614, y: 1200, width: 76, height: 136, angle: -0.54, points: 300, accent: "#31a8ff" },
+      { id: "right-outlane", label: "RIGHT OUT", shortLabel: "OUT", side: "right", type: "outlane", x: 758, y: 1214, width: 72, height: 150, angle: 0.42, points: 150, accent: "#ff7567", returnX: 632, returnY: 1168, returnVelocity: { x: -5.8, y: -7.4 } }
     ]
   };
   const MISSION_CONFIG = [
@@ -342,6 +350,7 @@
       deadline: 0
     },
     rollovers: createRolloverState(),
+    lanes: createLaneState(),
     missionStageIndex: 0,
     activeMissionId: "measurement",
     lastCompletedMissionId: "",
@@ -444,6 +453,25 @@
       }, {}),
       completedSets: 0,
       lastCompletedAt: 0
+    };
+  }
+
+  function createLaneState() {
+    return {
+      lit: TABLE_CONFIG.lanes.reduce((lit, lane) => {
+        lit[lane.id] = false;
+        return lit;
+      }, {}),
+      lastHitAt: TABLE_CONFIG.lanes.reduce((hitTimes, lane) => {
+        hitTimes[lane.id] = 0;
+        return hitTimes;
+      }, {}),
+      completedSets: 0,
+      lastCompletedAt: 0,
+      sideShieldUntil: 0,
+      sideShieldUsed: false,
+      sideShieldOpenedAt: 0,
+      sideShieldOpenReason: ""
     };
   }
 
@@ -1639,6 +1667,23 @@
     context.fillRect(354, 914, 192 * remaining, 4);
   }
 
+  function drawSideShieldBadge() {
+    if (!isSideShieldActive()) {
+      return;
+    }
+
+    const remaining = Math.max(0, gameState.lanes.sideShieldUntil - performance.now()) / SIDE_SHIELD_DURATION;
+    fillRoundedRect(326, 972, 248, 38, 8, "rgba(5, 11, 16, 0.72)");
+    context.fillStyle = "#7bdc6c";
+    context.font = "800 15px Arial, Helvetica, sans-serif";
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillText("SIDE SHIELD ACTIVE", 450, 991);
+
+    context.fillStyle = "rgba(123, 220, 108, 0.88)";
+    context.fillRect(354, 1004, 192 * remaining, 4);
+  }
+
   function drawMetaRewardBadge() {
     if (gameState.multiball.active) {
       return;
@@ -2153,39 +2198,36 @@
 
   function drawLowerLanePolish() {
     const hasLowerPlasticArt = isAssetReady("lower-plastic-left") && isAssetReady("lower-plastic-right");
+    const shieldActive = isSideShieldActive();
 
     context.save();
 
-    const lanes = [
-      {
-        rail: [
-          [128, 1168],
-          [230, 1232],
-          [306, 1282]
-        ],
-        label: "OUTLANE",
-        labelX: 188,
-        labelY: 1210,
-        lampX: 152,
-        lampY: 1188,
-        angle: 0.56
-      },
-      {
-        rail: [
-          [772, 1168],
-          [670, 1232],
-          [594, 1282]
-        ],
-        label: "RETURN",
-        labelX: 712,
-        labelY: 1210,
-        lampX: 748,
-        lampY: 1188,
-        angle: -0.56
-      }
-    ];
+    const lanes = TABLE_CONFIG.lanes.map((lane) => ({
+      ...lane,
+      rail: lane.side === "left"
+        ? [
+            [lane.type === "outlane" ? 112 : 228, 1138],
+            [lane.x, 1212],
+            [lane.type === "outlane" ? 204 : 354, 1282]
+          ]
+        : [
+            [lane.type === "outlane" ? 788 : 672, 1138],
+            [lane.x, 1212],
+            [lane.type === "outlane" ? 696 : 546, 1282]
+          ],
+      labelX: lane.x,
+      labelY: lane.type === "outlane" ? 1208 : 1188,
+      lampX: lane.x,
+      lampY: lane.type === "outlane" ? 1168 : 1244,
+      drawAngle: lane.side === "left" ? lane.angle + 0.98 : lane.angle - 0.98
+    }));
 
     lanes.forEach((lane) => {
+      const isLit = Boolean(gameState.lanes.lit[lane.id]);
+      const wasHit = wasRecentlyHit(lane.id);
+      const isShieldedOutlane = shieldActive && lane.type === "outlane";
+      const laneAccent = isShieldedOutlane ? "#7bdc6c" : lane.accent;
+
       if (!hasLowerPlasticArt) {
         context.strokeStyle = "rgba(3, 9, 13, 0.55)";
         context.lineWidth = 18;
@@ -2202,39 +2244,42 @@
         context.quadraticCurveTo(lane.rail[1][0], lane.rail[1][1], lane.rail[2][0], lane.rail[2][1]);
         context.stroke();
 
-        context.strokeStyle = "rgba(49, 168, 255, 0.45)";
+        context.strokeStyle = isShieldedOutlane ? "rgba(123, 220, 108, 0.62)" : "rgba(49, 168, 255, 0.45)";
         context.lineWidth = 4;
         context.beginPath();
-        context.moveTo(lane.rail[0][0] + (lane.angle > 0 ? 8 : -8), lane.rail[0][1] + 3);
+        context.moveTo(lane.rail[0][0] + (lane.side === "left" ? 8 : -8), lane.rail[0][1] + 3);
         context.quadraticCurveTo(lane.rail[1][0], lane.rail[1][1] + 4, lane.rail[2][0], lane.rail[2][1] - 4);
         context.stroke();
       }
 
       context.save();
       context.translate(lane.labelX, lane.labelY);
-      context.rotate(lane.angle);
-      context.globalAlpha = hasLowerPlasticArt ? 0.36 : 1;
+      context.rotate(lane.drawAngle);
+      context.globalAlpha = hasLowerPlasticArt ? 0.5 : 1;
       if (!hasLowerPlasticArt) {
-        fillRoundedRect(-42, -12, 84, 24, 6, "rgba(5, 11, 16, 0.68)");
+        fillRoundedRect(-28, -12, 56, 24, 6, "rgba(5, 11, 16, 0.68)");
       }
-      context.fillStyle = hasLowerPlasticArt ? "rgba(154, 179, 191, 0.68)" : "#9ab3bf";
+      context.fillStyle = isShieldedOutlane || isLit ? laneAccent : hasLowerPlasticArt ? "rgba(154, 179, 191, 0.68)" : "#9ab3bf";
       context.font = "800 12px Arial, Helvetica, sans-serif";
       context.textAlign = "center";
       context.textBaseline = "middle";
-      context.fillText(lane.label, 0, 1);
+      context.fillText(lane.shortLabel, 0, 1);
       context.restore();
 
       const lampGlow = context.createRadialGradient(lane.lampX, lane.lampY, 2, lane.lampX, lane.lampY, 22);
-      lampGlow.addColorStop(0, hasLowerPlasticArt ? "rgba(255, 155, 61, 0.46)" : "rgba(255, 155, 61, 0.9)");
+      lampGlow.addColorStop(0, wasHit || isLit || isShieldedOutlane ? `${laneAccent}d8` : hasLowerPlasticArt ? "rgba(255, 155, 61, 0.46)" : "rgba(255, 155, 61, 0.9)");
       lampGlow.addColorStop(1, "rgba(255, 155, 61, 0)");
       context.fillStyle = lampGlow;
       context.beginPath();
       context.arc(lane.lampX, lane.lampY, 22, 0, Math.PI * 2);
       context.fill();
-      if (!hasLowerPlasticArt) {
-        drawRailBolt(lane.lampX, lane.lampY, 6);
-      }
+      drawRailBolt(lane.lampX, lane.lampY, isShieldedOutlane ? 7 : 5);
     });
+
+    if (shieldActive) {
+      context.globalAlpha = 0.95;
+      drawLabel("SIDE SHIELD", 450, 1246, "#7bdc6c", 18);
+    }
 
     context.restore();
   }
@@ -2405,10 +2450,15 @@
       const metaLabel = gameState.metaRewards.lastAwardLabel ? ` Last reward: ${gameState.metaRewards.lastAwardLabel}.` : "";
       const litJackpots = getJackpotLitLabels();
       const jackpotStatus = litJackpots.length ? ` Jackpot lit: ${litJackpots.join(" / ")}.` : "";
+      const shieldStatus = isSideShieldActive()
+        ? ` Side shield ${Math.ceil(Math.max(0, gameState.lanes.sideShieldUntil - performance.now()) / 1000)}s.`
+        : gameState.lanes.sideShieldOpenReason
+          ? ` Side shield open: ${gameState.lanes.sideShieldOpenReason}.`
+          : "";
       const multiballStatus = gameState.multiball.active
         ? " Multiball active: 2x scoring, missions and companies paused."
         : ` Multiball missions ${gameState.multiball.progress}/${gameState.multiball.nextRequirement}.`;
-      ui.statusCopy.textContent = `${activeCompany.label}: ${activeState.detail}. Group bonus ${bonusCompanyCount}/${COMPANY_CONFIG.length}.${multiballStatus}${jackpotStatus}${metaLabel}`;
+      ui.statusCopy.textContent = `${activeCompany.label}: ${activeState.detail}. Group bonus ${bonusCompanyCount}/${COMPANY_CONFIG.length}.${multiballStatus}${shieldStatus}${jackpotStatus}${metaLabel}`;
     }
   }
 
@@ -2416,12 +2466,13 @@
     const activeBalls = physics ? getActiveBalls() : [];
 
     window.ImpolPinball = {
-      phase: "14.1",
+      phase: "14.2",
       matterLoaded: Boolean(MatterLib),
       staticBodyCount: physics ? physics.staticBodies.length : 0,
-      tableObjectCount: physics ? physics.bumperBodies.length + physics.targetBodies.length + physics.slingshotBodies.length + physics.rolloverBodies.length : 0,
+      tableObjectCount: physics ? physics.bumperBodies.length + physics.targetBodies.length + physics.slingshotBodies.length + physics.rolloverBodies.length + physics.laneBodies.length : 0,
       slingshotCount: physics ? physics.slingshotBodies.length : 0,
       rolloverCount: physics ? physics.rolloverBodies.length : 0,
+      laneCount: physics ? physics.laneBodies.length : 0,
       assetLoadedCount: Object.values(assets).filter((asset) => asset.loaded).length,
       ballSpawned: Boolean(physics && physics.ball),
       activeBallCount: activeBalls.length,
@@ -2489,6 +2540,17 @@
         completedSets: gameState.rollovers.completedSets,
         lastCompletedAt: gameState.rollovers.lastCompletedAt,
         completeBonus: ROLLOVER_COMPLETE_BONUS
+      },
+      lanes: {
+        lit: { ...gameState.lanes.lit },
+        completedSets: gameState.lanes.completedSets,
+        lastCompletedAt: gameState.lanes.lastCompletedAt,
+        setBonus: LANE_SET_BONUS,
+        sideShieldActive: isSideShieldActive(),
+        sideShieldUsed: gameState.lanes.sideShieldUsed,
+        sideShieldRemainingMs: Math.max(0, Math.round(gameState.lanes.sideShieldUntil - performance.now())),
+        sideShieldOpenedAt: gameState.lanes.sideShieldOpenedAt,
+        sideShieldOpenReason: gameState.lanes.sideShieldOpenReason
       },
       skillShotAwarded: gameState.skillShotAwarded,
       gameOver: {
@@ -2758,6 +2820,16 @@
       body.gameObject = { ...rollover, type: "rollover" };
       return body;
     });
+    const laneBodies = TABLE_CONFIG.lanes.map((lane) => {
+      const body = Bodies.rectangle(lane.x, lane.y, lane.width, lane.height, {
+        isStatic: true,
+        isSensor: true,
+        label: `lane:${lane.id}`,
+        angle: lane.angle
+      });
+      body.gameObject = { ...lane, type: "lane" };
+      return body;
+    });
 
     const ball = createBallBody("ball-1", getBallStartPosition());
 
@@ -2767,12 +2839,13 @@
       ...targetBodies,
       ...slingshotBodies,
       ...rolloverBodies,
+      ...laneBodies,
       flippers.left,
       flippers.right,
       ball
     ]);
 
-    [...staticBodies, ...bumperBodies, ...targetBodies, ...slingshotBodies, ...rolloverBodies, flippers.left, flippers.right].forEach((body) => {
+    [...staticBodies, ...bumperBodies, ...targetBodies, ...slingshotBodies, ...rolloverBodies, ...laneBodies, flippers.left, flippers.right].forEach((body) => {
       Body.setStatic(body, true);
     });
 
@@ -2809,6 +2882,7 @@
       targetBodies,
       slingshotBodies,
       rolloverBodies,
+      laneBodies,
       flippers,
       ball,
       activeBalls: [ball],
@@ -2909,6 +2983,7 @@
     gameState.skillShotAvailableUntil = performance.now() + 2600;
     gameState.skillShotAwarded = false;
     gameState.ballSaveUntil = gameState.ballSaveUsed ? 0 : performance.now() + BALL_SAVE_DURATION;
+    armSideShield();
     gameState.plungerPower = 0;
     inputState.chargingSince = 0;
     updateMetaRewardTimeout();
@@ -3249,6 +3324,11 @@
       return;
     }
 
+    if (object.type === "lane") {
+      handleLaneHit(object, ball);
+      return;
+    }
+
     const points = object.points * getActiveMultiplier();
     const combo = registerComboHit(object);
     gameState.score += points + combo.bonus;
@@ -3275,6 +3355,7 @@
 
     updateCompanyForEvent(object.event);
     updateCompanyForCombo(object, combo);
+    maybeOpenSideShieldFromScoring(object, combo);
 
     if (object.type === "bumper") {
       audio.play("bumper", { variant: object.id });
@@ -3322,6 +3403,151 @@
       y: 1000,
       accent: "#ffb967",
       label: `ROLL +${bonus.toLocaleString("sl-SI")}`,
+      color: "#ffb967"
+    });
+    audio.play("combo");
+  }
+
+  function isSideShieldActive() {
+    return gameState.status === "playing" && !gameState.lanes.sideShieldUsed && performance.now() <= gameState.lanes.sideShieldUntil;
+  }
+
+  function armSideShield(now = performance.now()) {
+    gameState.lanes.sideShieldUntil = now + SIDE_SHIELD_DURATION;
+    gameState.lanes.sideShieldUsed = false;
+    gameState.lanes.sideShieldOpenedAt = 0;
+    gameState.lanes.sideShieldOpenReason = "";
+  }
+
+  function openSideShield(reason) {
+    if (!isSideShieldActive()) {
+      return;
+    }
+
+    gameState.lanes.sideShieldUntil = 0;
+    gameState.lanes.sideShieldOpenedAt = performance.now();
+    gameState.lanes.sideShieldOpenReason = reason;
+  }
+
+  function updateSideShieldTimeout() {
+    if (gameState.status !== "playing" || gameState.lanes.sideShieldUsed || !gameState.lanes.sideShieldUntil) {
+      return;
+    }
+
+    if (performance.now() <= gameState.lanes.sideShieldUntil) {
+      return;
+    }
+
+    gameState.lanes.sideShieldOpenedAt = performance.now();
+    gameState.lanes.sideShieldOpenReason = "timer";
+    gameState.lanes.sideShieldUntil = 0;
+    updateHud();
+    syncInspectableState(physics);
+  }
+
+  function maybeOpenSideShieldFromScoring(object, combo) {
+    if (!isSideShieldActive() || object.type === "lane" || object.type === "rollover") {
+      return;
+    }
+
+    if (object.type === "bumper") {
+      openSideShield("first bumper");
+      return;
+    }
+
+    if (combo.count >= 2 || combo.bonus > 0) {
+      openSideShield("first scoring sequence");
+    }
+  }
+
+  function rescueOutlaneWithSideShield(lane, ball) {
+    if (!ball || lane.type !== "outlane" || !isSideShieldActive()) {
+      return false;
+    }
+
+    gameState.lanes.sideShieldUsed = true;
+    gameState.lanes.sideShieldUntil = 0;
+    gameState.lanes.sideShieldOpenedAt = performance.now();
+    gameState.lanes.sideShieldOpenReason = `${lane.side} shield save`;
+    MatterLib.Body.setPosition(ball, {
+      x: lane.returnX,
+      y: lane.returnY
+    });
+    MatterLib.Body.setVelocity(ball, lane.returnVelocity);
+    MatterLib.Body.setAngularVelocity(ball, lane.side === "left" ? 0.16 : -0.16);
+    gameState.feedback = "SIDE SHIELD SAVE";
+    gameState.feedbackUntil = performance.now() + 1100;
+    addHitFeedback({
+      id: `side-shield-${lane.id}`,
+      x: lane.x,
+      y: lane.y,
+      accent: "#7bdc6c",
+      label: "SHIELD",
+      color: "#7bdc6c"
+    });
+    audio.play("mission-progress");
+    return true;
+  }
+
+  function handleLaneHit(lane, ball) {
+    const now = performance.now();
+
+    if (now - (gameState.lanes.lastHitAt[lane.id] || 0) < 420) {
+      return;
+    }
+
+    gameState.lanes.lastHitAt[lane.id] = now;
+    gameState.lanes.lit[lane.id] = true;
+    gameState.hitCounts[lane.id] = now;
+    gameState.lastEvent = `hit:${lane.type.toUpperCase()}`;
+
+    const points = lane.points * getActiveMultiplier();
+    const combo = registerComboHit(lane);
+    gameState.score += points + combo.bonus;
+    setHighScore(gameState.score);
+    gameState.feedback = combo.bonus
+      ? `${combo.count}x COMBO +${combo.bonus.toLocaleString("sl-SI")}`
+      : `${lane.label} +${points.toLocaleString("sl-SI")}`;
+    gameState.feedbackUntil = now + 700;
+    addHitFeedback({
+      id: lane.id,
+      x: lane.x,
+      y: lane.y,
+      accent: lane.accent,
+      label: combo.bonus ? `${combo.count}x COMBO` : `+${points.toLocaleString("sl-SI")}`,
+      color: lane.type === "outlane" ? "#ffb967" : "#edf7fb"
+    });
+
+    rescueOutlaneWithSideShield(lane, ball);
+    updateLaneSetBonus();
+    audio.play(lane.type === "outlane" ? "target" : "combo");
+    updateHud();
+    syncInspectableState(physics);
+  }
+
+  function updateLaneSetBonus() {
+    const allLit = TABLE_CONFIG.lanes.every((lane) => gameState.lanes.lit[lane.id]);
+
+    if (!allLit) {
+      return;
+    }
+
+    const bonus = LANE_SET_BONUS * getActiveMultiplier();
+    gameState.score += bonus;
+    setHighScore(gameState.score);
+    gameState.lanes.completedSets += 1;
+    gameState.lanes.lastCompletedAt = performance.now();
+    TABLE_CONFIG.lanes.forEach((lane) => {
+      gameState.lanes.lit[lane.id] = false;
+    });
+    gameState.feedback = `LANES COMPLETE +${bonus.toLocaleString("sl-SI")}`;
+    gameState.feedbackUntil = performance.now() + 950;
+    addHitFeedback({
+      id: "lane-complete",
+      x: 450,
+      y: 1194,
+      accent: "#ffb967",
+      label: `LANES +${bonus.toLocaleString("sl-SI")}`,
       color: "#ffb967"
     });
     audio.play("combo");
@@ -3790,6 +4016,7 @@
       deadline: 0
     };
     gameState.rollovers = createRolloverState();
+    gameState.lanes = createLaneState();
     gameState.missionStageIndex = 0;
     gameState.activeMissionId = "measurement";
     gameState.lastCompletedMissionId = "";
@@ -4348,6 +4575,7 @@
       updateBomModeTimeout();
       updateComboTimeout();
       updateBallSaveTimeout();
+      updateSideShieldTimeout();
       updateMetaRewardTimeout();
       holdBallInLaunchLane();
       MatterLib.Engine.update(physics.engine, physicsClock.step * physicsClock.simulationScale);
@@ -4384,7 +4612,7 @@
     drawPlayfieldFrame();
 
     if (physics) {
-      drawPhysicsOverlay([...physics.staticBodies, ...physics.bumperBodies, ...physics.targetBodies, ...physics.rolloverBodies]);
+      drawPhysicsOverlay([...physics.staticBodies, ...physics.bumperBodies, ...physics.targetBodies, ...physics.rolloverBodies, ...physics.laneBodies]);
       drawFlipper(physics.flippers.left, inputState.left);
       drawFlipper(physics.flippers.right, inputState.right);
       drawPlungerCharge();
@@ -4396,6 +4624,7 @@
       drawJackpotBadge();
       drawLastJackpotAward();
       drawBallSaveBadge();
+      drawSideShieldBadge();
       drawBomModeBadge();
       drawHitEffects();
       drawGameOverPresentation();
