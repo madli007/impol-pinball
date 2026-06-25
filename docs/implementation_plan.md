@@ -394,6 +394,8 @@ Simplification:
 
 Use small phases that produce visible progress as quickly as possible. Each phase should leave the project in a runnable state.
 
+Agent execution rule: when a phase references a detailed plan, read the full shared constraints and the exact phase subsection before changing code. Implement only the requested numbered phase, verify its acceptance criteria, and update its status and implementation notes in both documents.
+
 ### Phase 1: Visible Static Shell
 
 - [x] Phase 1.1 - Page shell - Status: complete
@@ -897,45 +899,97 @@ Priority order:
   - Added canvas lane labels, outlane shield glow, a side-shield badge, HUD status copy, and inspectable `window.ImpolPinball.lanes` state.
   - Kept the shield sensor-only so the lane art communicates protection without adding a physical gate that can trap the ball.
 
-- [ ] Phase 14.3 - Upper orbit and return channel - Status: planned
+- [x] Phase 14.3 - Upper orbit and return channel - Status: completed
   - Add a left or right orbit/channel that carries the ball up and returns it down another path.
   - Use guide rails and a simple sensor zone rather than a fully simulated ramp at first.
   - Award a route/combo bonus when the ball completes the channel cleanly.
   - Add industrial route art such as aluminium flow arrows, conveyor markings, or pipe rails.
   - Redesign the entry so it is easy to hit and does not create a hidden wall.
   - Visible result: the player can intentionally shoot a loop instead of only hitting central targets.
+  - Added a visible left-side `ALU FLOW` orbit with metal guide rails, directional arrows, a wide lower entry, and a separate upper return channel.
+  - The entry and return use sensor zones plus restrained velocity guidance so the route reads clearly without requiring a fully simulated raised ramp.
+  - Clean orbit completions award 4,500 base points, participate in the existing combo chain, and expose route state and completion counts through `window.ImpolPinball`.
 
-- [ ] Phase 14.4 - Lock house / kickout opening - Status: planned
-  - Add a themed opening or "house" that can catch the ball.
-  - Keep it closed until the player hits required targets or lane switches.
-  - When open, let the ball enter, pause briefly, award a bonus, then kick it back into play.
-  - Add sound and light feedback for closed, opening, locked, and kickout states.
-  - Visible result: the table has a memorable feature that changes state during a ball.
+The detailed scope, exclusions, dependencies, acceptance criteria, and deliverables for Phases 14.3.1-14.3.8 are defined in `docs/phase14_3_full_table_stabilization_plan.md`. Phase 14.4 is blocked until Phase 14.3.8 is completed.
 
-- [ ] Phase 14.5 - Bonus mini-game hook - Status: planned
-  - Trigger a short top-screen bonus mode from the lock house or completed route sequence.
-  - Start with a very small overlay interaction, such as timing a press or dodging simple obstacles.
-  - Keep normal pinball paused or safely held while the mini-game runs.
-  - Award bonus points, multiplier progress, or ball save extension.
-  - Candidate theme: a tiny Flappy-style aluminium coil / delivery drone / factory route challenge.
-  - Visible result: completing table objectives can unlock a funny bonus moment without derailing the main game.
+- [ ] Phase 14.3.1 - Deterministic physics test harness - Status: planned
+  - Add repeatable diagnostic scenarios and measurements for routes, targets, drains, traps, launches, and multiball.
+  - Keep diagnostics disabled during ordinary gameplay.
+  - Detailed scope and acceptance criteria: `docs/phase14_3_full_table_stabilization_plan.md`.
+  - Visible result: later physics changes can be measured and reproduced.
 
-- [ ] Phase 14.6 - Hall of Fame UI - Status: planned
-  - Add a small local Hall of Fame view for top scores.
-  - Store a few entries in localStorage with score, date, optional initials, and the game/ruleset version.
-  - Save Hall of Fame data as a small JSON structure, for example `{ version, rulesetVersion, entries }`, so old scores can be separated when scoring changes.
-  - Keep the default flow simple: only ask for initials after a new high score.
-  - Preserve the current single high score as a fallback if localStorage is unavailable.
-  - Visible result: quick demo games become more social and replayable.
+- [ ] Phase 14.3.2 - Upper orbit and shot-map retune - Status: planned
+  - Make the orbit intentionally hittable and map repeatable shots to every required target.
+  - Correct blocking geometry, misleading openings, and trap risks.
+  - Depends on Phase 14.3.1.
+  - Visible result: both flippers have useful deliberate shots and the orbit is achievable in normal play.
 
-- [ ] Phase 14.7 - Additional ideas to evaluate - Status: planned
-  - Add mode callouts such as `QUALITY MODE`, `ERP FREEZE`, `GREEN BONUS`, and `KOSOVNICA PANIC` with small table lighting changes.
-  - Add a temporary `ERP ERROR` hurry-up where the player must hit MES/ERP before a timer expires.
-  - Add a `COIL FLOW` orbit/combo where sequential route hits increase a rolling bonus.
-  - Add a `SHIFT REPORT` end-of-ball bonus summary for completed missions, combos, and company progress.
-  - Add local Hall of Fame initials after game over once the larger game-over panel exists.
-  - Add a rules/help overlay that can be opened outside active play, not as in-game explanatory text.
-  - Visible result: future work has a ranked idea pool without distracting the current implementation.
+- [ ] Phase 14.3.3 - Sensor cooldowns and combo rules - Status: planned
+  - Stop repeated sensor farming and unbounded combo chains.
+  - Reward movement between meaningful table zones.
+  - Depends on Phase 14.3.2.
+  - Visible result: no passive score farming or 100+ combos.
+
+- [ ] Phase 14.3.4 - Score economy rebalance - Status: planned
+  - Rebalance incidental hits, targets, routes, missions, multiball, and jackpots.
+  - Version the scoring rules and handle inflated legacy high scores.
+  - Depends on Phase 14.3.3.
+  - Visible result: normal three-ball games fit documented score ranges.
+
+- [ ] Phase 14.3.5 - Mission and company progression retune - Status: planned
+  - Align mission requirements and company states with intentional, repeatable shots.
+  - Improve current-objective communication.
+  - Depends on Phase 14.3.4.
+  - Visible result: progression is understandable and does not outrun the active mission.
+
+- [ ] Phase 14.3.6 - Feedback layout and text clarity - Status: planned
+  - Replace overlapping fixed badges with prioritized feedback zones.
+  - Fix duplicate, ignored, clipped, and overly long messages.
+  - Depends on Phase 14.3.5.
+  - Visible result: simultaneous modes and awards remain readable without hiding gameplay.
+
+- [ ] Phase 14.3.7 - Table scale, responsive layout, and touch UX - Status: planned
+  - Increase desktop table presentation while keeping the internal 900x1400 physics space.
+  - Remove tablet overflow and keep mobile objectives and controls near the table.
+  - Depends on Phase 14.3.6.
+  - Visible result: desktop, tablet, and mobile layouts are usable without horizontal scrolling.
+
+- [ ] Phase 14.3.8 - Full regression and final tuning - Status: planned
+  - Run the documented full-game, route, drain, multiball, persistence, and viewport test matrix.
+  - Apply only measured final tuning and produce a go/no-go decision for Phase 14.4.
+  - Depends on Phases 14.3.1 through 14.3.7.
+  - Visible result: the stabilized table is demonstrably ready for the next major mechanism.
+
+The remaining Phase 14 work is split into agent-sized phases in `docs/phase14_future_execution_plan.md`.
+
+#### Phase 14.4: Lock House Program
+
+- [ ] Phase 14.4.1 - Lock house state model and closed target - Status: planned
+- [ ] Phase 14.4.2 - Ball capture and safe hold - Status: planned
+- [ ] Phase 14.4.3 - Kickout, reward, and requalification - Status: planned
+- [ ] Phase 14.4.4 - Lock house regression and presentation - Status: planned
+
+#### Phase 14.5: Bonus Mini-Game Program
+
+- [ ] Phase 14.5.1 - Mini-game trigger and pinball suspension contract - Status: planned
+- [ ] Phase 14.5.2 - Single bonus mini-game - Status: planned
+- [ ] Phase 14.5.3 - Reward integration and regression - Status: planned
+
+#### Phase 14.6: Local Hall Of Fame Program
+
+- [ ] Phase 14.6.1 - Versioned score storage model - Status: planned
+- [ ] Phase 14.6.2 - Hall of Fame view - Status: planned
+- [ ] Phase 14.6.3 - Qualifying score and initials flow - Status: planned
+
+#### Phase 14.7: Optional Depth Backlog
+
+Phase 14.7 is not an executable phase. Start a numbered optional subphase from the detailed execution plan.
+
+- [ ] Phase 14.7.1 - Rules and help overlay - Status: planned
+- [ ] Phase 14.7.2 - End-of-ball Shift Report - Status: planned
+- [ ] Phase 14.7.3 - ERP Error hurry-up - Status: planned
+- [ ] Phase 14.7.4 - Mode callouts and lighting - Status: planned
+- [ ] Phase 14.7.5 - Coil Flow route mode - Status: planned
 
 ## 15. Parking Lot
 

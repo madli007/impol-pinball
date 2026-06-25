@@ -52,6 +52,21 @@
   const ROLLOVER_COMPLETE_BONUS = 3000;
   const LANE_SET_BONUS = 1800;
   const SIDE_SHIELD_DURATION = 6500;
+  const UPPER_ORBIT = {
+    id: "upper-orbit",
+    label: "ALU FLOW ORBIT",
+    event: "hit:UPPER_ORBIT",
+    points: 4500,
+    accent: "#31a8ff",
+    timeoutMs: 4400,
+    entrySensor: { x: 142, y: 790, width: 88, height: 118, angle: -0.08 },
+    returnSensor: { x: 220, y: 300, width: 90, height: 90, angle: 0.04 },
+    rails: [
+      { x: 210, y: 535, width: 16, height: 500, angle: 0 },
+      { x: 144, y: 216, width: 16, height: 138, angle: -0.72 },
+      { x: 226, y: 784, width: 16, height: 126, angle: -0.72 }
+    ]
+  };
   const ASSET_CONFIG = {
     furnace: { src: "assets/images/furnace-target.png", width: 154, height: 132, yOffset: -8 },
     coil: { src: "assets/images/coil-collector.png", width: 184, height: 120, yOffset: -8 },
@@ -122,7 +137,8 @@
       { id: "left-inlane", label: "LEFT RETURN", shortLabel: "IN", side: "left", type: "inlane", x: 286, y: 1200, width: 76, height: 136, angle: 0.54, points: 300, accent: "#31a8ff" },
       { id: "right-inlane", label: "RIGHT RETURN", shortLabel: "IN", side: "right", type: "inlane", x: 614, y: 1200, width: 76, height: 136, angle: -0.54, points: 300, accent: "#31a8ff" },
       { id: "right-outlane", label: "RIGHT OUT", shortLabel: "OUT", side: "right", type: "outlane", x: 758, y: 1214, width: 72, height: 150, angle: 0.42, points: 150, accent: "#ff7567", returnX: 632, returnY: 1168, returnVelocity: { x: -5.8, y: -7.4 } }
-    ]
+    ],
+    upperOrbit: UPPER_ORBIT
   };
   const MISSION_CONFIG = [
     {
@@ -351,6 +367,7 @@
     },
     rollovers: createRolloverState(),
     lanes: createLaneState(),
+    upperOrbit: createUpperOrbitState(),
     missionStageIndex: 0,
     activeMissionId: "measurement",
     lastCompletedMissionId: "",
@@ -472,6 +489,18 @@
       sideShieldUsed: false,
       sideShieldOpenedAt: 0,
       sideShieldOpenReason: ""
+    };
+  }
+
+  function createUpperOrbitState() {
+    return {
+      active: false,
+      stage: "idle",
+      ballId: "",
+      startedAt: 0,
+      completedRuns: 0,
+      lastCompletedAt: 0,
+      lastAward: 0
     };
   }
 
@@ -1449,6 +1478,79 @@
       context.fillText(rollover.label, rollover.x, rollover.y + 1);
       context.restore();
     });
+  }
+
+  function drawUpperOrbit() {
+    const orbit = TABLE_CONFIG.upperOrbit;
+    const state = gameState.upperOrbit;
+    const activePulse = state.active ? 0.62 + Math.sin(performance.now() / 150) * 0.22 : 0;
+
+    context.save();
+    context.lineCap = "round";
+    context.lineJoin = "round";
+
+    const routeGlow = context.createLinearGradient(100, 820, 250, 220);
+    routeGlow.addColorStop(0, `rgba(49, 168, 255, ${0.08 + activePulse * 0.22})`);
+    routeGlow.addColorStop(0.58, `rgba(49, 168, 255, ${0.12 + activePulse * 0.24})`);
+    routeGlow.addColorStop(1, `rgba(255, 155, 61, ${0.08 + activePulse * 0.2})`);
+    context.strokeStyle = routeGlow;
+    context.lineWidth = 42;
+    context.beginPath();
+    context.moveTo(142, 842);
+    context.lineTo(152, 320);
+    context.quadraticCurveTo(150, 205, 218, 236);
+    context.quadraticCurveTo(248, 258, 250, 354);
+    context.stroke();
+
+    orbit.rails.forEach((rail) => {
+      context.save();
+      context.translate(rail.x, rail.y);
+      context.rotate(rail.angle);
+      const metal = context.createLinearGradient(-rail.width / 2, 0, rail.width / 2, 0);
+      metal.addColorStop(0, "#243945");
+      metal.addColorStop(0.32, "#b7c7ce");
+      metal.addColorStop(0.58, "#5e7783");
+      metal.addColorStop(1, "#172a34");
+      fillRoundedRect(-rail.width / 2, -rail.height / 2, rail.width, rail.height, 7, metal);
+      context.strokeStyle = state.active ? "rgba(49, 168, 255, 0.88)" : "rgba(173, 196, 205, 0.62)";
+      context.lineWidth = state.active ? 3 : 2;
+      context.strokeRect(-rail.width / 2 + 2, -rail.height / 2 + 5, rail.width - 4, rail.height - 10);
+      context.restore();
+    });
+
+    [
+      { x: 132, y: 700, angle: -Math.PI / 2 },
+      { x: 132, y: 548, angle: -Math.PI / 2 },
+      { x: 132, y: 396, angle: -Math.PI / 2 },
+      { x: 208, y: 250, angle: 0.32 },
+      { x: 240, y: 322, angle: Math.PI / 2 }
+    ].forEach((arrow) => {
+      context.save();
+      context.translate(arrow.x, arrow.y);
+      context.rotate(arrow.angle);
+      context.fillStyle = state.active ? "#edf7fb" : orbit.accent;
+      context.beginPath();
+      context.moveTo(12, 0);
+      context.lineTo(-8, -9);
+      context.lineTo(-3, 0);
+      context.lineTo(-8, 9);
+      context.closePath();
+      context.fill();
+      context.restore();
+    });
+
+    context.translate(112, 582);
+    context.rotate(-Math.PI / 2);
+    fillRoundedRect(-76, -13, 152, 26, 6, "rgba(5, 15, 22, 0.88)");
+    context.strokeStyle = state.active ? "#edf7fb" : orbit.accent;
+    context.lineWidth = 2;
+    context.strokeRect(-72, -9, 144, 18);
+    context.fillStyle = state.active ? "#edf7fb" : orbit.accent;
+    context.font = "900 12px Arial, Helvetica, sans-serif";
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillText("ALU FLOW", 0, 1);
+    context.restore();
   }
 
   function wasRecentlyHit(id) {
@@ -2458,7 +2560,12 @@
       const multiballStatus = gameState.multiball.active
         ? " Multiball active: 2x scoring, missions and companies paused."
         : ` Multiball missions ${gameState.multiball.progress}/${gameState.multiball.nextRequirement}.`;
-      ui.statusCopy.textContent = `${activeCompany.label}: ${activeState.detail}. Group bonus ${bonusCompanyCount}/${COMPANY_CONFIG.length}.${multiballStatus}${shieldStatus}${jackpotStatus}${metaLabel}`;
+      const orbitStatus = gameState.upperOrbit.active
+        ? ` ALU FLOW ${gameState.upperOrbit.stage}.`
+        : gameState.upperOrbit.completedRuns
+          ? ` ALU FLOW runs ${gameState.upperOrbit.completedRuns}.`
+          : "";
+      ui.statusCopy.textContent = `${activeCompany.label}: ${activeState.detail}. Group bonus ${bonusCompanyCount}/${COMPANY_CONFIG.length}.${multiballStatus}${shieldStatus}${orbitStatus}${jackpotStatus}${metaLabel}`;
     }
   }
 
@@ -2466,13 +2573,14 @@
     const activeBalls = physics ? getActiveBalls() : [];
 
     window.ImpolPinball = {
-      phase: "14.2",
+      phase: "14.3",
       matterLoaded: Boolean(MatterLib),
       staticBodyCount: physics ? physics.staticBodies.length : 0,
-      tableObjectCount: physics ? physics.bumperBodies.length + physics.targetBodies.length + physics.slingshotBodies.length + physics.rolloverBodies.length + physics.laneBodies.length : 0,
+      tableObjectCount: physics ? physics.bumperBodies.length + physics.targetBodies.length + physics.slingshotBodies.length + physics.rolloverBodies.length + physics.laneBodies.length + physics.orbitSensorBodies.length : 0,
       slingshotCount: physics ? physics.slingshotBodies.length : 0,
       rolloverCount: physics ? physics.rolloverBodies.length : 0,
       laneCount: physics ? physics.laneBodies.length : 0,
+      orbitSensorCount: physics ? physics.orbitSensorBodies.length : 0,
       assetLoadedCount: Object.values(assets).filter((asset) => asset.loaded).length,
       ballSpawned: Boolean(physics && physics.ball),
       activeBallCount: activeBalls.length,
@@ -2551,6 +2659,18 @@
         sideShieldRemainingMs: Math.max(0, Math.round(gameState.lanes.sideShieldUntil - performance.now())),
         sideShieldOpenedAt: gameState.lanes.sideShieldOpenedAt,
         sideShieldOpenReason: gameState.lanes.sideShieldOpenReason
+      },
+      upperOrbit: {
+        active: gameState.upperOrbit.active,
+        stage: gameState.upperOrbit.stage,
+        ballId: gameState.upperOrbit.ballId,
+        completedRuns: gameState.upperOrbit.completedRuns,
+        lastCompletedAt: gameState.upperOrbit.lastCompletedAt,
+        lastAward: gameState.upperOrbit.lastAward,
+        baseBonus: UPPER_ORBIT.points,
+        remainingMs: gameState.upperOrbit.active
+          ? Math.max(0, Math.round(UPPER_ORBIT.timeoutMs - (performance.now() - gameState.upperOrbit.startedAt)))
+          : 0
       },
       skillShotAwarded: gameState.skillShotAwarded,
       gameOver: {
@@ -2640,6 +2760,7 @@
     drawFutureGameplayAssetHints();
     drawMechanicalDetailAssets();
     drawLowerLanePolish();
+    drawUpperOrbit();
 
     if (!hasSideTargetArt) {
       context.fillStyle = "#1b3541";
@@ -2830,6 +2951,40 @@
       body.gameObject = { ...lane, type: "lane" };
       return body;
     });
+    const orbitRailBodies = TABLE_CONFIG.upperOrbit.rails.map((rail, index) =>
+      Bodies.rectangle(rail.x, rail.y, rail.width, rail.height, {
+        ...wallOptions,
+        label: `upper-orbit-rail:${index + 1}`,
+        angle: rail.angle,
+        restitution: 0.3
+      })
+    );
+    const orbitSensorBodies = [
+      Bodies.rectangle(
+        TABLE_CONFIG.upperOrbit.entrySensor.x,
+        TABLE_CONFIG.upperOrbit.entrySensor.y,
+        TABLE_CONFIG.upperOrbit.entrySensor.width,
+        TABLE_CONFIG.upperOrbit.entrySensor.height,
+        {
+          isStatic: true,
+          isSensor: true,
+          label: "upper-orbit-entry",
+          angle: TABLE_CONFIG.upperOrbit.entrySensor.angle
+        }
+      ),
+      Bodies.rectangle(
+        TABLE_CONFIG.upperOrbit.returnSensor.x,
+        TABLE_CONFIG.upperOrbit.returnSensor.y,
+        TABLE_CONFIG.upperOrbit.returnSensor.width,
+        TABLE_CONFIG.upperOrbit.returnSensor.height,
+        {
+          isStatic: true,
+          isSensor: true,
+          label: "upper-orbit-return",
+          angle: TABLE_CONFIG.upperOrbit.returnSensor.angle
+        }
+      )
+    ];
 
     const ball = createBallBody("ball-1", getBallStartPosition());
 
@@ -2840,12 +2995,14 @@
       ...slingshotBodies,
       ...rolloverBodies,
       ...laneBodies,
+      ...orbitRailBodies,
+      ...orbitSensorBodies,
       flippers.left,
       flippers.right,
       ball
     ]);
 
-    [...staticBodies, ...bumperBodies, ...targetBodies, ...slingshotBodies, ...rolloverBodies, ...laneBodies, flippers.left, flippers.right].forEach((body) => {
+    [...staticBodies, ...bumperBodies, ...targetBodies, ...slingshotBodies, ...rolloverBodies, ...laneBodies, ...orbitRailBodies, ...orbitSensorBodies, flippers.left, flippers.right].forEach((body) => {
       Body.setStatic(body, true);
     });
 
@@ -2868,6 +3025,14 @@
           awardSkillShot();
         }
 
+        if (pairBall && labels.includes("upper-orbit-entry")) {
+          startUpperOrbit(pairBall);
+        }
+
+        if (pairBall && labels.includes("upper-orbit-return")) {
+          completeUpperOrbit(pairBall);
+        }
+
         const hitObject = getHitObject(pair);
         if (hitObject) {
           handleTableHit(hitObject, pairBall);
@@ -2883,6 +3048,8 @@
       slingshotBodies,
       rolloverBodies,
       laneBodies,
+      orbitRailBodies,
+      orbitSensorBodies,
       flippers,
       ball,
       activeBalls: [ball],
@@ -3377,6 +3544,121 @@
     maybeAwardJackpot(object);
     updateHud();
     syncInspectableState(physics);
+  }
+
+  function startUpperOrbit(ball) {
+    if (
+      gameState.status !== "playing" ||
+      !ball ||
+      ball.velocity.y >= -2 ||
+      (gameState.upperOrbit.active && gameState.upperOrbit.ballId === ball.gameBallId)
+    ) {
+      return;
+    }
+
+    gameState.upperOrbit.active = true;
+    gameState.upperOrbit.stage = "ascending";
+    gameState.upperOrbit.ballId = ball.gameBallId;
+    gameState.upperOrbit.startedAt = performance.now();
+    gameState.hitCounts["upper-orbit-entry"] = performance.now();
+    gameState.feedback = "ALU FLOW ORBIT";
+    gameState.feedbackUntil = performance.now() + 700;
+    MatterLib.Body.setVelocity(ball, {
+      x: Math.max(0.8, ball.velocity.x * 0.2),
+      y: Math.min(-13.5, ball.velocity.y)
+    });
+    audio.play("skill-shot");
+    updateHud();
+    syncInspectableState(physics);
+  }
+
+  function completeUpperOrbit(ball) {
+    const state = gameState.upperOrbit;
+    const now = performance.now();
+
+    if (
+      gameState.status !== "playing" ||
+      !state.active ||
+      state.stage !== "returning" ||
+      state.ballId !== ball?.gameBallId ||
+      now - state.startedAt > UPPER_ORBIT.timeoutMs ||
+      ball.velocity.y <= 1
+    ) {
+      return;
+    }
+
+    const combo = registerComboHit(UPPER_ORBIT);
+    const routePoints = UPPER_ORBIT.points * getActiveMultiplier();
+    const award = routePoints + combo.bonus;
+    gameState.score += award;
+    setHighScore(gameState.score);
+    state.active = false;
+    state.stage = "idle";
+    state.ballId = "";
+    state.completedRuns += 1;
+    state.lastCompletedAt = now;
+    state.lastAward = award;
+    gameState.lastEvent = UPPER_ORBIT.event;
+    gameState.hitCounts[UPPER_ORBIT.id] = now;
+    gameState.feedback = combo.bonus
+      ? `ORBIT ${combo.count}x COMBO +${award.toLocaleString("sl-SI")}`
+      : `ORBIT COMPLETE +${award.toLocaleString("sl-SI")}`;
+    gameState.feedbackUntil = now + 1200;
+    addHitFeedback({
+      id: UPPER_ORBIT.id,
+      x: UPPER_ORBIT.returnSensor.x,
+      y: UPPER_ORBIT.returnSensor.y,
+      accent: UPPER_ORBIT.accent
+    });
+    audio.play("combo");
+    updateHud();
+    syncInspectableState(physics);
+  }
+
+  function updateUpperOrbitGuide() {
+    const state = gameState.upperOrbit;
+
+    if (!state.active || gameState.status !== "playing") {
+      return;
+    }
+
+    const ball = getActiveBalls().find((candidate) => candidate.gameBallId === state.ballId);
+    const now = performance.now();
+
+    if (!ball || now - state.startedAt > UPPER_ORBIT.timeoutMs) {
+      state.active = false;
+      state.stage = "idle";
+      state.ballId = "";
+      updateHud();
+      syncInspectableState(physics);
+      return;
+    }
+
+    if (state.stage === "ascending" && ball.position.y < 286) {
+      state.stage = "returning";
+      MatterLib.Body.setVelocity(ball, {
+        x: Math.max(6.6, ball.velocity.x),
+        y: Math.max(5.2, Math.abs(ball.velocity.y) * 0.42)
+      });
+      updateHud();
+      return;
+    }
+
+    if (state.stage === "ascending" && ball.position.x < 178 && ball.position.y < 760) {
+      const centeringVelocity = ball.position.x < 138 ? 1.2 : ball.position.x > 160 ? -1.2 : ball.velocity.x * 0.3;
+      MatterLib.Body.setVelocity(ball, {
+        x: centeringVelocity,
+        y: Math.min(-10.8, ball.velocity.y)
+      });
+      return;
+    }
+
+    if (state.stage === "returning" && ball.position.x > 175 && ball.position.x < 280 && ball.position.y < 390) {
+      MatterLib.Body.setVelocity(ball, {
+        x: Math.max(1.2, Math.min(4.8, ball.velocity.x)),
+        y: Math.max(6.4, ball.velocity.y)
+      });
+    }
   }
 
   function updateRolloverLamps(rollover) {
@@ -3885,6 +4167,9 @@
     gameState.bomMode.active = false;
     gameState.bomMode.step = 0;
     gameState.bomMode.deadline = 0;
+    gameState.upperOrbit.active = false;
+    gameState.upperOrbit.stage = "idle";
+    gameState.upperOrbit.ballId = "";
     resetCombo();
     resetBall(ball, true);
     gameState.feedback = "BALL SAVE";
@@ -3936,6 +4221,9 @@
     gameState.bomMode.active = false;
     gameState.bomMode.step = 0;
     gameState.bomMode.deadline = 0;
+    gameState.upperOrbit.active = false;
+    gameState.upperOrbit.stage = "idle";
+    gameState.upperOrbit.ballId = "";
     resetCombo();
     gameState.ballsLeft = Math.max(0, gameState.ballsLeft - 1);
     setHighScore(gameState.score);
@@ -4017,6 +4305,7 @@
     };
     gameState.rollovers = createRolloverState();
     gameState.lanes = createLaneState();
+    gameState.upperOrbit = createUpperOrbitState();
     gameState.missionStageIndex = 0;
     gameState.activeMissionId = "measurement";
     gameState.lastCompletedMissionId = "";
@@ -4579,6 +4868,7 @@
       updateMetaRewardTimeout();
       holdBallInLaunchLane();
       MatterLib.Engine.update(physics.engine, physicsClock.step * physicsClock.simulationScale);
+      updateUpperOrbitGuide();
       maybeGuideShooterLaneExit();
       maybeCatchLostBall();
       maybeRescueLowerFlipperTrap();
@@ -4612,7 +4902,7 @@
     drawPlayfieldFrame();
 
     if (physics) {
-      drawPhysicsOverlay([...physics.staticBodies, ...physics.bumperBodies, ...physics.targetBodies, ...physics.rolloverBodies, ...physics.laneBodies]);
+      drawPhysicsOverlay([...physics.staticBodies, ...physics.bumperBodies, ...physics.targetBodies, ...physics.rolloverBodies, ...physics.laneBodies, ...physics.orbitRailBodies, ...physics.orbitSensorBodies]);
       drawFlipper(physics.flippers.left, inputState.left);
       drawFlipper(physics.flippers.right, inputState.right);
       drawPlungerCharge();
