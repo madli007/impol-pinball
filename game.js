@@ -62,13 +62,12 @@
     points: 4500,
     accent: "#31a8ff",
     timeoutMs: 4400,
-    committedX: 236,
-    committedY: 900,
-    entrySensor: { x: 176, y: 832, width: 164, height: 190, angle: -0.03 },
+    committedX: 258,
+    committedY: 920,
+    entrySensor: { x: 194, y: 832, width: 196, height: 188, angle: -0.22 },
     returnSensor: { x: 224, y: 304, width: 106, height: 100, angle: 0.04 },
     rails: [
-      { x: 232, y: 530, width: 14, height: 514, angle: 0 },
-      { x: 162, y: 214, width: 14, height: 148, angle: -0.66 }
+      { x: 232, y: 570, width: 14, height: 438, angle: 0 }
     ]
   };
   const ASSET_CONFIG = {
@@ -128,8 +127,8 @@
       { id: "kosovnica", label: "KOSOVNICA", x: 450, y: 508, width: 168, height: 34, accent: "#ff9b3d", event: "hit:KOSOVNICA", points: 700 }
     ],
     slingshots: [
-      { id: "left-slingshot", label: "SEVAL", x: 286, y: 1098, width: 100, height: 22, angle: 0.72, visualX: 258, visualY: 1098, visualWidth: 108, visualHeight: 115, visualAngle: 0, accent: "#31a8ff", event: "hit:LEFT_SLINGSHOT", points: 350, impulse: { x: 6.8, y: -7.8 } },
-      { id: "right-slingshot", label: "IMPOL-PC", x: 614, y: 1098, width: 100, height: 22, angle: -0.72, visualX: 642, visualY: 1098, visualWidth: 108, visualHeight: 115, visualAngle: 0, accent: "#31a8ff", event: "hit:RIGHT_SLINGSHOT", points: 350, impulse: { x: -6.8, y: -7.8 } }
+      { id: "left-slingshot", label: "SEVAL", x: 286, y: 1098, width: 100, height: 22, angle: 0.72, visualX: 258, visualY: 1098, visualWidth: 108, visualHeight: 115, visualAngle: 0, accent: "#31a8ff", event: "hit:LEFT_SLINGSHOT", points: 350, impulse: { x: 7.6, y: -8.6 } },
+      { id: "right-slingshot", label: "IMPOL-PC", x: 614, y: 1098, width: 100, height: 22, angle: -0.72, visualX: 642, visualY: 1098, visualWidth: 108, visualHeight: 115, visualAngle: 0, accent: "#31a8ff", event: "hit:RIGHT_SLINGSHOT", points: 350, impulse: { x: -7.6, y: -8.6 } }
     ],
     rollovers: [
       { id: "rollover-flow", label: "FLOW", x: 348, y: 1008, radius: 22, accent: "#31a8ff", event: "hit:ROLLOVER", points: 250 },
@@ -1500,17 +1499,17 @@
     context.lineCap = "round";
     context.lineJoin = "round";
 
-    const routeGlow = context.createLinearGradient(96, 872, 262, 214);
+    const routeGlow = context.createLinearGradient(104, 900, 262, 214);
     routeGlow.addColorStop(0, `rgba(49, 168, 255, ${0.08 + activePulse * 0.22})`);
     routeGlow.addColorStop(0.58, `rgba(49, 168, 255, ${0.12 + activePulse * 0.24})`);
     routeGlow.addColorStop(1, `rgba(255, 155, 61, ${0.08 + activePulse * 0.2})`);
     context.strokeStyle = routeGlow;
-    context.lineWidth = 58;
+    context.lineWidth = 64;
     context.beginPath();
-    context.moveTo(150, 876);
-    context.quadraticCurveTo(154, 800, 164, 712);
-    context.lineTo(166, 332);
-    context.quadraticCurveTo(160, 202, 226, 232);
+    context.moveTo(188, 920);
+    context.quadraticCurveTo(152, 842, 164, 712);
+    context.lineTo(166, 356);
+    context.quadraticCurveTo(162, 206, 226, 232);
     context.quadraticCurveTo(264, 254, 264, 362);
     context.stroke();
 
@@ -1519,19 +1518,20 @@
       context.translate(rail.x, rail.y);
       context.rotate(rail.angle);
       const metal = context.createLinearGradient(-rail.width / 2, 0, rail.width / 2, 0);
-      metal.addColorStop(0, "#243945");
-      metal.addColorStop(0.32, "#b7c7ce");
-      metal.addColorStop(0.58, "#5e7783");
-      metal.addColorStop(1, "#172a34");
+      metal.addColorStop(0, "rgba(36, 57, 69, 0.66)");
+      metal.addColorStop(0.32, "rgba(183, 199, 206, 0.82)");
+      metal.addColorStop(0.58, "rgba(94, 119, 131, 0.72)");
+      metal.addColorStop(1, "rgba(23, 42, 52, 0.62)");
       fillRoundedRect(-rail.width / 2, -rail.height / 2, rail.width, rail.height, 7, metal);
-      context.strokeStyle = state.active ? "rgba(49, 168, 255, 0.88)" : "rgba(173, 196, 205, 0.62)";
+      context.strokeStyle = state.active ? "rgba(49, 168, 255, 0.88)" : "rgba(173, 196, 205, 0.36)";
       context.lineWidth = state.active ? 3 : 2;
       context.strokeRect(-rail.width / 2 + 2, -rail.height / 2 + 5, rail.width - 4, rail.height - 10);
       context.restore();
     });
 
     [
-      { x: 156, y: 802, angle: -Math.PI / 2 },
+      { x: 188, y: 862, angle: -2.08 },
+      { x: 164, y: 790, angle: -Math.PI / 2 },
       { x: 146, y: 666, angle: -Math.PI / 2 },
       { x: 146, y: 514, angle: -Math.PI / 2 },
       { x: 146, y: 362, angle: -Math.PI / 2 },
@@ -3655,10 +3655,10 @@
     });
     const orbitRailBodies = TABLE_CONFIG.upperOrbit.rails.map((rail, index) =>
       Bodies.rectangle(rail.x, rail.y, rail.width, rail.height, {
-        ...wallOptions,
+        isStatic: true,
+        isSensor: true,
         label: `upper-orbit-rail:${index + 1}`,
-        angle: rail.angle,
-        restitution: 0.16
+        angle: rail.angle
       })
     );
     const orbitSensorBodies = [
@@ -4272,7 +4272,7 @@
     return (
       ball.position.x <= UPPER_ORBIT.committedX &&
       ball.position.y <= UPPER_ORBIT.committedY &&
-      ball.velocity.y < -3.2
+      ball.velocity.y < -2.2
     );
   }
 
@@ -4312,8 +4312,8 @@
     gameState.feedback = "ALU FLOW ORBIT";
     gameState.feedbackUntil = performance.now() + 700;
     MatterLib.Body.setVelocity(ball, {
-      x: Math.max(0.9, Math.min(2.4, ball.velocity.x * 0.18 + 0.9)),
-      y: Math.min(-14.2, ball.velocity.y - 0.8)
+      x: Math.max(0.8, Math.min(2.8, ball.velocity.x * 0.14 + 1.05)),
+      y: Math.min(-13.8, ball.velocity.y - 0.65)
     });
     audio.play("orbit-entry");
     updateHud();
@@ -4431,34 +4431,35 @@
       return;
     }
 
-    if (state.stage === "ascending" && ball.position.y > 862 && ball.velocity.y > 1.4) {
+    if (state.stage === "ascending" && ball.position.y > 930 && ball.velocity.y > 1.4) {
       failUpperOrbit(ball, "rolled-out");
       return;
     }
 
-    if (state.stage === "ascending" && ball.position.y < 286) {
+    if (state.stage === "ascending" && ball.position.y < 246) {
       state.stage = "returning";
       MatterLib.Body.setVelocity(ball, {
-        x: Math.max(6.6, ball.velocity.x),
-        y: Math.max(5.2, Math.abs(ball.velocity.y) * 0.42)
+        x: Math.max(7.4, ball.velocity.x),
+        y: Math.max(4.8, Math.abs(ball.velocity.y) * 0.34)
       });
       updateHud();
       return;
     }
 
-    if (state.stage === "ascending" && ball.position.x < 212 && ball.position.y < 770) {
-      const centeringVelocity = ball.position.x < 150 ? 1.25 : ball.position.x > 178 ? -1.25 : ball.velocity.x * 0.28;
+    if (state.stage === "ascending") {
+      const targetX = ball.position.y < 330 ? 220 : ball.position.y < 720 ? 166 : 176;
+      const correction = Math.max(-1.7, Math.min(1.7, (targetX - ball.position.x) * 0.075));
       MatterLib.Body.setVelocity(ball, {
-        x: centeringVelocity,
-        y: Math.min(-11.2, ball.velocity.y)
+        x: ball.velocity.x * 0.24 + correction,
+        y: Math.min(-12.8, ball.velocity.y)
       });
       return;
     }
 
-    if (state.stage === "returning" && ball.position.x > 175 && ball.position.x < 280 && ball.position.y < 390) {
+    if (state.stage === "returning" && ball.position.x > 175 && ball.position.x < 370 && ball.position.y < 440) {
       MatterLib.Body.setVelocity(ball, {
-        x: Math.max(1.2, Math.min(4.8, ball.velocity.x)),
-        y: Math.max(6.4, ball.velocity.y)
+        x: Math.max(4.8, Math.min(8.2, ball.velocity.x)),
+        y: Math.max(4.8, Math.min(7.2, ball.velocity.y))
       });
 
       if (isBallInOrbitReturnZone(ball)) {
