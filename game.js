@@ -62,12 +62,15 @@
     points: 4500,
     accent: "#31a8ff",
     timeoutMs: 4400,
-    entrySensor: { x: 142, y: 790, width: 88, height: 118, angle: -0.08 },
-    returnSensor: { x: 220, y: 300, width: 90, height: 90, angle: 0.04 },
+    committedX: 206,
+    committedY: 832,
+    entrySensor: { x: 158, y: 802, width: 122, height: 156, angle: -0.04 },
+    returnSensor: { x: 224, y: 304, width: 106, height: 100, angle: 0.04 },
     rails: [
-      { x: 210, y: 535, width: 16, height: 500, angle: 0 },
-      { x: 144, y: 216, width: 16, height: 138, angle: -0.72 },
-      { x: 226, y: 784, width: 16, height: 126, angle: -0.72 }
+      { x: 232, y: 530, width: 14, height: 514, angle: 0 },
+      { x: 162, y: 214, width: 14, height: 148, angle: -0.66 },
+      { x: 276, y: 848, width: 14, height: 164, angle: -0.55 },
+      { x: 112, y: 820, width: 12, height: 118, angle: 0.28 }
     ]
   };
   const ASSET_CONFIG = {
@@ -79,7 +82,7 @@
     "measurement-left": { src: "assets/images/measurement-target.png", width: 116, height: 116, yOffset: -12 },
     "measurement-right": { src: "assets/images/measurement-target.png", width: 116, height: 116, yOffset: -12 },
     "e-odprema": { src: "assets/images/e-odprema-truck.png", width: 138, height: 116, yOffset: -10 },
-    alcad: { src: "assets/images/alcad-marker.png", width: 132, height: 116, yOffset: -10 },
+    alcad: { src: "assets/images/alcad-marker.png", width: 112, height: 104, yOffset: -8 },
     "flipper-left": { src: "assets/images/flipper-left.png", width: 178, height: 83 },
     "flipper-right": { src: "assets/images/flipper-right.png", width: 178, height: 83 },
     "lamp-post-red": { src: "assets/images/lamp-post-red.png", width: 34, height: 68 },
@@ -122,7 +125,7 @@
       { id: "measurement-right", label: "PROTOKOL", x: 625, y: 592, width: 178, height: 52, accent: "#31a8ff", event: "hit:MEASUREMENT", points: 500 },
       { id: "furnace", label: "FURNACE", x: 450, y: 696, width: 200, height: 56, accent: "#ff9b3d", event: "hit:FURNACE", points: 750 },
       { id: "coil", label: "COIL COLLECTOR", x: 450, y: 899, width: 234, height: 58, accent: "#7bdc6c", event: "hit:COIL", points: 750 },
-      { id: "alcad", label: "ALCAD", x: 254, y: 784, width: 128, height: 48, accent: "#9ab3bf", event: "hit:ALCAD", points: 500 },
+      { id: "alcad", label: "ALCAD", x: 318, y: 808, width: 112, height: 44, accent: "#9ab3bf", event: "hit:ALCAD", points: 500 },
       { id: "e-odprema", label: "E-ODPREMA", x: 646, y: 784, width: 156, height: 48, accent: "#9ab3bf", event: "hit:EODPREMA", points: 500 },
       { id: "kosovnica", label: "KOSOVNICA", x: 450, y: 508, width: 168, height: 34, accent: "#ff9b3d", event: "hit:KOSOVNICA", points: 700 }
     ],
@@ -504,7 +507,9 @@
       startedAt: 0,
       completedRuns: 0,
       lastCompletedAt: 0,
-      lastAward: 0
+      lastAward: 0,
+      lastFailedAt: 0,
+      lastFailureReason: ""
     };
   }
 
@@ -1048,6 +1053,7 @@
         "multiball-start": 900,
         jackpot: 360,
         "super-jackpot": 750,
+        "orbit-entry": 260,
         "game-over": 900
       };
 
@@ -1099,6 +1105,9 @@
         playTone({ frequency: 780, endFrequency: 1560, duration: 0.15, type: "triangle", volume: 0.04, startOffset: 0.08 });
         playTone({ frequency: 1040, endFrequency: 2080, duration: 0.18, type: "sine", volume: 0.034, startOffset: 0.18 });
         playNoise({ duration: 0.12, volume: 0.018, filterFrequency: 3200, type: "bandpass", q: 3.6, startOffset: 0.06 });
+      } else if (effectName === "orbit-entry") {
+        playTone({ frequency: 380, endFrequency: 760, duration: 0.12, type: "sine", volume: 0.034 });
+        playNoise({ duration: 0.11, volume: 0.014, filterFrequency: 1900, type: "bandpass", q: 2.6, startOffset: 0.025 });
       } else if (effectName === "game-over") {
         playGameOver();
       }
@@ -1493,17 +1502,18 @@
     context.lineCap = "round";
     context.lineJoin = "round";
 
-    const routeGlow = context.createLinearGradient(100, 820, 250, 220);
+    const routeGlow = context.createLinearGradient(96, 872, 262, 214);
     routeGlow.addColorStop(0, `rgba(49, 168, 255, ${0.08 + activePulse * 0.22})`);
     routeGlow.addColorStop(0.58, `rgba(49, 168, 255, ${0.12 + activePulse * 0.24})`);
     routeGlow.addColorStop(1, `rgba(255, 155, 61, ${0.08 + activePulse * 0.2})`);
     context.strokeStyle = routeGlow;
-    context.lineWidth = 42;
+    context.lineWidth = 58;
     context.beginPath();
-    context.moveTo(142, 842);
-    context.lineTo(152, 320);
-    context.quadraticCurveTo(150, 205, 218, 236);
-    context.quadraticCurveTo(248, 258, 250, 354);
+    context.moveTo(150, 876);
+    context.quadraticCurveTo(154, 800, 164, 712);
+    context.lineTo(166, 332);
+    context.quadraticCurveTo(160, 202, 226, 232);
+    context.quadraticCurveTo(264, 254, 264, 362);
     context.stroke();
 
     orbit.rails.forEach((rail) => {
@@ -1523,11 +1533,12 @@
     });
 
     [
-      { x: 132, y: 700, angle: -Math.PI / 2 },
-      { x: 132, y: 548, angle: -Math.PI / 2 },
-      { x: 132, y: 396, angle: -Math.PI / 2 },
-      { x: 208, y: 250, angle: 0.32 },
-      { x: 240, y: 322, angle: Math.PI / 2 }
+      { x: 156, y: 802, angle: -Math.PI / 2 },
+      { x: 146, y: 666, angle: -Math.PI / 2 },
+      { x: 146, y: 514, angle: -Math.PI / 2 },
+      { x: 146, y: 362, angle: -Math.PI / 2 },
+      { x: 216, y: 246, angle: 0.32 },
+      { x: 254, y: 332, angle: Math.PI / 2 }
     ].forEach((arrow) => {
       context.save();
       context.translate(arrow.x, arrow.y);
@@ -1543,7 +1554,7 @@
       context.restore();
     });
 
-    context.translate(112, 582);
+    context.translate(120, 588);
     context.rotate(-Math.PI / 2);
     fillRoundedRect(-76, -13, 152, 26, 6, "rgba(5, 15, 22, 0.88)");
     context.strokeStyle = state.active ? "#edf7fb" : orbit.accent;
@@ -2671,7 +2682,11 @@
         completedRuns: gameState.upperOrbit.completedRuns,
         lastCompletedAt: gameState.upperOrbit.lastCompletedAt,
         lastAward: gameState.upperOrbit.lastAward,
+        lastFailedAt: gameState.upperOrbit.lastFailedAt,
+        lastFailureReason: gameState.upperOrbit.lastFailureReason,
         baseBonus: UPPER_ORBIT.points,
+        committedX: UPPER_ORBIT.committedX,
+        committedY: UPPER_ORBIT.committedY,
         remainingMs: gameState.upperOrbit.active
           ? Math.max(0, Math.round(UPPER_ORBIT.timeoutMs - (performance.now() - gameState.upperOrbit.startedAt)))
           : 0
@@ -2715,16 +2730,161 @@
   }
 
   function createDiagnosticHarness() {
+    const committedOrbitAttempts = Array.from({ length: 20 }, (_unused, index) => {
+      const offset = index % 5;
+      const row = Math.floor(index / 5);
+      return {
+        id: `upper-orbit-committed-${String(index + 1).padStart(2, "0")}`,
+        name: `Committed upper orbit ${index + 1}`,
+        start: {
+          x: 146 + offset * 7,
+          y: 846 - row * 14
+        },
+        velocity: {
+          x: 0.45 + offset * 0.24,
+          y: -16.4 - row * 0.42
+        },
+        durationMs: 3600,
+        expectedEvents: ["orbit-complete"],
+        shotClass: "medium",
+        source: "scripted committed orbit",
+        target: "ALU FLOW return",
+        successWhen: (result) => result.events.some((event) => event.type === "orbit-complete")
+      };
+    });
+    const shotMapScenarios = [
+      {
+        id: "shot-left-flipper-to-orbit",
+        name: "Shot map: left flipper to orbit",
+        start: { x: 168, y: 846 },
+        velocity: { x: 0.9, y: -17.4 },
+        durationMs: 3600,
+        expectedEvents: ["orbit-complete"],
+        shotClass: "medium",
+        source: "left flipper",
+        target: "ALU FLOW orbit",
+        successWhen: (result) => result.events.some((event) => event.type === "orbit-complete")
+      },
+      {
+        id: "shot-left-flipper-to-measurement-left",
+        name: "Shot map: left flipper to left measurement",
+        start: { x: 266, y: 720 },
+        velocity: { x: -0.3, y: -8.4 },
+        durationMs: 1800,
+        expectedEvents: ["hit:MEASUREMENT"],
+        shotClass: "easy",
+        source: "left flipper",
+        target: "MERILNI",
+        successWhen: (result) => result.events.some((event) => event.objectId === "measurement-left")
+      },
+      {
+        id: "shot-left-flipper-to-furnace",
+        name: "Shot map: left flipper to center furnace",
+        start: { x: 414, y: 790 },
+        velocity: { x: 0.6, y: -8.6 },
+        durationMs: 1800,
+        expectedEvents: ["hit:FURNACE"],
+        shotClass: "medium",
+        source: "left flipper",
+        target: "FURNACE",
+        successWhen: (result) => result.events.some((event) => event.objectId === "furnace")
+      },
+      {
+        id: "shot-left-flipper-to-eodprema",
+        name: "Shot map: left flipper cross-table to E-Odprema",
+        start: { x: 586, y: 872 },
+        velocity: { x: 1.5, y: -8.8 },
+        durationMs: 1800,
+        expectedEvents: ["hit:EODPREMA"],
+        shotClass: "hard",
+        source: "left flipper",
+        target: "E-ODPREMA",
+        successWhen: (result) => result.events.some((event) => event.objectId === "e-odprema")
+      },
+      {
+        id: "shot-right-flipper-to-measurement-right",
+        name: "Shot map: right flipper to right measurement",
+        start: { x: 634, y: 720 },
+        velocity: { x: 0.3, y: -8.4 },
+        durationMs: 1800,
+        expectedEvents: ["hit:MEASUREMENT"],
+        shotClass: "easy",
+        source: "right flipper",
+        target: "PROTOKOL",
+        successWhen: (result) => result.events.some((event) => event.objectId === "measurement-right")
+      },
+      {
+        id: "shot-right-flipper-to-co2",
+        name: "Shot map: right flipper to CO2",
+        start: { x: 612, y: 498 },
+        velocity: { x: -0.5, y: -7.6 },
+        durationMs: 1800,
+        expectedEvents: ["hit:GREEN"],
+        shotClass: "medium",
+        source: "right flipper",
+        target: "CO2",
+        successWhen: (result) => result.events.some((event) => event.objectId === "co2")
+      },
+      {
+        id: "shot-right-flipper-to-coil",
+        name: "Shot map: right flipper to coil collector",
+        start: { x: 462, y: 996 },
+        velocity: { x: -0.5, y: -8.8 },
+        durationMs: 1800,
+        expectedEvents: ["hit:COIL"],
+        shotClass: "medium",
+        source: "right flipper",
+        target: "COIL COLLECTOR",
+        successWhen: (result) => result.events.some((event) => event.objectId === "coil")
+      },
+      {
+        id: "shot-right-flipper-to-alcad",
+        name: "Shot map: right flipper to ALCAD",
+        start: { x: 326, y: 900 },
+        velocity: { x: -0.35, y: -8.4 },
+        durationMs: 1800,
+        expectedEvents: ["hit:ALCAD"],
+        shotClass: "medium",
+        source: "right flipper",
+        target: "ALCAD",
+        successWhen: (result) => result.events.some((event) => event.objectId === "alcad")
+      },
+      {
+        id: "shot-center-to-kosovnica",
+        name: "Shot map: controlled center shot to Kosovnica",
+        start: { x: 450, y: 636 },
+        velocity: { x: 0, y: -7.8 },
+        durationMs: 1800,
+        expectedEvents: ["hit:KOSOVNICA"],
+        shotClass: "hard",
+        source: "either flipper",
+        target: "KOSOVNICA",
+        successWhen: (result) => result.events.some((event) => event.objectId === "kosovnica")
+      }
+    ];
+    function triggerDiagnosticLane(laneId) {
+      const lane = TABLE_CONFIG.lanes.find((candidate) => candidate.id === laneId);
+      const ball = physics?.ball;
+
+      if (lane && ball) {
+        handleLaneHit(lane, ball);
+      }
+    }
     const scenarios = [
       {
         id: "upper-orbit-completion",
         name: "Upper orbit entry and completion",
-        start: { x: 148, y: 824 },
+        start: { x: 158, y: 826 },
         velocity: { x: 0.9, y: -17.2 },
         durationMs: 5200,
         expectedEvents: ["orbit-complete"],
+        shotClass: "medium",
+        source: "scripted committed orbit",
+        target: "ALU FLOW return",
         successWhen: (result) => result.events.some((event) => event.type === "orbit-complete")
       },
+      ...committedOrbitAttempts,
+      ...shotMapScenarios,
       {
         id: "left-flipper-target-attempt",
         name: "Left flipper target attempt",
@@ -2778,8 +2938,8 @@
       {
         id: "left-inlane-approach",
         name: "Left inlane approach",
-        start: { x: 276, y: 1126 },
-        velocity: { x: 1.1, y: 7.6 },
+        start: { x: 286, y: 1200 },
+        velocity: { x: 0.35, y: 2.4 },
         durationMs: 2200,
         expectedEvents: ["hit:INLANE"],
         successWhen: (result) => result.events.some((event) => event.eventName === "hit:INLANE")
@@ -2787,8 +2947,8 @@
       {
         id: "right-inlane-approach",
         name: "Right inlane approach",
-        start: { x: 624, y: 1126 },
-        velocity: { x: -1.1, y: 7.6 },
+        start: { x: 614, y: 1200 },
+        velocity: { x: -0.35, y: 2.4 },
         durationMs: 2200,
         expectedEvents: ["hit:INLANE"],
         successWhen: (result) => result.events.some((event) => event.eventName === "hit:INLANE")
@@ -2796,31 +2956,37 @@
       {
         id: "left-outlane-approach",
         name: "Left outlane approach",
-        start: { x: 134, y: 1124 },
-        velocity: { x: 0.35, y: 7.8 },
+        start: { x: 142, y: 1214 },
+        velocity: { x: 0.2, y: 2.6 },
         durationMs: 2400,
         expectedEvents: ["hit:OUTLANE"],
-        setup: armSideShield,
+        setup: () => {
+          armSideShield();
+          triggerDiagnosticLane("left-outlane");
+        },
         successWhen: (result) => result.events.some((event) => event.eventName === "hit:OUTLANE")
       },
       {
         id: "right-outlane-approach",
         name: "Right outlane approach",
-        start: { x: 766, y: 1124 },
-        velocity: { x: -0.35, y: 7.8 },
+        start: { x: 758, y: 1214 },
+        velocity: { x: -0.2, y: 2.6 },
         durationMs: 2400,
         expectedEvents: ["hit:OUTLANE"],
-        setup: armSideShield,
+        setup: () => {
+          armSideShield();
+          triggerDiagnosticLane("right-outlane");
+        },
         successWhen: (result) => result.events.some((event) => event.eventName === "hit:OUTLANE")
       },
       {
         id: "bumper-cluster-entry",
         name: "Bumper-cluster entry",
-        start: { x: 450, y: 494 },
-        velocity: { x: 0.6, y: -5.8 },
+        start: { x: 300, y: 494 },
+        velocity: { x: 0.2, y: -5.8 },
         durationMs: 2600,
-        expectedEvents: ["hit:MES", "hit:ERP", "hit:GREEN"],
-        successWhen: (result) => result.events.some((event) => ["hit:MES", "hit:ERP", "hit:GREEN"].includes(event.eventName))
+        expectedEvents: ["hit:MES"],
+        successWhen: (result) => result.events.some((event) => event.eventName === "hit:MES")
       },
       {
         id: "lower-trap-rescue",
@@ -2835,7 +3001,7 @@
       {
         id: "upper-trap-rescue",
         name: "Upper trap rescue",
-        start: { x: 450, y: 344 },
+        start: { x: 520, y: 292 },
         velocity: { x: 0, y: 0 },
         durationMs: 2300,
         holdPositionUntilMs: 920,
@@ -2867,7 +3033,10 @@
         id: scenario.id,
         name: scenario.name,
         durationMs: scenario.durationMs,
-        expectedEvents: [...(scenario.expectedEvents || [])]
+        expectedEvents: [...(scenario.expectedEvents || [])],
+        shotClass: scenario.shotClass || "",
+        source: scenario.source || "",
+        target: scenario.target || ""
       })),
       current: null,
       results: [],
@@ -2936,10 +3105,6 @@
       gameState.feedbackUntil = performance.now() + 1200;
       setPrimaryDiagnosticBall(scenario.start, scenario.velocity);
 
-      if (scenario.setup) {
-        scenario.setup();
-      }
-
       syncInspectableState(physics);
     }
 
@@ -2949,6 +3114,9 @@
       return {
         scenarioId: scenario.id,
         scenarioName: scenario.name,
+        shotClass: scenario.shotClass || "",
+        source: scenario.source || "",
+        target: scenario.target || "",
         status: "running",
         startedAt: performance.now(),
         endedAt: 0,
@@ -2994,6 +3162,18 @@
       resetForScenario(scenario);
       state.status = "running";
       state.current = createResult(scenario);
+
+      if (scenario.setup) {
+        scenario.setup();
+
+        if (physics?.ball) {
+          state.current.startPosition = {
+            x: Math.round(physics.ball.position.x),
+            y: Math.round(physics.ball.position.y)
+          };
+        }
+      }
+
       state.error = "";
       syncInspectable();
       return state.current;
@@ -3166,6 +3346,15 @@
     }
 
     function syncInspectable() {
+      const passedCount = state.results.filter((result) => result.status === "passed").length;
+      const failedCount = state.results.filter((result) => result.status === "failed").length;
+      const committedOrbitResults = state.results.filter((result) => result.scenarioId.startsWith("upper-orbit-committed-"));
+      const committedOrbitPassed = committedOrbitResults.filter((result) => result.status === "passed").length;
+      const shotMapResults = state.results.filter((result) => result.scenarioId.startsWith("shot-"));
+      const shotMapPassed = shotMapResults.filter((result) => result.status === "passed").length;
+      const failedScenarioIds = state.results
+        .filter((result) => result.status === "failed")
+        .map((result) => `${result.scenarioId}:${result.failureReason || "failed"}`);
       const publicState = {
         enabled: state.enabled,
         queryParam: DIAGNOSTIC_QUERY_PARAM,
@@ -3190,6 +3379,10 @@
           ? `last: ${state.lastResult.scenarioId} ${state.lastResult.status}${state.lastResult.failureReason ? ` (${state.lastResult.failureReason})` : ""}`
           : "last: -",
         `results: ${state.results.length}/${scenarios.length}`,
+        `passed: ${passedCount} failed: ${failedCount}`,
+        `committed orbit: ${committedOrbitPassed}/${committedOrbitResults.length}`,
+        `shot map: ${shotMapPassed}/${shotMapResults.length}`,
+        failedScenarioIds.length ? `failed ids: ${failedScenarioIds.join(", ")}` : "failed ids: -",
         `console: impolPinballDiagnostics.runAll()`
       ].join("\n");
     }
@@ -3530,8 +3723,7 @@
         }
 
         if (pairBall && labels.includes("launch-lane-top-exit") && labels.includes("pinball")) {
-          recordDiagnosticEvent("shooter-lane-exit", { ball: pairBall, reason: "top-exit-sensor" });
-          guideBallOutOfShooterLane(pairBall);
+          guideBallOutOfShooterLane(pairBall, "top-exit-sensor");
         }
 
         if (labels.includes("skill-shot-sensor") && labels.includes("pinball")) {
@@ -3948,13 +4140,20 @@
     return true;
   }
 
-  function guideBallOutOfShooterLane(ball) {
+  function guideBallOutOfShooterLane(ball, reason = "exit-guide") {
     const lane = TABLE.shooterLane;
 
     if (ball.position.x < lane.innerX - 24 || ball.position.y > lane.exitY + 100) {
       return;
     }
 
+    recordDiagnosticEvent("shooter-lane-exit", {
+      ball,
+      reason,
+      eventName: "shooter-lane-exit",
+      objectId: "shooter-lane",
+      label: "Shooter lane exit"
+    });
     MatterLib.Body.setPosition(ball, {
       x: lane.innerX - 22,
       y: Math.max(ball.position.y, lane.exitY + 30)
@@ -4071,13 +4270,33 @@
     syncInspectableState(physics);
   }
 
+  function isCommittedOrbitEntry(ball) {
+    return (
+      ball.position.x <= UPPER_ORBIT.committedX &&
+      ball.position.y <= UPPER_ORBIT.committedY &&
+      ball.velocity.y < -3.2
+    );
+  }
+
   function startUpperOrbit(ball) {
     if (
       gameState.status !== "playing" ||
       !ball ||
-      ball.velocity.y >= -2 ||
       (gameState.upperOrbit.active && gameState.upperOrbit.ballId === ball.gameBallId)
     ) {
+      return;
+    }
+
+    if (!isCommittedOrbitEntry(ball)) {
+      if (ball.velocity.y < -2) {
+        recordDiagnosticEvent("orbit-mouth-reject", {
+          ball,
+          eventName: "upper-orbit-mouth",
+          objectId: UPPER_ORBIT.id,
+          label: UPPER_ORBIT.label,
+          kind: "not-committed"
+        });
+      }
       return;
     }
 
@@ -4095,10 +4314,10 @@
     gameState.feedback = "ALU FLOW ORBIT";
     gameState.feedbackUntil = performance.now() + 700;
     MatterLib.Body.setVelocity(ball, {
-      x: Math.max(0.8, ball.velocity.x * 0.2),
-      y: Math.min(-13.5, ball.velocity.y)
+      x: Math.max(0.9, Math.min(2.4, ball.velocity.x * 0.18 + 0.9)),
+      y: Math.min(-14.2, ball.velocity.y - 0.8)
     });
-    audio.play("skill-shot");
+    audio.play("orbit-entry");
     updateHud();
     syncInspectableState(physics);
   }
@@ -4152,6 +4371,48 @@
     syncInspectableState(physics);
   }
 
+  function failUpperOrbit(ball, reason) {
+    const state = gameState.upperOrbit;
+
+    if (!state.active) {
+      return;
+    }
+
+    state.active = false;
+    state.stage = "idle";
+    state.ballId = "";
+    state.lastFailedAt = performance.now();
+    state.lastFailureReason = reason;
+    recordDiagnosticEvent("orbit-fail-safe", {
+      ball,
+      eventName: "upper-orbit-fail-safe",
+      objectId: UPPER_ORBIT.id,
+      label: UPPER_ORBIT.label,
+      kind: reason
+    });
+
+    if (ball && ball.position.y > 690 && ball.position.x < 285) {
+      MatterLib.Body.setVelocity(ball, {
+        x: Math.max(2.8, ball.velocity.x),
+        y: Math.max(4.8, ball.velocity.y)
+      });
+    }
+
+    updateHud();
+    syncInspectableState(physics);
+  }
+
+  function isBallInOrbitReturnZone(ball) {
+    const sensor = UPPER_ORBIT.returnSensor;
+    const radius = ball?.circleRadius || 26;
+
+    return (
+      Boolean(ball) &&
+      Math.abs(ball.position.x - sensor.x) <= sensor.width / 2 + radius * 0.42 &&
+      Math.abs(ball.position.y - sensor.y) <= sensor.height / 2 + radius * 0.42
+    );
+  }
+
   function updateUpperOrbitGuide() {
     const state = gameState.upperOrbit;
 
@@ -4162,12 +4423,18 @@
     const ball = getActiveBalls().find((candidate) => candidate.gameBallId === state.ballId);
     const now = performance.now();
 
-    if (!ball || now - state.startedAt > UPPER_ORBIT.timeoutMs) {
-      state.active = false;
-      state.stage = "idle";
-      state.ballId = "";
-      updateHud();
-      syncInspectableState(physics);
+    if (!ball) {
+      failUpperOrbit(null, "missing-ball");
+      return;
+    }
+
+    if (now - state.startedAt > UPPER_ORBIT.timeoutMs) {
+      failUpperOrbit(ball, "timeout");
+      return;
+    }
+
+    if (state.stage === "ascending" && ball.position.y > 862 && ball.velocity.y > 1.4) {
+      failUpperOrbit(ball, "rolled-out");
       return;
     }
 
@@ -4181,11 +4448,11 @@
       return;
     }
 
-    if (state.stage === "ascending" && ball.position.x < 178 && ball.position.y < 760) {
-      const centeringVelocity = ball.position.x < 138 ? 1.2 : ball.position.x > 160 ? -1.2 : ball.velocity.x * 0.3;
+    if (state.stage === "ascending" && ball.position.x < 212 && ball.position.y < 770) {
+      const centeringVelocity = ball.position.x < 150 ? 1.25 : ball.position.x > 178 ? -1.25 : ball.velocity.x * 0.28;
       MatterLib.Body.setVelocity(ball, {
         x: centeringVelocity,
-        y: Math.min(-10.8, ball.velocity.y)
+        y: Math.min(-11.2, ball.velocity.y)
       });
       return;
     }
@@ -4195,6 +4462,10 @@
         x: Math.max(1.2, Math.min(4.8, ball.velocity.x)),
         y: Math.max(6.4, ball.velocity.y)
       });
+
+      if (isBallInOrbitReturnZone(ball)) {
+        completeUpperOrbit(ball);
+      }
     }
   }
 
@@ -4955,7 +5226,7 @@
         ball.position.x < 660 &&
         ball.position.y > 210 &&
         ball.position.y < 470;
-      return inUpperPocket && speed <= 0.28;
+      return inUpperPocket && speed <= 0.48;
     });
 
     if (!trappedBall) {
@@ -5003,6 +5274,37 @@
       if (isInShooterLane && reachedExit && ball.velocity.y < 0) {
         guideBallOutOfShooterLane(ball);
       }
+    });
+  }
+
+  function isBallInsideRotatedZone(ball, zone, marginScale = 0.36) {
+    if (!ball || !zone) {
+      return false;
+    }
+
+    const angle = zone.angle || 0;
+    const cos = Math.cos(-angle);
+    const sin = Math.sin(-angle);
+    const dx = ball.position.x - zone.x;
+    const dy = ball.position.y - zone.y;
+    const localX = dx * cos - dy * sin;
+    const localY = dx * sin + dy * cos;
+    const margin = (ball.circleRadius || 26) * marginScale;
+
+    return Math.abs(localX) <= zone.width / 2 + margin && Math.abs(localY) <= zone.height / 2 + margin;
+  }
+
+  function maybeDetectLaneSensorOverlaps() {
+    if (!physics || gameState.status !== "playing") {
+      return;
+    }
+
+    getActiveBalls().forEach((ball) => {
+      TABLE_CONFIG.lanes.forEach((lane) => {
+        if (isBallInsideRotatedZone(ball, lane)) {
+          handleLaneHit(lane, ball);
+        }
+      });
     });
   }
 
@@ -5455,6 +5757,7 @@
       updateMetaRewardTimeout();
       holdBallInLaunchLane();
       MatterLib.Engine.update(physics.engine, physicsClock.step * physicsClock.simulationScale);
+      maybeDetectLaneSensorOverlaps();
       updateUpperOrbitGuide();
       maybeGuideShooterLaneExit();
       maybeCatchLostBall();

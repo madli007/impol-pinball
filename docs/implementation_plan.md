@@ -919,11 +919,13 @@ The detailed scope, exclusions, dependencies, acceptance criteria, and deliverab
   - Visible result: later physics changes can be measured and reproduced.
   - Added `?pinballDiagnostics=1`, `?pinballDiagnostics=all`, and `window.impolPinballDiagnostics` with named deterministic scenarios and explicit pass/fail result reporting.
 
-- [ ] Phase 14.3.2 - Upper orbit and shot-map retune - Status: planned
+- [x] Phase 14.3.2 - Upper orbit and shot-map retune - Status: completed
   - Make the orbit intentionally hittable and map repeatable shots to every required target.
   - Correct blocking geometry, misleading openings, and trap risks.
   - Depends on Phase 14.3.1.
   - Visible result: both flippers have useful deliberate shots and the orbit is achievable in normal play.
+  - Widened and clarified the ALU FLOW orbit mouth, moved/reduced the ALCAD footprint, added committed-entry and fail-safe route handling, and documented the shot map in `docs/phase14_3_2_shot_map.md`.
+  - Verified with `?pinballDiagnostics=all`: 43/43 diagnostics passed, including 20/20 committed orbit attempts and 9/9 shot-map scenarios.
 
 - [ ] Phase 14.3.3 - Sensor cooldowns and combo rules - Status: planned
   - Stop repeated sensor farming and unbounded combo chains.

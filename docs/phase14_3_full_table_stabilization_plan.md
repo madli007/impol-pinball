@@ -88,7 +88,7 @@ Implementation notes:
 
 ## Phase 14.3.2 - Upper Orbit And Shot-Map Retune
 
-Status: planned
+Status: completed
 
 Depends on: Phase 14.3.1
 
@@ -128,6 +128,11 @@ Acceptance criteria:
 Deliverable:
 
 - A documented shot map and corrected table geometry.
+
+Completed notes:
+
+- Corrected geometry and shot map are documented in `docs/phase14_3_2_shot_map.md`.
+- Final diagnostic run passed `43/43` scenarios, including `20/20` committed orbit attempts and `9/9` shot-map scenarios.
 
 ## Phase 14.3.3 - Sensor Cooldowns And Combo Rules
 
