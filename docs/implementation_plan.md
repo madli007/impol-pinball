@@ -942,11 +942,12 @@ The detailed scope, exclusions, dependencies, acceptance criteria, and deliverab
   - Visible result: normal three-ball games fit documented score ranges.
   - Added ruleset `14.3.4-score-economy-1`, separated legacy high scores, exposed score economy diagnostics, and documented measured samples in `docs/phase14_3_4_score_economy.md`.
 
-- [ ] Phase 14.3.5 - Mission and company progression retune - Status: planned
+- [x] Phase 14.3.5 - Mission and company progression retune - Status: completed
   - Align mission requirements and company states with intentional, repeatable shots.
   - Improve current-objective communication.
   - Depends on Phase 14.3.4.
   - Visible result: progression is understandable and does not outrun the active mission.
+  - Retuned ERP to the repeatable ALU FLOW orbit, gated company state behind mission progress/completion and controlled combos, added objective copy/lighting, and documented diagnostics in `docs/phase14_3_5_mission_company_progression.md`.
 
 - [ ] Phase 14.3.6 - Feedback layout and text clarity - Status: planned
   - Replace overlapping fixed badges with prioritized feedback zones.

@@ -237,17 +237,18 @@
     {
       id: "erp",
       label: "ERP GO-LIVE",
-      event: "hit:ERP",
-      required: 3,
+      event: UPPER_ORBIT.event,
+      required: 2,
       bonus: SCORING_RULES.values.missions.erp,
       multiplierReward: 2,
+      shotLabel: "ALU FLOW ORBIT",
       reward: "2x multiplier"
     },
     {
       id: "green",
       label: "GREEN ALUMINIUM",
       event: "hit:GREEN",
-      required: 4,
+      required: 3,
       bonus: SCORING_RULES.values.missions.green,
       reward: "CO2 bonus"
     },
@@ -311,7 +312,7 @@
     {
       id: "impol",
       label: "IMPOL",
-      events: ["hit:MEASUREMENT", "hit:MES", "hit:ERP"],
+      events: ["hit:MEASUREMENT", "hit:MES", "hit:ERP", UPPER_ORBIT.event],
       missions: ["measurement", "mes", "erp"]
     },
     {
@@ -357,6 +358,17 @@
     });
     return companiesByMission;
   }, {});
+  const MISSION_TARGET_LABELS = {
+    "hit:MEASUREMENT": "MERILNI / PROTOKOL",
+    "hit:MES": "MES",
+    "hit:GREEN": "CO2 / GREEN",
+    "hit:COIL": "COIL COLLECTOR",
+    "hit:EODPREMA": "E-ODPREMA",
+    "hit:ALCAD": "ALCAD",
+    "hit:FURNACE": "FURNACE",
+    "hit:KOSOVNICA": "KOSOVNICA",
+    [UPPER_ORBIT.event]: "ALU FLOW ORBIT"
+  };
   const BOM_MODE = {
     sequence: ["hit:MES", "hit:ERP", "hit:COIL"],
     labels: ["MES", "ERP", "COIL"],
@@ -664,16 +676,65 @@
     return MISSION_CONFIG.find((mission) => mission.id === id);
   }
 
+  function getMissionTargetLabel(mission) {
+    return mission?.shotLabel || MISSION_TARGET_LABELS[mission?.event] || mission?.label || "TARGET";
+  }
+
+  function getActiveMission() {
+    return getMissionById(gameState.activeMissionId);
+  }
+
+  function getMissionStageNumber(missionId) {
+    const index = MISSION_STAGES.findIndex((stage) => stage.includes(missionId));
+    return index >= 0 ? index + 1 : 0;
+  }
+
+  function getObjectiveCopy() {
+    if (areAllRequiredMissionsComplete()) {
+      return "ALL MISSIONS COMPLETE: BUILD COMPANY BONUS";
+    }
+
+    const mission = getActiveMission();
+    const state = mission ? gameState.missions[mission.id] : null;
+
+    if (!mission || !state) {
+      return "FOLLOW STAGED MISSIONS";
+    }
+
+    return `HIT ${getMissionTargetLabel(mission)} ${state.progress}/${mission.required}`;
+  }
+
+  function isCurrentMissionEvent(eventName) {
+    const mission = getActiveMission();
+    const state = mission ? gameState.missions[mission.id] : null;
+    return Boolean(mission && state && state.unlocked && !state.completed && mission.event === eventName);
+  }
+
+  function getProgressionCueForEvent(eventName) {
+    if (eventName === "hit:ERP" && gameState.activeMissionId === "erp") {
+      return "USE ALU FLOW ORBIT";
+    }
+
+    const mission = MISSION_CONFIG.find((candidate) => candidate.event === eventName && !gameState.missions[candidate.id].completed);
+    const state = mission ? gameState.missions[mission.id] : null;
+
+    if (!mission || !state || mission.id === gameState.activeMissionId) {
+      return "";
+    }
+
+    if (!state.unlocked) {
+      return `LOCKED STAGE ${getMissionStageNumber(mission.id)}`;
+    }
+
+    return `QUEUE ${mission.label}`;
+  }
+
   function formatMissionNames(missionIds) {
     return missionIds
       .map((id) => getMissionById(id))
       .filter(Boolean)
       .map((mission) => mission.label)
       .join(" / ");
-  }
-
-  function getNextStageMissionIds() {
-    return MISSION_STAGES[gameState.missionStageIndex + 1] || [];
   }
 
   function getFirstIncompleteUnlockedMissionId() {
@@ -725,6 +786,12 @@
     return true;
   }
 
+  function focusCompany(companyId) {
+    if (companyId && gameState.companies[companyId]) {
+      gameState.activeCompanyId = companyId;
+    }
+  }
+
   function updateCompanyForEvent(eventName) {
     const companyId = COMPANY_BY_EVENT[eventName];
 
@@ -732,17 +799,26 @@
       return;
     }
 
-    setCompanyStatus(companyId, "online", "Online");
+    focusCompany(companyId);
   }
 
   function updateCompanyForMissionProgress(mission) {
     const companyId = COMPANY_BY_MISSION[mission.id];
+    const company = getCompanyById(companyId);
 
-    if (!companyId) {
+    if (!companyId || !company) {
       return;
     }
 
-    setCompanyStatus(companyId, "online", "Online");
+    const state = gameState.missions[mission.id];
+    const completedCount = company.missions.filter((missionId) => gameState.missions[missionId].completed).length;
+    const missionProgress = `${getMissionTargetLabel(mission)} ${state.progress}/${mission.required}`;
+    const detail =
+      company.missions.length > 1
+        ? `${completedCount}/${company.missions.length} - ${missionProgress}`
+        : missionProgress;
+
+    setCompanyStatus(companyId, "online", detail);
   }
 
   function updateCompanyForMissionComplete(mission) {
@@ -755,7 +831,11 @@
 
     const completedCount = company.missions.filter((missionId) => gameState.missions[missionId].completed).length;
     const isCompanyComplete = completedCount === company.missions.length;
-    setCompanyStatus(companyId, isCompanyComplete ? "complete" : "online", isCompanyComplete ? "Complete" : `${completedCount}/${company.missions.length} Complete`);
+    setCompanyStatus(
+      companyId,
+      isCompanyComplete ? "complete" : "online",
+      isCompanyComplete ? "Complete - combo bonus lit" : `${completedCount}/${company.missions.length} Complete`
+    );
   }
 
   function updateCompanyForCombo(object, combo) {
@@ -886,6 +966,45 @@
         passiveShareUnderTwentyPercent: samples.every((sample) => sample.passiveShare < 0.2)
       },
       samples
+    };
+  }
+
+  function getProgressionReport() {
+    return {
+      phase: "14.3.5",
+      objective: getObjectiveCopy(),
+      missionCompletion: `${getCompletedMissionCount()}/${MISSION_CONFIG.length}`,
+      companyBonusCompletion: `${getBonusCompanyCount()}/${COMPANY_CONFIG.length}`,
+      activeMissionId: gameState.activeMissionId,
+      activeCompanyId: gameState.activeCompanyId,
+      companyRules: {
+        incidentalContactsUpgradeCompany: false,
+        onlineRequiresMissionProgress: true,
+        completeRequiresCompanyMissionsComplete: true,
+        bonusRequiresCompanyCompleteAndControlledCombo: true,
+        multiballPausesMissionAndCompanyProgress: true
+      },
+      missions: MISSION_CONFIG.map((mission) => {
+        const state = gameState.missions[mission.id];
+        return {
+          id: mission.id,
+          label: mission.label,
+          event: mission.event,
+          target: getMissionTargetLabel(mission),
+          required: mission.required,
+          stage: getMissionStageNumber(mission.id),
+          progress: state.progress,
+          unlocked: state.unlocked,
+          completed: state.completed
+        };
+      }),
+      companies: COMPANY_CONFIG.map((company) => ({
+        id: company.id,
+        label: company.label,
+        status: gameState.companies[company.id].status,
+        detail: gameState.companies[company.id].detail,
+        missions: [...company.missions]
+      }))
     };
   }
 
@@ -1568,7 +1687,7 @@
 
   function drawConfiguredBumpers() {
     TABLE_CONFIG.bumpers.forEach((bumper) => {
-      const isLit = wasRecentlyHit(bumper.id);
+      const isLit = wasRecentlyHit(bumper.id) || isCurrentMissionEvent(bumper.event);
       const asset = assets[bumper.id];
       const assetReady = asset?.loaded;
 
@@ -1601,7 +1720,7 @@
 
   function drawConfiguredTargets() {
     TABLE_CONFIG.targets.forEach((target) => {
-      const isLit = wasRecentlyHit(target.id);
+      const isLit = wasRecentlyHit(target.id) || isCurrentMissionEvent(target.event);
       const asset = assets[target.id];
       const assetReady = asset?.loaded;
 
@@ -1714,7 +1833,9 @@
   function drawUpperOrbit() {
     const orbit = TABLE_CONFIG.upperOrbit;
     const state = gameState.upperOrbit;
-    const activePulse = state.active ? 0.62 + Math.sin(performance.now() / 150) * 0.22 : 0;
+    const isObjectiveLit = isCurrentMissionEvent(orbit.event);
+    const isRouteLit = state.active || isObjectiveLit;
+    const activePulse = isRouteLit ? 0.62 + Math.sin(performance.now() / 150) * 0.22 : 0;
 
     context.save();
     context.lineCap = "round";
@@ -1744,8 +1865,8 @@
       metal.addColorStop(0.58, "rgba(94, 119, 131, 0.72)");
       metal.addColorStop(1, "rgba(23, 42, 52, 0.62)");
       fillRoundedRect(-rail.width / 2, -rail.height / 2, rail.width, rail.height, 7, metal);
-      context.strokeStyle = state.active ? "rgba(49, 168, 255, 0.88)" : "rgba(173, 196, 205, 0.36)";
-      context.lineWidth = state.active ? 3 : 2;
+      context.strokeStyle = isRouteLit ? "rgba(49, 168, 255, 0.88)" : "rgba(173, 196, 205, 0.36)";
+      context.lineWidth = isRouteLit ? 3 : 2;
       context.strokeRect(-rail.width / 2 + 2, -rail.height / 2 + 5, rail.width - 4, rail.height - 10);
       context.restore();
     });
@@ -1762,7 +1883,7 @@
       context.save();
       context.translate(arrow.x, arrow.y);
       context.rotate(arrow.angle);
-      context.fillStyle = state.active ? "#edf7fb" : orbit.accent;
+      context.fillStyle = isRouteLit ? "#edf7fb" : orbit.accent;
       context.beginPath();
       context.moveTo(12, 0);
       context.lineTo(-8, -9);
@@ -1776,10 +1897,10 @@
     context.translate(120, 588);
     context.rotate(-Math.PI / 2);
     fillRoundedRect(-76, -13, 152, 26, 6, "rgba(5, 15, 22, 0.88)");
-    context.strokeStyle = state.active ? "#edf7fb" : orbit.accent;
+    context.strokeStyle = isRouteLit ? "#edf7fb" : orbit.accent;
     context.lineWidth = 2;
     context.strokeRect(-72, -9, 144, 18);
-    context.fillStyle = state.active ? "#edf7fb" : orbit.accent;
+    context.fillStyle = isRouteLit ? "#edf7fb" : orbit.accent;
     context.font = "900 12px Arial, Helvetica, sans-serif";
     context.textAlign = "center";
     context.textBaseline = "middle";
@@ -2734,12 +2855,11 @@
   function updateMissionUi() {
     const visibleMissionIds = new Set(getHudMissions().map((mission) => mission.id));
     const currentStageMissionIds = MISSION_STAGES[gameState.missionStageIndex] || [];
-    const nextStageMissionIds = getNextStageMissionIds();
     const lastCompletedMission = getMissionById(gameState.lastCompletedMissionId);
     const allMissionsComplete = areAllRequiredMissionsComplete();
 
     ui.missionStage.textContent = `${gameState.missionStageIndex + 1}/${MISSION_STAGES.length}`;
-    ui.missionNext.textContent = allMissionsComplete ? "META REWARD LIT" : nextStageMissionIds.length ? formatMissionNames(nextStageMissionIds) : "FINAL READY";
+    ui.missionNext.textContent = allMissionsComplete ? "COMPANY BONUS LIT" : getObjectiveCopy();
     ui.missionComplete.textContent = allMissionsComplete ? "ALL COMPLETE" : lastCompletedMission ? lastCompletedMission.label : "None";
 
     MISSION_CONFIG.forEach((mission) => {
@@ -2783,6 +2903,7 @@
 
     if (ui.statusCopy && activeCompany) {
       const activeState = gameState.companies[activeCompany.id];
+      const objective = getObjectiveCopy();
       const metaLabel = gameState.metaRewards.lastAwardLabel ? ` Last reward: ${gameState.metaRewards.lastAwardLabel}.` : "";
       const litJackpots = getJackpotLitLabels();
       const jackpotStatus = litJackpots.length ? ` Jackpot lit: ${litJackpots.join(" / ")}.` : "";
@@ -2799,7 +2920,7 @@
         : gameState.upperOrbit.completedRuns
           ? ` ALU FLOW runs ${gameState.upperOrbit.completedRuns}.`
           : "";
-      ui.statusCopy.textContent = `${activeCompany.label}: ${activeState.detail}. Group bonus ${bonusCompanyCount}/${COMPANY_CONFIG.length}.${multiballStatus}${shieldStatus}${orbitStatus}${jackpotStatus}${metaLabel}`;
+      ui.statusCopy.textContent = `${objective}. ${activeCompany.label}: ${activeState.detail}. Group bonus ${bonusCompanyCount}/${COMPANY_CONFIG.length}.${multiballStatus}${shieldStatus}${orbitStatus}${jackpotStatus}${metaLabel}`;
     }
   }
 
@@ -2807,8 +2928,9 @@
     const activeBalls = physics ? getActiveBalls() : [];
 
     window.ImpolPinball = {
-      phase: "14.3.4",
+      phase: "14.3.5",
       scoring: getScoreEconomyReport(),
+      progression: getProgressionReport(),
       matterLoaded: Boolean(MatterLib),
       staticBodyCount: physics ? physics.staticBodies.length : 0,
       tableObjectCount: physics ? physics.bumperBodies.length + physics.targetBodies.length + physics.slingshotBodies.length + physics.rolloverBodies.length + physics.laneBodies.length + physics.orbitSensorBodies.length : 0,
@@ -3210,6 +3332,83 @@
       }
     }
 
+    function settleDiagnosticMultiballProgress() {
+      gameState.multiball.active = false;
+      gameState.multiball.progress = 0;
+      gameState.multiball.graceUntil = 0;
+      removeExtraBalls();
+    }
+
+    function triggerMissionProgressionSequence() {
+      MISSION_STAGES.flat().forEach((missionId) => {
+        const mission = getMissionById(missionId);
+
+        if (!mission) {
+          return;
+        }
+
+        for (let progress = 0; progress < mission.required; progress += 1) {
+          advanceMissions(mission.event);
+          settleDiagnosticMultiballProgress();
+        }
+      });
+
+      recordDiagnosticEvent("progression-check", {
+        eventName: "progression:missions",
+        objectId: "missions",
+        label: `${getCompletedMissionCount()}/${MISSION_CONFIG.length} missions`,
+        kind: areAllRequiredMissionsComplete() ? "complete" : "blocked"
+      });
+    }
+
+    function triggerCompanyBonusComboSequence() {
+      [
+        "e-odprema",
+        "alcad",
+        "co2",
+        "coil",
+        "kosovnica",
+        "measurement-left",
+        "furnace",
+        "e-odprema",
+        "alcad"
+      ].forEach((objectId) => {
+        const object = getDiagnosticTableObject(objectId);
+
+        if (!object) {
+          return;
+        }
+
+        const combo = registerComboHit(object);
+        updateCompanyForCombo(object, combo);
+        recordDiagnosticEvent("company-combo", {
+          eventName: object.event,
+          objectId: object.id,
+          label: formatComboLabel(combo),
+          kind: getCompanyById(COMPANY_BY_EVENT[object.event])?.label || ""
+        });
+      });
+
+      recordDiagnosticEvent("progression-check", {
+        eventName: "progression:companies",
+        objectId: "companies",
+        label: `${getBonusCompanyCount()}/${COMPANY_CONFIG.length} bonus`,
+        kind: areAllCompaniesBonus() ? "complete" : "blocked"
+      });
+    }
+
+    function triggerIncidentalCompanyDiagnostic() {
+      ["left-slingshot", "right-slingshot", "co2", "furnace", "kosovnica"].forEach(triggerDiagnosticObject);
+
+      const upgradedCompanies = COMPANY_CONFIG.filter((company) => gameState.companies[company.id].rank > COMPANY_STATUS.ready.rank);
+      recordDiagnosticEvent("progression-check", {
+        eventName: "progression:incidental-contacts",
+        objectId: "companies",
+        label: `${upgradedCompanies.length} upgraded companies`,
+        kind: upgradedCompanies.length === 0 ? "gated" : "outrun"
+      });
+    }
+
     const scenarios = [
       {
         id: "upper-orbit-completion",
@@ -3431,6 +3630,34 @@
         expectedEvents: ["legacy-high-score"],
         setup: triggerLegacyHighScoreDiagnostic,
         successWhen: (result) => result.events.some((event) => event.type === "legacy-high-score" && event.kind === "separated")
+      },
+      {
+        id: "progression-incidental-contacts-gated",
+        name: "Progression: incidental contacts stay gated",
+        start: { x: 450, y: 720 },
+        velocity: { x: 0, y: 0 },
+        durationMs: 500,
+        expectedEvents: ["progression-check"],
+        setup: triggerIncidentalCompanyDiagnostic,
+        successWhen: (result) => result.events.some((event) => event.type === "progression-check" && event.kind === "gated")
+      },
+      {
+        id: "progression-full-staged-reachable",
+        name: "Progression: full staged path reachable",
+        start: { x: 450, y: 720 },
+        velocity: { x: 0, y: 0 },
+        durationMs: 500,
+        expectedEvents: ["progression-check", "company-combo"],
+        setup: () => {
+          triggerMissionProgressionSequence();
+          triggerCompanyBonusComboSequence();
+          updateHud();
+        },
+        successWhen: (result) => {
+          const missionsComplete = result.events.some((event) => event.type === "progression-check" && event.objectId === "missions" && event.kind === "complete");
+          const companiesComplete = result.events.some((event) => event.type === "progression-check" && event.objectId === "companies" && event.kind === "complete");
+          return missionsComplete && companiesComplete && getObjectiveCopy().includes("ALL MISSIONS COMPLETE");
+        }
       },
       {
         id: "lower-trap-rescue",
@@ -4893,7 +5120,12 @@
     }
 
     if (object.type !== "slingshot" && object.type !== "rollover") {
-      advanceMissions(object.event);
+      const didAdvanceMission = advanceMissions(object.event);
+      const progressionCue = didAdvanceMission ? "" : getProgressionCueForEvent(object.event);
+      if (progressionCue) {
+        gameState.feedback = `${object.label}: ${progressionCue}`;
+        gameState.feedbackUntil = performance.now() + 850;
+      }
       updateBomMode(object.event);
     }
     if (object.type === "rollover") {
@@ -5009,6 +5241,9 @@
       accent: UPPER_ORBIT.accent
     });
     audio.play("combo");
+    updateCompanyForEvent(UPPER_ORBIT.event);
+    updateCompanyForCombo(UPPER_ORBIT, combo);
+    advanceMissions(UPPER_ORBIT.event);
     updateHud();
     syncInspectableState(physics);
   }
@@ -5530,7 +5765,7 @@
 
   function advanceMissions(eventName) {
     if (gameState.multiball.active) {
-      return;
+      return false;
     }
 
     const activeStageMissionIds = new Set(MISSION_STAGES[gameState.missionStageIndex] || []);
@@ -5559,11 +5794,12 @@
     });
 
     if (!didAdvance) {
-      return;
+      return false;
     }
 
     maybeUnlockNextMissionStage();
     setActiveMissionFromStage();
+    return true;
   }
 
   function maybeUnlockNextMissionStage() {
@@ -5697,9 +5933,10 @@
     };
 
     if (slingshotPingPongCount >= 2) {
+      const breakDirection = slingshot.x < TABLE.width / 2 ? 1 : -1;
       nextVelocity = {
-        x: nextVelocity.x * 0.38,
-        y: Math.min(nextVelocity.y - 1.8, -9.4)
+        x: breakDirection * Math.max(6.6, Math.abs(nextVelocity.x) * 0.82),
+        y: Math.max(-5.8, Math.min(-3.2, nextVelocity.y * 0.28))
       };
       ball.slingshotPingPongCount = 0;
     } else {

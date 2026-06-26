@@ -256,7 +256,15 @@ h1 {
 }
 
 .company-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 64%);
   border-color: rgba(49, 168, 255, 0.2);
+}
+
+.company-list span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .company-list li.is-active {
@@ -280,8 +288,13 @@ h1 {
 }
 
 .company-list strong {
+  min-width: 0;
+  overflow: hidden;
   color: var(--muted);
   font-weight: 700;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .company-list li.is-online strong {

@@ -234,7 +234,7 @@ Result:
 
 ## Phase 14.3.5 - Mission And Company Progression Retune
 
-Status: planned
+Status: completed
 
 Depends on: Phase 14.3.4
 
@@ -267,6 +267,14 @@ Acceptance criteria:
 Deliverable:
 
 - Retuned requirements, state transitions, and objective communication.
+
+Completed notes:
+
+- ERP GO-LIVE now advances from the repeatable ALU FLOW orbit instead of incidental upper-bumper movement.
+- GREEN ALUMINIUM was reduced to 3 CO2/GREEN hits.
+- Company progression is gated behind mission progress, mission completion, and controlled 4+ combos; incidental contacts only focus company context.
+- Current-objective copy, target lighting, locked-stage cues, and progression diagnostics were added.
+- Details are documented in `docs/phase14_3_5_mission_company_progression.md`.
 
 ## Phase 14.3.6 - Feedback Layout And Text Clarity
 
