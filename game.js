@@ -62,15 +62,13 @@
     points: 4500,
     accent: "#31a8ff",
     timeoutMs: 4400,
-    committedX: 206,
-    committedY: 832,
-    entrySensor: { x: 158, y: 802, width: 122, height: 156, angle: -0.04 },
+    committedX: 236,
+    committedY: 900,
+    entrySensor: { x: 176, y: 832, width: 164, height: 190, angle: -0.03 },
     returnSensor: { x: 224, y: 304, width: 106, height: 100, angle: 0.04 },
     rails: [
       { x: 232, y: 530, width: 14, height: 514, angle: 0 },
-      { x: 162, y: 214, width: 14, height: 148, angle: -0.66 },
-      { x: 276, y: 848, width: 14, height: 164, angle: -0.55 },
-      { x: 112, y: 820, width: 12, height: 118, angle: 0.28 }
+      { x: 162, y: 214, width: 14, height: 148, angle: -0.66 }
     ]
   };
   const ASSET_CONFIG = {
@@ -82,7 +80,7 @@
     "measurement-left": { src: "assets/images/measurement-target.png", width: 116, height: 116, yOffset: -12 },
     "measurement-right": { src: "assets/images/measurement-target.png", width: 116, height: 116, yOffset: -12 },
     "e-odprema": { src: "assets/images/e-odprema-truck.png", width: 138, height: 116, yOffset: -10 },
-    alcad: { src: "assets/images/alcad-marker.png", width: 112, height: 104, yOffset: -8 },
+    alcad: { src: "assets/images/alcad-marker.png", width: 104, height: 96, yOffset: -8 },
     "flipper-left": { src: "assets/images/flipper-left.png", width: 178, height: 83 },
     "flipper-right": { src: "assets/images/flipper-right.png", width: 178, height: 83 },
     "lamp-post-red": { src: "assets/images/lamp-post-red.png", width: 34, height: 68 },
@@ -125,7 +123,7 @@
       { id: "measurement-right", label: "PROTOKOL", x: 625, y: 592, width: 178, height: 52, accent: "#31a8ff", event: "hit:MEASUREMENT", points: 500 },
       { id: "furnace", label: "FURNACE", x: 450, y: 696, width: 200, height: 56, accent: "#ff9b3d", event: "hit:FURNACE", points: 750 },
       { id: "coil", label: "COIL COLLECTOR", x: 450, y: 899, width: 234, height: 58, accent: "#7bdc6c", event: "hit:COIL", points: 750 },
-      { id: "alcad", label: "ALCAD", x: 318, y: 808, width: 112, height: 44, accent: "#9ab3bf", event: "hit:ALCAD", points: 500 },
+      { id: "alcad", label: "ALCAD", x: 346, y: 828, width: 104, height: 42, accent: "#9ab3bf", event: "hit:ALCAD", points: 500 },
       { id: "e-odprema", label: "E-ODPREMA", x: 646, y: 784, width: 156, height: 48, accent: "#9ab3bf", event: "hit:EODPREMA", points: 500 },
       { id: "kosovnica", label: "KOSOVNICA", x: 450, y: 508, width: 168, height: 34, accent: "#ff9b3d", event: "hit:KOSOVNICA", points: 700 }
     ],
@@ -3526,8 +3524,8 @@
 
     const wallOptions = {
       isStatic: true,
-      restitution: 0.48,
-      friction: 0.02,
+      restitution: 0.38,
+      friction: 0.035,
       render: { visible: true }
     };
 
@@ -3589,8 +3587,8 @@
           isStatic: true,
           label: "left-flipper",
           angle: TABLE.flippers.left.restAngle,
-          restitution: 0.16,
-          friction: 0.08
+          restitution: 0.08,
+          friction: 0.14
         }
       ),
       right: Bodies.rectangle(
@@ -3602,8 +3600,8 @@
           isStatic: true,
           label: "right-flipper",
           angle: TABLE.flippers.right.restAngle,
-          restitution: 0.16,
-          friction: 0.08
+          restitution: 0.08,
+          friction: 0.14
         }
       )
     };
@@ -3611,8 +3609,8 @@
       const body = Bodies.circle(bumper.x, bumper.y, bumper.radius, {
         isStatic: true,
         label: `bumper:${bumper.id}`,
-        restitution: 1.04,
-        friction: 0.01
+        restitution: 0.96,
+        friction: 0.018
       });
       body.gameObject = { ...bumper, type: "bumper" };
       return body;
@@ -3660,7 +3658,7 @@
         ...wallOptions,
         label: `upper-orbit-rail:${index + 1}`,
         angle: rail.angle,
-        restitution: 0.3
+        restitution: 0.16
       })
     );
     const orbitSensorBodies = [
@@ -3767,9 +3765,9 @@
   function createBallBody(id, position) {
     const ball = MatterLib.Bodies.circle(position.x, position.y, 26, {
       label: "pinball",
-      restitution: 0.82,
+      restitution: 0.74,
       friction: 0.005,
-      frictionAir: 0.0008,
+      frictionAir: 0.00125,
       density: 0.0011
     });
     ball.gameBallId = id;
@@ -4467,6 +4465,21 @@
         completeUpperOrbit(ball);
       }
     }
+  }
+
+  function maybeDetectUpperOrbitEntryOverlap() {
+    if (!physics || gameState.status !== "playing") {
+      return;
+    }
+
+    getActiveBalls().forEach((ball) => {
+      if (
+        !gameState.upperOrbit.active &&
+        isBallInsideRotatedZone(ball, UPPER_ORBIT.entrySensor, 0.62)
+      ) {
+        startUpperOrbit(ball);
+      }
+    });
   }
 
   function updateRolloverLamps(rollover) {
@@ -5758,6 +5771,7 @@
       holdBallInLaunchLane();
       MatterLib.Engine.update(physics.engine, physicsClock.step * physicsClock.simulationScale);
       maybeDetectLaneSensorOverlaps();
+      maybeDetectUpperOrbitEntryOverlap();
       updateUpperOrbitGuide();
       maybeGuideShooterLaneExit();
       maybeCatchLostBall();
