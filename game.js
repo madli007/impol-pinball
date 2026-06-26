@@ -127,8 +127,8 @@
       { id: "kosovnica", label: "KOSOVNICA", x: 450, y: 508, width: 168, height: 34, accent: "#ff9b3d", event: "hit:KOSOVNICA", points: 700 }
     ],
     slingshots: [
-      { id: "left-slingshot", label: "SEVAL", x: 286, y: 1098, width: 100, height: 22, angle: 0.72, visualX: 258, visualY: 1098, visualWidth: 108, visualHeight: 115, visualAngle: 0, accent: "#31a8ff", event: "hit:LEFT_SLINGSHOT", points: 350, impulse: { x: 7.6, y: -8.6 } },
-      { id: "right-slingshot", label: "IMPOL-PC", x: 614, y: 1098, width: 100, height: 22, angle: -0.72, visualX: 642, visualY: 1098, visualWidth: 108, visualHeight: 115, visualAngle: 0, accent: "#31a8ff", event: "hit:RIGHT_SLINGSHOT", points: 350, impulse: { x: -7.6, y: -8.6 } }
+      { id: "left-slingshot", label: "SEVAL", x: 266, y: 1102, width: 100, height: 22, angle: 0.72, visualX: 248, visualY: 1100, visualWidth: 108, visualHeight: 115, visualAngle: 0, accent: "#31a8ff", event: "hit:LEFT_SLINGSHOT", points: 350, impulse: { x: 6.7, y: -10.2 } },
+      { id: "right-slingshot", label: "IMPOL-PC", x: 634, y: 1102, width: 100, height: 22, angle: -0.72, visualX: 652, visualY: 1100, visualWidth: 108, visualHeight: 115, visualAngle: 0, accent: "#31a8ff", event: "hit:RIGHT_SLINGSHOT", points: 350, impulse: { x: -6.7, y: -10.2 } }
     ],
     rollovers: [
       { id: "rollover-flow", label: "FLOW", x: 348, y: 1008, radius: 22, accent: "#31a8ff", event: "hit:ROLLOVER", points: 250 },
@@ -4945,6 +4945,11 @@
   }
 
   function kickBallFromObject(ball, object) {
+    const now = performance.now();
+    const previousBumperHitAt = ball.lastBumperHitAt || 0;
+    const previousBumperId = ball.lastBumperObjectId || "";
+    const isFastBumperExchange = previousBumperId && previousBumperId !== object.id && now - previousBumperHitAt < 1050;
+    const pingPongCount = isFastBumperExchange ? (ball.bumperPingPongCount || 0) + 1 : 0;
     const dx = ball.position.x - object.x;
     const dy = ball.position.y - object.y;
     const length = Math.max(1, Math.hypot(dx, dy));
@@ -4955,16 +4960,18 @@
     const speed = Math.hypot(ball.velocity.x, ball.velocity.y);
     const tangentDot = ball.velocity.x * tangentX + ball.velocity.y * tangentY;
     const tangentDirection = Math.sign(tangentDot) || (ball.position.x < object.x ? -1 : 1);
-    const radialKick = 7.6;
-    const tangentKick = Math.min(5.8, Math.max(2.8, speed * 0.42));
-    const retainedVelocity = 0.55;
+    const radialKick = pingPongCount >= 3 ? 4.2 : 5.8;
+    const tangentKick = pingPongCount >= 3 ? 1.4 : Math.min(4.2, Math.max(2.1, speed * 0.32));
+    const retainedVelocity = pingPongCount >= 3 ? 0.24 : 0.38;
     let nextVelocity = {
       x: ball.velocity.x * retainedVelocity + radialX * radialKick + tangentX * tangentDirection * tangentKick,
       y: ball.velocity.y * retainedVelocity + radialY * radialKick + tangentY * tangentDirection * tangentKick
     };
 
     const outgoingSpeed = Math.hypot(nextVelocity.x, nextVelocity.y);
-    const minOutgoingSpeed = Math.min(13.5, Math.max(9.4, speed * 0.92));
+    const minOutgoingSpeed = pingPongCount >= 3
+      ? 5.8
+      : Math.min(10.8, Math.max(7.2, speed * 0.7));
 
     if (outgoingSpeed < minOutgoingSpeed) {
       const scale = minOutgoingSpeed / Math.max(0.1, outgoingSpeed);
@@ -4974,18 +4981,47 @@
       };
     }
 
+    if (pingPongCount >= 3) {
+      nextVelocity = {
+        x: nextVelocity.x * 0.42,
+        y: Math.max(3.8, nextVelocity.y)
+      };
+      ball.bumperPingPongCount = 0;
+    } else {
+      ball.bumperPingPongCount = pingPongCount;
+    }
+
+    ball.lastBumperHitAt = now;
+    ball.lastBumperObjectId = object.id;
     MatterLib.Body.setVelocity(ball, nextVelocity);
   }
 
   function kickBallFromSlingshot(ball, slingshot) {
+    const now = performance.now();
+    const previousSlingshotHitAt = ball.lastSlingshotHitAt || 0;
+    const previousSlingshotId = ball.lastSlingshotObjectId || "";
+    const isFastSlingshotExchange = previousSlingshotId && previousSlingshotId !== slingshot.id && now - previousSlingshotHitAt < 950;
+    const slingshotPingPongCount = isFastSlingshotExchange ? (ball.slingshotPingPongCount || 0) + 1 : 0;
     const speed = Math.hypot(ball.velocity.x, ball.velocity.y);
     const retainedVelocity = 0.42;
     const impulseScale = Math.min(1.2, Math.max(0.78, speed / 9));
-    const nextVelocity = {
+    let nextVelocity = {
       x: ball.velocity.x * retainedVelocity + slingshot.impulse.x * impulseScale,
       y: Math.min(ball.velocity.y * retainedVelocity + slingshot.impulse.y * impulseScale, -5.2)
     };
 
+    if (slingshotPingPongCount >= 2) {
+      nextVelocity = {
+        x: nextVelocity.x * 0.38,
+        y: Math.min(nextVelocity.y - 1.8, -9.4)
+      };
+      ball.slingshotPingPongCount = 0;
+    } else {
+      ball.slingshotPingPongCount = slingshotPingPongCount;
+    }
+
+    ball.lastSlingshotHitAt = now;
+    ball.lastSlingshotObjectId = slingshot.id;
     MatterLib.Body.setVelocity(ball, nextVelocity);
   }
 

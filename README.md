@@ -81,6 +81,26 @@ Opening `index.html` directly can still work for quick checks, but the local ser
 
 Matter.js is loaded from CDN, so internet access is currently required for physics.
 
+### Cache Busting During Local Tuning
+
+Browsers can keep an old `game.js` or even an old `index.html` while tuning physics. When a local change does not appear, use an explicit `index.html` URL with a throwaway query value:
+
+```text
+http://127.0.0.1:4173/index.html?bust=<short-label>
+```
+
+When changing gameplay physics, also bump the query string on the local script tag in `index.html`, for example:
+
+```html
+<script src="game.js?v=14.3.2-feel-6"></script>
+```
+
+Diagnostics can be combined with the cache-bust URL:
+
+```text
+http://127.0.0.1:4173/index.html?pinballDiagnostics=all&bust=<short-label>
+```
+
 ## Verification Notes
 
 In the current Codex desktop environment, browser smoke testing is limited:
