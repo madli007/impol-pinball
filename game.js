@@ -5662,9 +5662,15 @@
     }
 
     if (pingPongCount >= 3) {
+      const centerX = TABLE.width / 2;
+      const exitDirection = object.x < centerX
+        ? -1
+        : object.x > centerX
+          ? 1
+          : Math.sign(ball.velocity.x || ball.position.x - centerX) || 1;
       nextVelocity = {
-        x: nextVelocity.x * 0.42,
-        y: Math.max(3.8, nextVelocity.y)
+        x: exitDirection * Math.max(4.6, Math.abs(nextVelocity.x) * 0.72),
+        y: Math.min(1.8, Math.max(-2.4, nextVelocity.y * 0.34))
       };
       ball.bumperPingPongCount = 0;
     } else {
