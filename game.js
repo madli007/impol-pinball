@@ -117,6 +117,28 @@
     medium: { label: "Medium", minCount: 4, maxCount: 6, requiredZones: 2, requiredObjects: 3 },
     max: { label: "Max", minCount: 7, maxCount: COMBO_MAX_COUNT, requiredZones: 3, requiredObjects: 4 }
   };
+  const FEEDBACK_PRIORITIES = {
+    idle: 0,
+    hit: 20,
+    combo: 35,
+    progress: 45,
+    mode: 55,
+    save: 65,
+    jackpot: 75,
+    multiball: 85,
+    meta: 90,
+    system: 100
+  };
+  const FEEDBACK_ZONES = {
+    status: { x: 590, y: 96, width: 220, height: 42, radius: 6, priority: FEEDBACK_PRIORITIES.system },
+    multiball: { x: 92, y: 96, width: 270, height: 46, radius: 8, priority: FEEDBACK_PRIORITIES.multiball },
+    meta: { x: 92, y: 150, width: 270, height: 44, radius: 8, priority: FEEDBACK_PRIORITIES.meta },
+    jackpot: { x: 282, y: 150, width: 336, height: 44, radius: 8, priority: FEEDBACK_PRIORITIES.jackpot },
+    ballSave: { x: 92, y: 258, width: 228, height: 38, radius: 8, priority: FEEDBACK_PRIORITIES.save },
+    sideShield: { x: 580, y: 258, width: 228, height: 38, radius: 8, priority: FEEDBACK_PRIORITIES.save },
+    bom: { x: 292, y: 204, width: 316, height: 48, radius: 8, priority: FEEDBACK_PRIORITIES.mode },
+    combo: { x: 332, y: 258, width: 236, height: 40, radius: 8, priority: FEEDBACK_PRIORITIES.combo }
+  };
   const SENSOR_REHIT_RULES = {
     default: { objectCooldownMs: 620, ballObjectCooldownMs: 980 },
     bumper: { objectCooldownMs: 520, ballObjectCooldownMs: 820 },
@@ -430,6 +452,7 @@
     lastEvent: "",
     feedback: "",
     feedbackUntil: 0,
+    feedbackPriority: FEEDBACK_PRIORITIES.idle,
     gameOverStartedAt: 0,
     gameOverRestartAt: 0,
     finalScore: 0,
@@ -1053,8 +1076,7 @@
     activateMetaMultiplier(reward);
     extendBallSave(reward.ballSaveExtension);
     setHighScore(gameState.score);
-    gameState.feedback = `${reward.label} +${bonus.toLocaleString("sl-SI")}`;
-    gameState.feedbackUntil = performance.now() + 1900;
+    setFeedback(`${reward.label} +${bonus.toLocaleString("sl-SI")}`, 1900, "meta");
     addHitFeedback({
       id: `meta-${rewardKey}`,
       x: 450,
@@ -1950,6 +1972,93 @@
     context.fillText("MATTER STATIC BODIES", 116, 121);
   }
 
+  function setFeedback(message, durationMs, priorityKey = "hit", now = performance.now()) {
+    const priority = FEEDBACK_PRIORITIES[priorityKey] || FEEDBACK_PRIORITIES.hit;
+    const hasActiveMessage = Boolean(gameState.feedback && now <= gameState.feedbackUntil);
+
+    if (hasActiveMessage && priority < gameState.feedbackPriority) {
+      return false;
+    }
+
+    gameState.feedback = message;
+    gameState.feedbackUntil = now + durationMs;
+    gameState.feedbackPriority = priority;
+    return true;
+  }
+
+  function clearFeedback() {
+    gameState.feedback = "";
+    gameState.feedbackUntil = 0;
+    gameState.feedbackPriority = FEEDBACK_PRIORITIES.idle;
+  }
+
+  function fitCanvasText(text, maxWidth, baseSize, minSize = 11, weight = 800) {
+    const value = String(text || "");
+    let size = baseSize;
+
+    while (size > minSize) {
+      context.font = `${weight} ${size}px Arial, Helvetica, sans-serif`;
+      if (context.measureText(value).width <= maxWidth) {
+        return { text: value, size };
+      }
+      size -= 1;
+    }
+
+    context.font = `${weight} ${minSize}px Arial, Helvetica, sans-serif`;
+    if (context.measureText(value).width <= maxWidth) {
+      return { text: value, size: minSize };
+    }
+
+    let clipped = value;
+    while (clipped.length > 4 && context.measureText(`${clipped.slice(0, -1)}...`).width > maxWidth) {
+      clipped = clipped.slice(0, -1);
+    }
+
+    return { text: `${clipped.slice(0, -1)}...`, size: minSize };
+  }
+
+  function drawFeedbackText(text, x, y, maxWidth, color, baseSize, options = {}) {
+    const fit = fitCanvasText(text, maxWidth, baseSize, options.minSize || 11, options.weight || 800);
+    context.fillStyle = color;
+    context.font = `${options.weight || 800} ${fit.size}px Arial, Helvetica, sans-serif`;
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillText(fit.text, x, y);
+  }
+
+  function drawFeedbackZone(zoneName, label, options = {}) {
+    const zone = FEEDBACK_ZONES[zoneName];
+
+    if (!zone || !label) {
+      return;
+    }
+
+    fillRoundedRect(zone.x, zone.y, zone.width, zone.height, zone.radius, options.background || "rgba(5, 11, 16, 0.76)");
+
+    if (options.stroke) {
+      strokeRoundedRect(zone.x, zone.y, zone.width, zone.height, zone.radius, options.stroke, options.strokeWidth || 2);
+    }
+
+    drawFeedbackText(
+      label,
+      zone.x + zone.width / 2,
+      options.textY || zone.y + zone.height / 2,
+      zone.width - (options.paddingX || 28),
+      options.color || "#edf7fb",
+      options.fontSize || 16,
+      { minSize: options.minSize || 11, weight: options.weight || 800 }
+    );
+
+    if (typeof options.progress === "number") {
+      const clamped = Math.max(0, Math.min(1, options.progress));
+      const progressX = zone.x + (options.progressInset || 26);
+      const progressWidth = zone.width - (options.progressInset || 26) * 2;
+      const progressY = zone.y + zone.height - (options.progressBottom || 8);
+      context.fillStyle = options.progressColor || "rgba(255, 155, 61, 0.88)";
+      context.fillRect(progressX, progressY, progressWidth * clamped, 4);
+    }
+  }
+
   function drawStatusBadge() {
     const labels = {
       ready: "HOLD SPACE",
@@ -1961,12 +2070,11 @@
     const label = labels[gameState.status] || "BALL IN PLAY";
     const color = gameState.status === "game-over" ? "#ff7567" : "#7bdc6c";
 
-    fillRoundedRect(590, 100, 210, 42, 6, "rgba(5, 11, 16, 0.72)");
-    context.fillStyle = color;
-    context.font = "800 18px Arial, Helvetica, sans-serif";
-    context.textAlign = "center";
-    context.textBaseline = "middle";
-    context.fillText(label, 695, 121);
+    drawFeedbackZone("status", label, {
+      color,
+      fontSize: 18,
+      background: "rgba(5, 11, 16, 0.72)"
+    });
   }
 
   function drawGameOverPresentation() {
@@ -2063,6 +2171,16 @@
       context.beginPath();
       context.ellipse(effect.x, effect.y, radius * 0.95, radius * 0.55, 0, 0, Math.PI * 2);
       context.fill();
+
+      if (effect.label) {
+        const labelY = Math.max(64, effect.y - radius - 22);
+        const labelWidth = Math.min(220, Math.max(92, effect.label.length * 8 + 24));
+        fillRoundedRect(effect.x - labelWidth / 2, labelY - 16, labelWidth, 28, 7, "rgba(5, 11, 16, 0.7)");
+        drawFeedbackText(effect.label, effect.x, labelY - 2, labelWidth - 18, effect.color || effect.accent, 13, {
+          minSize: 10,
+          weight: 900
+        });
+      }
       context.restore();
     });
   }
@@ -2073,15 +2191,13 @@
     }
 
     const remaining = Math.max(0, gameState.comboUntil - performance.now()) / COMBO_WINDOW_MS;
-    fillRoundedRect(332, 1000, 236, 40, 8, "rgba(5, 11, 16, 0.74)");
-    context.fillStyle = "#31a8ff";
-    context.font = "800 18px Arial, Helvetica, sans-serif";
-    context.textAlign = "center";
-    context.textBaseline = "middle";
-    context.fillText(formatComboLabel(), 450, 1019);
-
-    context.fillStyle = "rgba(255, 155, 61, 0.86)";
-    context.fillRect(354, 1034, 192 * remaining, 4);
+    drawFeedbackZone("combo", formatComboLabel(), {
+      color: "#31a8ff",
+      fontSize: 18,
+      progress: remaining,
+      progressColor: "rgba(255, 155, 61, 0.86)",
+      background: "rgba(5, 11, 16, 0.74)"
+    });
   }
 
   function drawBomModeBadge() {
@@ -2092,15 +2208,13 @@
     const remaining = Math.max(0, gameState.bomMode.deadline - performance.now()) / BOM_MODE.duration;
     const label = BOM_MODE.labels[gameState.bomMode.step] || "APPROVE";
 
-    fillRoundedRect(292, 928, 316, 48, 8, "rgba(5, 11, 16, 0.78)");
-    context.fillStyle = "#ff9b3d";
-    context.font = "800 16px Arial, Helvetica, sans-serif";
-    context.textAlign = "center";
-    context.textBaseline = "middle";
-    context.fillText(`BOM ERROR: HIT ${label}`, 450, 946);
-
-    context.fillStyle = "rgba(49, 168, 255, 0.88)";
-    context.fillRect(326, 968, 248 * remaining, 4);
+    drawFeedbackZone("bom", `BOM ERROR: HIT ${label}`, {
+      color: "#ff9b3d",
+      fontSize: 16,
+      progress: remaining,
+      progressColor: "rgba(49, 168, 255, 0.88)",
+      background: "rgba(5, 11, 16, 0.78)"
+    });
   }
 
   function isBallSaveActive() {
@@ -2113,15 +2227,13 @@
     }
 
     const remaining = Math.max(0, gameState.ballSaveUntil - performance.now()) / BALL_SAVE_DURATION;
-    fillRoundedRect(328, 882, 244, 38, 8, "rgba(5, 11, 16, 0.72)");
-    context.fillStyle = "#7bdc6c";
-    context.font = "800 15px Arial, Helvetica, sans-serif";
-    context.textAlign = "center";
-    context.textBaseline = "middle";
-    context.fillText("BALL SAVE ACTIVE", 450, 901);
-
-    context.fillStyle = "rgba(123, 220, 108, 0.88)";
-    context.fillRect(354, 914, 192 * remaining, 4);
+    drawFeedbackZone("ballSave", "BALL SAVE ACTIVE", {
+      color: "#7bdc6c",
+      fontSize: 15,
+      progress: remaining,
+      progressColor: "rgba(123, 220, 108, 0.88)",
+      background: "rgba(5, 11, 16, 0.72)"
+    });
   }
 
   function drawSideShieldBadge() {
@@ -2130,15 +2242,13 @@
     }
 
     const remaining = Math.max(0, gameState.lanes.sideShieldUntil - performance.now()) / SIDE_SHIELD_DURATION;
-    fillRoundedRect(326, 972, 248, 38, 8, "rgba(5, 11, 16, 0.72)");
-    context.fillStyle = "#7bdc6c";
-    context.font = "800 15px Arial, Helvetica, sans-serif";
-    context.textAlign = "center";
-    context.textBaseline = "middle";
-    context.fillText("SIDE SHIELD ACTIVE", 450, 991);
-
-    context.fillStyle = "rgba(123, 220, 108, 0.88)";
-    context.fillRect(354, 1004, 192 * remaining, 4);
+    drawFeedbackZone("sideShield", "SIDE SHIELD ACTIVE", {
+      color: "#7bdc6c",
+      fontSize: 15,
+      progress: remaining,
+      progressColor: "rgba(123, 220, 108, 0.88)",
+      background: "rgba(5, 11, 16, 0.72)"
+    });
   }
 
   function drawMetaRewardBadge() {
@@ -2154,15 +2264,13 @@
 
     const duration = gameState.metaRewards.multiplierValue >= META_REWARDS.companies.multiplier ? META_REWARDS.companies.duration : META_REWARDS.missions.duration;
     const remaining = remainingMs / duration;
-    fillRoundedRect(292, 832, 316, 44, 8, "rgba(5, 11, 16, 0.78)");
-    context.fillStyle = gameState.metaRewards.multiplierValue >= META_REWARDS.companies.multiplier ? "#7bdc6c" : "#ffb967";
-    context.font = "800 16px Arial, Helvetica, sans-serif";
-    context.textAlign = "center";
-    context.textBaseline = "middle";
-    context.fillText(`${gameState.metaRewards.multiplierValue}x ${gameState.metaRewards.lastAwardLabel}`, 450, 850);
-
-    context.fillStyle = "rgba(255, 155, 61, 0.88)";
-    context.fillRect(326, 870, 248 * Math.min(1, remaining), 4);
+    drawFeedbackZone("meta", `${gameState.metaRewards.multiplierValue}x ${gameState.metaRewards.lastAwardLabel}`, {
+      color: gameState.metaRewards.multiplierValue >= META_REWARDS.companies.multiplier ? "#7bdc6c" : "#ffb967",
+      fontSize: 16,
+      progress: Math.min(1, remaining),
+      progressColor: "rgba(255, 155, 61, 0.88)",
+      background: "rgba(5, 11, 16, 0.78)"
+    });
   }
 
   function drawMultiballBadge() {
@@ -2172,18 +2280,13 @@
 
     const graceRemaining = Math.max(0, gameState.multiball.graceUntil - performance.now());
     const activeBallCount = getActiveBalls().length;
-    fillRoundedRect(318, 774, 264, 46, 8, "rgba(5, 11, 16, 0.78)");
-    context.fillStyle = "#edf7fb";
-    context.font = "800 16px Arial, Helvetica, sans-serif";
-    context.textAlign = "center";
-    context.textBaseline = "middle";
-    context.fillText(`MULTIBALL ${activeBallCount} BALLS / ${MULTIBALL.multiplier}x`, 450, 792);
-
-    if (graceRemaining > 0) {
-      const remaining = graceRemaining / MULTIBALL.graceMs;
-      context.fillStyle = "rgba(123, 220, 108, 0.9)";
-      context.fillRect(344, 812, 212 * remaining, 4);
-    }
+    drawFeedbackZone("multiball", `MULTIBALL ${activeBallCount} BALLS / ${MULTIBALL.multiplier}x`, {
+      color: "#edf7fb",
+      fontSize: 16,
+      progress: graceRemaining > 0 ? graceRemaining / MULTIBALL.graceMs : undefined,
+      progressColor: "rgba(123, 220, 108, 0.9)",
+      background: "rgba(5, 11, 16, 0.78)"
+    });
   }
 
   function drawJackpotBadge() {
@@ -2194,26 +2297,13 @@
     }
 
     const isSuperOnly = litLabels.length === 1 && litLabels[0].includes("SUPER");
-    fillRoundedRect(284, 826, 332, 44, 8, "rgba(5, 11, 16, 0.78)");
-    context.fillStyle = isSuperOnly ? "#ffb967" : "#31a8ff";
     const label = `${isSuperOnly ? "SUPER JACKPOT" : "JACKPOT LIT"}: ${litLabels.join(" / ")}`;
-    context.font = `800 ${label.length > 38 ? 12 : 15}px Arial, Helvetica, sans-serif`;
-    context.textAlign = "center";
-    context.textBaseline = "middle";
-    context.fillText(label, 450, 848);
-  }
-
-  function drawLastJackpotAward() {
-    if (!gameState.jackpot.lastAwardLabel || performance.now() > gameState.feedbackUntil) {
-      return;
-    }
-
-    fillRoundedRect(312, 716, 276, 44, 8, "rgba(5, 11, 16, 0.76)");
-    context.fillStyle = gameState.jackpot.lastAwardLabel === "SUPER JACKPOT" ? "#ffb967" : "#edf7fb";
-    context.font = "900 17px Arial, Helvetica, sans-serif";
-    context.textAlign = "center";
-    context.textBaseline = "middle";
-    context.fillText(`${gameState.jackpot.lastAwardLabel} +${gameState.jackpot.lastAwardValue.toLocaleString("sl-SI")}`, 450, 738);
+    drawFeedbackZone("jackpot", label, {
+      color: isSuperOnly ? "#ffb967" : "#31a8ff",
+      fontSize: 15,
+      minSize: 11,
+      background: "rgba(5, 11, 16, 0.78)"
+    });
   }
 
   function drawMissionLights() {
@@ -2825,6 +2915,10 @@
       return;
     }
 
+    if (gameState.feedbackPriority !== FEEDBACK_PRIORITIES.idle) {
+      clearFeedback();
+    }
+
     if (gameState.comboCount >= 2 && now <= gameState.comboUntil) {
       ui.scoreFeed.textContent = formatComboLabel();
       return;
@@ -2924,11 +3018,61 @@
     }
   }
 
+  function getActiveFeedbackZones(now = performance.now()) {
+    const zones = [];
+
+    if (gameState.status) {
+      zones.push("status");
+    }
+
+    if (gameState.multiball.active) {
+      zones.push("multiball");
+    } else if (getMetaMultiplierRemainingMs() > 0) {
+      zones.push("meta");
+    }
+
+    if (gameState.jackpot.active && getJackpotLitLabels().length) {
+      zones.push("jackpot");
+    }
+
+    if (isBallSaveActive()) {
+      zones.push("ballSave");
+    }
+
+    if (isSideShieldActive()) {
+      zones.push("sideShield");
+    }
+
+    if (gameState.bomMode.active) {
+      zones.push("bom");
+    }
+
+    if (gameState.comboCount >= 2 && now <= gameState.comboUntil) {
+      zones.push("combo");
+    }
+
+    return zones;
+  }
+
+  function getFeedbackReport() {
+    const now = performance.now();
+
+    return {
+      model: "14.3.6-prioritized-zones",
+      message: gameState.feedback && now <= gameState.feedbackUntil ? gameState.feedback : "",
+      messagePriority: gameState.feedbackPriority,
+      messageRemainingMs: Math.max(0, Math.round(gameState.feedbackUntil - now)),
+      activeZones: getActiveFeedbackZones(now),
+      zones: FEEDBACK_ZONES
+    };
+  }
+
   function syncInspectableState(physics) {
     const activeBalls = physics ? getActiveBalls() : [];
 
     window.ImpolPinball = {
-      phase: "14.3.5",
+      phase: "14.3.6",
+      feedback: getFeedbackReport(),
       scoring: getScoreEconomyReport(),
       progression: getProgressionReport(),
       matterLoaded: Boolean(MatterLib),
@@ -3775,8 +3919,7 @@
       gameState.status = "playing";
       gameState.ballSaveUntil = 0;
       gameState.ballSaveUsed = true;
-      gameState.feedback = `DIAGNOSTIC: ${scenario.name}`;
-      gameState.feedbackUntil = performance.now() + 1200;
+      setFeedback(`DIAGNOSTIC: ${scenario.name}`, 1200, "system");
       setPrimaryDiagnosticBall(scenario.start, scenario.velocity);
 
       syncInspectableState(physics);
@@ -4684,8 +4827,7 @@
     const label = isSuper ? "SUPER JACKPOT" : "JACKPOT";
     gameState.jackpot.lastAwardLabel = label;
     gameState.jackpot.lastAwardValue = value;
-    gameState.feedback = `${label} +${value.toLocaleString("sl-SI")}`;
-    gameState.feedbackUntil = performance.now() + (isSuper ? 1800 : 1350);
+    setFeedback(`${label} +${value.toLocaleString("sl-SI")}`, isSuper ? 1800 : 1350, "jackpot");
     addHitFeedback({
       id: `${label.toLowerCase().replace(" ", "-")}-${object.id}`,
       x: object.x,
@@ -4728,8 +4870,7 @@
 
     gameState.ballSaveUsed = false;
     gameState.ballSaveUntil = Math.max(gameState.ballSaveUntil, gameState.multiball.graceUntil);
-    gameState.feedback = `${sourceLabel}: TWO-BALL MULTIBALL`;
-    gameState.feedbackUntil = now + 2200;
+    setFeedback(`${sourceLabel}: TWO-BALL MULTIBALL`, 2200, "multiball", now);
     addHitFeedback({
       id: "multiball-start",
       x: 450,
@@ -4758,8 +4899,7 @@
 
     const remaining = gameState.multiball.nextRequirement - gameState.multiball.progress;
     if (remaining <= 1) {
-      gameState.feedback = `MULTIBALL MISSIONS ${gameState.multiball.progress}/${gameState.multiball.nextRequirement}`;
-      gameState.feedbackUntil = performance.now() + 850;
+      setFeedback(`MULTIBALL MISSIONS ${gameState.multiball.progress}/${gameState.multiball.nextRequirement}`, 850, "progress");
     }
   }
 
@@ -4772,8 +4912,7 @@
     gameState.multiball.endedAt = performance.now();
     gameState.multiball.graceUntil = 0;
     clearJackpots();
-    gameState.feedback = "MULTIBALL COMPLETE";
-    gameState.feedbackUntil = performance.now() + 1300;
+    setFeedback("MULTIBALL COMPLETE", 1300, "multiball");
     addHitFeedback({
       id: "multiball-end",
       x: 450,
@@ -4793,8 +4932,7 @@
     MatterLib.Body.setPosition(ball, getBallStartPosition());
     MatterLib.Body.setVelocity(ball, MULTIBALL.launchVelocity);
     MatterLib.Body.setAngularVelocity(ball, 0);
-    gameState.feedback = "MULTIBALL BALL SAVE";
-    gameState.feedbackUntil = performance.now() + 1200;
+    setFeedback("MULTIBALL BALL SAVE", 1200, "save");
     recordDiagnosticEvent("multiball-save", {
       ball,
       eventName: "multiball:grace-save",
@@ -4849,8 +4987,7 @@
     gameState.score += points;
     setHighScore(gameState.score);
     gameState.lastEvent = "hit:SKILL_SHOT";
-    gameState.feedback = `SKILL SHOT +${points.toLocaleString("sl-SI")}`;
-    gameState.feedbackUntil = performance.now() + 1100;
+    setFeedback(`SKILL SHOT +${points.toLocaleString("sl-SI")}`, 1100, "progress");
     gameState.hitCounts["skill-shot"] = performance.now();
     updateCompanyForEvent(gameState.lastEvent);
     addHitFeedback({
@@ -5086,10 +5223,13 @@
       objectId: object.id,
       label: object.label
     });
-    gameState.feedback = combo.bonus
-      ? `${formatComboLabel(combo)} +${combo.bonus.toLocaleString("sl-SI")}`
-      : `+${points.toLocaleString("sl-SI")} ${object.label}`;
-    gameState.feedbackUntil = performance.now() + 700;
+    setFeedback(
+      combo.bonus
+        ? `${formatComboLabel(combo)} +${combo.bonus.toLocaleString("sl-SI")}`
+        : `+${points.toLocaleString("sl-SI")} ${object.label}`,
+      700,
+      combo.bonus ? "combo" : "hit"
+    );
     gameState.hitCounts[object.id] = performance.now();
     addHitFeedback({
       id: object.id,
@@ -5123,8 +5263,7 @@
       const didAdvanceMission = advanceMissions(object.event);
       const progressionCue = didAdvanceMission ? "" : getProgressionCueForEvent(object.event);
       if (progressionCue) {
-        gameState.feedback = `${object.label}: ${progressionCue}`;
-        gameState.feedbackUntil = performance.now() + 850;
+        setFeedback(`${object.label}: ${progressionCue}`, 850, "progress");
       }
       updateBomMode(object.event);
     }
@@ -5177,8 +5316,7 @@
       objectId: UPPER_ORBIT.id,
       label: UPPER_ORBIT.label
     });
-    gameState.feedback = "ALU FLOW ORBIT";
-    gameState.feedbackUntil = performance.now() + 700;
+    setFeedback("ALU FLOW ORBIT", 700, "hit");
     MatterLib.Body.setVelocity(ball, {
       x: Math.max(0.8, Math.min(2.8, ball.velocity.x * 0.14 + 1.05)),
       y: Math.min(-13.8, ball.velocity.y - 0.65)
@@ -5230,10 +5368,14 @@
       objectId: UPPER_ORBIT.id,
       label: UPPER_ORBIT.label
     });
-    gameState.feedback = combo.bonus
-      ? `ORBIT ${formatComboLabel(combo)} +${award.toLocaleString("sl-SI")}`
-      : `ORBIT COMPLETE +${award.toLocaleString("sl-SI")}`;
-    gameState.feedbackUntil = now + 1200;
+    setFeedback(
+      combo.bonus
+        ? `ORBIT ${formatComboLabel(combo)} +${award.toLocaleString("sl-SI")}`
+        : `ORBIT COMPLETE +${award.toLocaleString("sl-SI")}`,
+      1200,
+      combo.bonus ? "combo" : "progress",
+      now
+    );
     addHitFeedback({
       id: UPPER_ORBIT.id,
       x: UPPER_ORBIT.returnSensor.x,
@@ -5378,8 +5520,7 @@
     TABLE_CONFIG.rollovers.forEach((rolloverConfig) => {
       gameState.rollovers.lit[rolloverConfig.id] = false;
     });
-    gameState.feedback = `ROLLOVERS COMPLETE +${bonus.toLocaleString("sl-SI")}`;
-    gameState.feedbackUntil = performance.now() + 950;
+    setFeedback(`ROLLOVERS COMPLETE +${bonus.toLocaleString("sl-SI")}`, 950, "progress");
     addHitFeedback({
       id: "rollover-complete",
       x: 450,
@@ -5458,8 +5599,7 @@
     });
     MatterLib.Body.setVelocity(ball, lane.returnVelocity);
     MatterLib.Body.setAngularVelocity(ball, lane.side === "left" ? 0.16 : -0.16);
-    gameState.feedback = "SIDE SHIELD SAVE";
-    gameState.feedbackUntil = performance.now() + 1100;
+    setFeedback("SIDE SHIELD SAVE", 1100, "save");
     recordDiagnosticEvent("side-shield-save", {
       ball,
       eventName: `hit:${lane.type.toUpperCase()}`,
@@ -5502,10 +5642,14 @@
     const combo = registerComboHit(lane);
     gameState.score += points + combo.bonus;
     setHighScore(gameState.score);
-    gameState.feedback = combo.bonus
-      ? `${formatComboLabel(combo)} +${combo.bonus.toLocaleString("sl-SI")}`
-      : `${lane.label} +${points.toLocaleString("sl-SI")}`;
-    gameState.feedbackUntil = now + 700;
+    setFeedback(
+      combo.bonus
+        ? `${formatComboLabel(combo)} +${combo.bonus.toLocaleString("sl-SI")}`
+        : `${lane.label} +${points.toLocaleString("sl-SI")}`,
+      700,
+      combo.bonus ? "combo" : "hit",
+      now
+    );
     addHitFeedback({
       id: lane.id,
       x: lane.x,
@@ -5537,8 +5681,7 @@
     TABLE_CONFIG.lanes.forEach((lane) => {
       gameState.lanes.lit[lane.id] = false;
     });
-    gameState.feedback = `LANES COMPLETE +${bonus.toLocaleString("sl-SI")}`;
-    gameState.feedbackUntil = performance.now() + 950;
+    setFeedback(`LANES COMPLETE +${bonus.toLocaleString("sl-SI")}`, 950, "progress");
     addHitFeedback({
       id: "lane-complete",
       x: 450,
@@ -5550,13 +5693,15 @@
     audio.play("combo");
   }
 
-  function addHitFeedback({ id, x, y, accent }) {
+  function addHitFeedback({ id, x, y, accent, label = "", color = "" }) {
     const now = performance.now();
     gameState.hitEffects.push({
       id,
       x,
       y,
       accent,
+      label,
+      color,
       radius: 26,
       duration: 520,
       until: now + 520
@@ -5645,8 +5790,7 @@
     gameState.bomMode.active = true;
     gameState.bomMode.step = 0;
     gameState.bomMode.deadline = performance.now() + BOM_MODE.duration;
-    gameState.feedback = "BOM ERROR: MANJKA REVIZIJA";
-    gameState.feedbackUntil = performance.now() + 1400;
+    setFeedback("BOM ERROR: MANJKA REVIZIJA", 1400, "mode");
     audio.play("mission-progress");
   }
 
@@ -5685,8 +5829,7 @@
     }
 
     const nextLabel = BOM_MODE.labels[gameState.bomMode.step];
-    gameState.feedback = `KOSOVNICA ${gameState.bomMode.step}/${BOM_MODE.sequence.length}: ${nextLabel}`;
-    gameState.feedbackUntil = performance.now() + 1000;
+    setFeedback(`KOSOVNICA ${gameState.bomMode.step}/${BOM_MODE.sequence.length}: ${nextLabel}`, 1000, "mode");
     audio.play("mission-progress");
   }
 
@@ -5698,8 +5841,7 @@
     gameState.score += bonus;
     setHighScore(gameState.score);
     setCompanyStatus("rondal", "bonus", "Bonus");
-    gameState.feedback = `KOSOVNICA USKLAJENA +${bonus.toLocaleString("sl-SI")}`;
-    gameState.feedbackUntil = performance.now() + 1600;
+    setFeedback(`KOSOVNICA USKLAJENA +${bonus.toLocaleString("sl-SI")}`, 1600, "mode");
     addHitFeedback({
       id: "kosovnica-complete",
       x: 450,
@@ -5715,8 +5857,7 @@
     gameState.bomMode.active = false;
     gameState.bomMode.step = 0;
     gameState.bomMode.deadline = 0;
-    gameState.feedback = label;
-    gameState.feedbackUntil = performance.now() + 1100;
+    setFeedback(label, 1100, "mode");
     audio.play("target");
   }
 
@@ -5787,8 +5928,7 @@
       if (state.progress >= mission.required) {
         completeMission(mission, state);
       } else {
-        gameState.feedback = `${mission.label} ${state.progress}/${mission.required}`;
-        gameState.feedbackUntil = performance.now() + 850;
+        setFeedback(`${mission.label} ${state.progress}/${mission.required}`, 850, "progress");
         audio.play("mission-progress");
       }
     });
@@ -5818,8 +5958,7 @@
     });
 
     const nextStageLabel = formatMissionNames(nextStageMissionIds);
-    gameState.feedback = `STAGE ${gameState.missionStageIndex + 1} UNLOCKED: ${nextStageLabel}`;
-    gameState.feedbackUntil = performance.now() + 1500;
+    setFeedback(`STAGE ${gameState.missionStageIndex + 1} UNLOCKED: ${nextStageLabel}`, 1500, "progress");
 
     nextStageMissionIds.forEach((missionId) => {
       const mission = getMissionById(missionId);
@@ -5854,8 +5993,7 @@
       audio.play("mission-complete");
     }
 
-    gameState.feedback = `${mission.label} COMPLETE +${mission.bonus.toLocaleString("sl-SI")}`;
-    gameState.feedbackUntil = performance.now() + 1300;
+    setFeedback(`${mission.label} COMPLETE +${mission.bonus.toLocaleString("sl-SI")}`, 1300, "progress");
     advanceMultiballProgressFromMission(mission);
     maybeAwardMissionMetaReward();
   }
@@ -5966,8 +6104,7 @@
     gameState.upperOrbit.ballId = "";
     resetCombo();
     resetBall(ball, true);
-    gameState.feedback = "BALL SAVE";
-    gameState.feedbackUntil = performance.now() + 1400;
+    setFeedback("BALL SAVE", 1400, "save");
     recordDiagnosticEvent("ball-save", {
       ball,
       eventName: "ball-save",
@@ -6053,8 +6190,7 @@
     gameState.finalScore = gameState.score;
     gameState.finalHighScore = gameState.highScore;
     gameState.finalWasRecord = gameState.score > gameState.previousHighScore;
-    gameState.feedback = "";
-    gameState.feedbackUntil = 0;
+    clearFeedback();
     inputState.space = false;
     inputState.chargingSince = 0;
     resetMultiballState();
@@ -6079,8 +6215,7 @@
     gameState.drainCount = 0;
     gameState.plungerPower = 0;
     gameState.lastEvent = "";
-    gameState.feedback = "";
-    gameState.feedbackUntil = 0;
+    clearFeedback();
     gameState.gameOverStartedAt = 0;
     gameState.gameOverRestartAt = 0;
     gameState.finalScore = 0;
@@ -6780,7 +6915,6 @@
       drawMetaRewardBadge();
       drawMultiballBadge();
       drawJackpotBadge();
-      drawLastJackpotAward();
       drawBallSaveBadge();
       drawSideShieldBadge();
       drawBomModeBadge();

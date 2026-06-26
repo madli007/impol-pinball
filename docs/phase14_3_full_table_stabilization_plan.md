@@ -278,7 +278,7 @@ Completed notes:
 
 ## Phase 14.3.6 - Feedback Layout And Text Clarity
 
-Status: planned
+Status: completed
 
 Depends on: Phase 14.3.5
 
@@ -316,6 +316,14 @@ Acceptance criteria:
 Deliverable:
 
 - One centralized feedback layout and message-priority model.
+
+Completed notes:
+
+- Added named canvas feedback zones for status, multiball, meta reward, jackpot, ball save, side shield, BOM, and combo state.
+- Centralized score-feed replacement through priority-based `setFeedback` timeouts so major saves, jackpots, multiball, meta rewards, and diagnostics outrank low-value hit chatter.
+- Removed the duplicate persistent jackpot-award canvas badge; latest award text now lives in the DOM score feed, which can wrap to two compact lines.
+- `addHitFeedback` now renders the passed label/color payload as a fitted transient hit chip.
+- Exposed the model through `window.ImpolPinball.feedback` with active zones and zone geometry for diagnostics.
 
 ## Phase 14.3.7 - Table Scale, Responsive Layout, And Touch UX
 

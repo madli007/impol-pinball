@@ -949,11 +949,12 @@ The detailed scope, exclusions, dependencies, acceptance criteria, and deliverab
   - Visible result: progression is understandable and does not outrun the active mission.
   - Retuned ERP to the repeatable ALU FLOW orbit, gated company state behind mission progress/completion and controlled combos, added objective copy/lighting, and documented diagnostics in `docs/phase14_3_5_mission_company_progression.md`.
 
-- [ ] Phase 14.3.6 - Feedback layout and text clarity - Status: planned
+- [x] Phase 14.3.6 - Feedback layout and text clarity - Status: completed
   - Replace overlapping fixed badges with prioritized feedback zones.
   - Fix duplicate, ignored, clipped, and overly long messages.
   - Depends on Phase 14.3.5.
   - Visible result: simultaneous modes and awards remain readable without hiding gameplay.
+  - Added the `14.3.6-prioritized-zones` feedback model, moved persistent canvas badges into named top-table zones, made latest awards DOM-feed-first, and rendered `addHitFeedback` labels with fitted transient hit chips.
 
 - [ ] Phase 14.3.7 - Table scale, responsive layout, and touch UX - Status: planned
   - Increase desktop table presentation while keeping the internal 900x1400 physics space.
