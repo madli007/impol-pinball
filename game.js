@@ -436,7 +436,10 @@
     groupReward: document.getElementById("group-reward-value"),
     companies: {},
     statusCopy: document.querySelector(".status-copy"),
-    scoreFeed: document.getElementById("score-feed-value")
+    scoreFeed: document.getElementById("score-feed-value"),
+    tableScore: document.getElementById("table-score-value"),
+    tableBalls: document.getElementById("table-balls-value"),
+    tableMission: document.getElementById("table-mission-value")
   };
   const gameState = {
     score: 0,
@@ -2899,8 +2902,19 @@
     ui.multiplier.textContent = `${getActiveMultiplier()}x`;
     ui.highScore.textContent = gameState.highScore.toLocaleString("sl-SI");
     updateMissionUi();
+    updateTableQuickStatus();
     updateCompanyUi();
     updateRestartUi();
+  }
+
+  function updateTableQuickStatus() {
+    if (!ui.tableScore || !ui.tableBalls || !ui.tableMission) {
+      return;
+    }
+
+    ui.tableScore.textContent = gameState.score.toLocaleString("sl-SI");
+    ui.tableBalls.textContent = `#${gameState.ballNumber} / ${gameState.ballsLeft}`;
+    ui.tableMission.textContent = areAllRequiredMissionsComplete() ? "COMPANY BONUS LIT" : getObjectiveCopy();
   }
 
   function updateScoreFeed() {

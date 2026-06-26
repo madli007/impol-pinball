@@ -956,11 +956,12 @@ The detailed scope, exclusions, dependencies, acceptance criteria, and deliverab
   - Visible result: simultaneous modes and awards remain readable without hiding gameplay.
   - Added the `14.3.6-prioritized-zones` feedback model, moved persistent canvas badges into named top-table zones, made latest awards DOM-feed-first, and rendered `addHitFeedback` labels with fitted transient hit chips.
 
-- [ ] Phase 14.3.7 - Table scale, responsive layout, and touch UX - Status: planned
+- [x] Phase 14.3.7 - Table scale, responsive layout, and touch UX - Status: completed
   - Increase desktop table presentation while keeping the internal 900x1400 physics space.
   - Remove tablet overflow and keep mobile objectives and controls near the table.
   - Depends on Phase 14.3.6.
   - Visible result: desktop, tablet, and mobile layouts are usable without horizontal scrolling.
+  - Added responsive breakpoints at 920px and 1180px, a compact table status strip, fixed touch controls on narrow screens, cache-busted CSS/JS assets, and verified no horizontal overflow at 390, 768, 800, 1024, and 1440px.
 
 - [ ] Phase 14.3.8 - Full regression and final tuning - Status: planned
   - Run the documented full-game, route, drain, multiball, persistence, and viewport test matrix.

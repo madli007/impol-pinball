@@ -327,7 +327,7 @@ Completed notes:
 
 ## Phase 14.3.7 - Table Scale, Responsive Layout, And Touch UX
 
-Status: planned
+Status: completed
 
 Depends on: Phase 14.3.6
 
@@ -368,6 +368,16 @@ Acceptance criteria:
 Deliverable:
 
 - Responsive desktop, tablet, and mobile presentation without changing physics coordinates.
+
+Completion notes:
+
+- Preserved the internal `900x1400` canvas coordinate space while resizing only the CSS presentation.
+- Added narrow-screen table status for score, ball count, and current mission directly above the playfield.
+- Moved the mobile score feed into normal flow so it no longer covers the top playfield.
+- Kept touch controls fixed at the bottom of narrow screens and reordered them as left, launch, right, sound.
+- Introduced responsive layout bands: single-column below `920px`, two-column from `920px`, and full three-column from `1180px`.
+- Verified in the browser at `390x844`, `768x1024`, `800x1024`, `1024x900`, and `1440x900`: `scrollWidth <= clientWidth` and score feed did not overlap the canvas.
+- Verified a tall desktop check at `1440x1080`: canvas presentation reached `629px` wide with no horizontal overflow.
 
 ## Phase 14.3.8 - Full Regression And Final Tuning
 

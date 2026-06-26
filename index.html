@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Impol Pinball</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=14.3.7-responsive-1">
   </head>
   <body>
     <main class="app-shell">
@@ -68,6 +68,20 @@
       </section>
 
       <section class="game-stage" aria-label="Pinball playfield preview">
+        <dl class="table-quick-status" aria-label="Current game status">
+          <div>
+            <dt>Score</dt>
+            <dd id="table-score-value">0</dd>
+          </div>
+          <div>
+            <dt>Balls</dt>
+            <dd id="table-balls-value">3</dd>
+          </div>
+          <div>
+            <dt>Mission</dt>
+            <dd id="table-mission-value">HIT MERILNI / PROTOKOL 0/3</dd>
+          </div>
+        </dl>
         <div class="score-feed" aria-live="polite">
           <span>Last score</span>
           <strong id="score-feed-value">Ready</strong>
@@ -94,14 +108,14 @@
 
         <div class="controls-hint" aria-label="Controls">
           <button id="left-control" type="button">A / Left</button>
-          <button id="right-control" type="button">D / Right</button>
           <button id="space-control" type="button">Space</button>
+          <button id="right-control" type="button">D / Right</button>
           <button id="audio-toggle" type="button" aria-pressed="false">Sound Off</button>
         </div>
       </aside>
     </main>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.20.0/matter.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <script src="game.js?v=14.3.6-feedback-1"></script>
+    <script src="game.js?v=14.3.7-responsive-1"></script>
   </body>
 </html>
