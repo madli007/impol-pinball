@@ -381,7 +381,7 @@ Completion notes:
 
 ## Phase 14.3.8 - Full Regression And Final Tuning
 
-Status: planned
+Status: completed
 
 Depends on: Phases 14.3.1 through 14.3.7
 
@@ -433,6 +433,16 @@ Acceptance criteria:
 Deliverable:
 
 - A regression report and a clear go/no-go decision for Phase 14.4.
+
+Implementation notes:
+
+- Added Phase 14.3.8 regression diagnostics for ten deterministic three-ball game samples, ten shooter launches, twenty outlane approaches, five multiball start/end cycles, mission-stage transitions, game-over/restart flow, audio preference persistence, high-score/ruleset persistence, and simultaneous feedback-zone readability.
+- Ran `?pinballDiagnostics=all`: `102/102` diagnostics passed, including `20/20` committed orbit attempts, `9/9` shot-map scenarios, and all Phase 14.3.8 regression checks.
+- Regression samples measured average score `386,637`, maximum score `947,070`, average ball duration `82s`, maximum combo `10`, orbit completion `44/54`, drains center/left/right `16/7/7`, rescue activations `18`, and unexpected repeated hits `0`.
+- Applied one measured tablet-only responsive tune so fixed controls no longer cover the bottom of the canvas at 768/800 px.
+- Responsive checks at 390, 768, 800, 1024, and 1440 px found `0 px` horizontal overflow.
+- Final report: `docs/phase14_3_8_regression_report.md`.
+- Decision: GO for Phase 14.4.
 
 ## Program Completion
 

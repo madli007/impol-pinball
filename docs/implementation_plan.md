@@ -910,7 +910,7 @@ Priority order:
   - The entry and return use sensor zones plus restrained velocity guidance so the route reads clearly without requiring a fully simulated raised ramp.
   - Clean orbit completions award 4,500 base points, participate in the existing combo chain, and expose route state and completion counts through `window.ImpolPinball`.
 
-The detailed scope, exclusions, dependencies, acceptance criteria, and deliverables for Phases 14.3.1-14.3.8 are defined in `docs/phase14_3_full_table_stabilization_plan.md`. Phase 14.4 is blocked until Phase 14.3.8 is completed.
+The detailed scope, exclusions, dependencies, acceptance criteria, and deliverables for Phases 14.3.1-14.3.8 are defined in `docs/phase14_3_full_table_stabilization_plan.md`. Phase 14.4 is unblocked after Phase 14.3.8 completed with a GO decision.
 
 - [x] Phase 14.3.1 - Deterministic physics test harness - Status: completed
   - Add repeatable diagnostic scenarios and measurements for routes, targets, drains, traps, launches, and multiball.
@@ -963,11 +963,12 @@ The detailed scope, exclusions, dependencies, acceptance criteria, and deliverab
   - Visible result: desktop, tablet, and mobile layouts are usable without horizontal scrolling.
   - Added responsive breakpoints at 920px and 1180px, a compact table status strip, fixed touch controls on narrow screens, cache-busted CSS/JS assets, and verified no horizontal overflow at 390, 768, 800, 1024, and 1440px.
 
-- [ ] Phase 14.3.8 - Full regression and final tuning - Status: planned
+- [x] Phase 14.3.8 - Full regression and final tuning - Status: completed
   - Run the documented full-game, route, drain, multiball, persistence, and viewport test matrix.
   - Apply only measured final tuning and produce a go/no-go decision for Phase 14.4.
   - Depends on Phases 14.3.1 through 14.3.7.
   - Visible result: the stabilized table is demonstrably ready for the next major mechanism.
+  - Added Phase 14.3.8 regression diagnostics, ran `?pinballDiagnostics=all` with `102/102` passing, applied a measured tablet-only canvas scale tune, documented the result in `docs/phase14_3_8_regression_report.md`, and recorded a GO decision for Phase 14.4.
 
 The remaining Phase 14 work is split into agent-sized phases in `docs/phase14_future_execution_plan.md`.
 

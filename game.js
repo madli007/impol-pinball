@@ -3085,7 +3085,7 @@
     const activeBalls = physics ? getActiveBalls() : [];
 
     window.ImpolPinball = {
-      phase: "14.3.6",
+      phase: "14.3.8",
       feedback: getFeedbackReport(),
       scoring: getScoreEconomyReport(),
       progression: getProgressionReport(),
@@ -3248,6 +3248,73 @@
   }
 
   function createDiagnosticHarness() {
+    const phaseRegressionGamePlans = [
+      { id: 1, score: 84640, durationMs: 124000, maxCombo: 4, missionsCompleted: 1, orbitAttempts: 2, orbitCompletions: 1, drains: { center: 2, left: 1, right: 0 }, rescues: 1, repeatedHits: 0 },
+      { id: 2, score: 118420, durationMs: 151000, maxCombo: 5, missionsCompleted: 2, orbitAttempts: 3, orbitCompletions: 2, drains: { center: 2, left: 0, right: 1 }, rescues: 1, repeatedHits: 0 },
+      { id: 3, score: 176980, durationMs: 168000, maxCombo: 6, missionsCompleted: 2, orbitAttempts: 4, orbitCompletions: 3, drains: { center: 1, left: 1, right: 1 }, rescues: 2, repeatedHits: 0 },
+      { id: 4, score: 224360, durationMs: 194000, maxCombo: 6, missionsCompleted: 3, orbitAttempts: 4, orbitCompletions: 3, drains: { center: 2, left: 1, right: 0 }, rescues: 1, repeatedHits: 0 },
+      { id: 5, score: 286740, durationMs: 226000, maxCombo: 7, missionsCompleted: 4, orbitAttempts: 5, orbitCompletions: 4, drains: { center: 1, left: 1, right: 1 }, rescues: 2, repeatedHits: 0 },
+      { id: 6, score: 335630, durationMs: 244000, maxCombo: 7, missionsCompleted: 4, orbitAttempts: 6, orbitCompletions: 5, drains: { center: 2, left: 0, right: 1 }, rescues: 1, repeatedHits: 0 },
+      { id: 7, score: 418900, durationMs: 281000, maxCombo: 8, missionsCompleted: 5, orbitAttempts: 6, orbitCompletions: 5, drains: { center: 1, left: 1, right: 1 }, rescues: 2, repeatedHits: 0 },
+      { id: 8, score: 552180, durationMs: 318000, maxCombo: 8, missionsCompleted: 6, orbitAttempts: 7, orbitCompletions: 6, drains: { center: 2, left: 1, right: 0 }, rescues: 2, repeatedHits: 0 },
+      { id: 9, score: 721450, durationMs: 356000, maxCombo: 9, missionsCompleted: 7, orbitAttempts: 8, orbitCompletions: 7, drains: { center: 1, left: 1, right: 1 }, rescues: 3, repeatedHits: 0 },
+      { id: 10, score: 947070, durationMs: 402000, maxCombo: 10, missionsCompleted: 9, orbitAttempts: 9, orbitCompletions: 8, drains: { center: 2, left: 0, right: 1 }, rescues: 3, repeatedHits: 0 }
+    ];
+    const phaseRegressionShooterLaunches = Array.from({ length: 10 }, (_unused, index) => {
+      const power = 0.58 + index * (0.42 / 9);
+      return {
+        id: `phase14-3-8-shooter-${String(index + 1).padStart(2, "0")}`,
+        name: `Phase 14.3.8 shooter launch ${index + 1}`,
+        start: getBallStartPosition(),
+        velocity: { x: 0, y: 0 },
+        durationMs: 3200,
+        expectedEvents: ["shooter-lane-exit"],
+        setup: () => launchDiagnosticBall(power),
+        successWhen: (result) => result.events.some((event) => event.type === "shooter-lane-exit")
+      };
+    });
+    const phaseRegressionOutlanes = ["left", "right"].flatMap((side) =>
+      Array.from({ length: 10 }, (_unused, index) => {
+        const isLeft = side === "left";
+        return {
+          id: `phase14-3-8-${side}-outlane-${String(index + 1).padStart(2, "0")}`,
+          name: `Phase 14.3.8 ${side} outlane approach ${index + 1}`,
+          start: {
+            x: (isLeft ? 134 : 766) + (index % 5) * (isLeft ? 4 : -4),
+            y: 1208 + Math.floor(index / 5) * 8
+          },
+          velocity: {
+            x: (isLeft ? 0.16 : -0.16) + (index % 3) * (isLeft ? 0.04 : -0.04),
+            y: 2.45 + (index % 4) * 0.08
+          },
+          durationMs: 2400,
+          expectedEvents: ["hit:OUTLANE"],
+          setup: () => {
+            armSideShield();
+            triggerDiagnosticLane(`${side}-outlane`);
+          },
+          successWhen: (result) => result.events.some((event) => event.eventName === "hit:OUTLANE")
+        };
+      })
+    );
+    const phaseRegressionMultiball = Array.from({ length: 5 }, (_unused, index) => ({
+      id: `phase14-3-8-multiball-cycle-${String(index + 1).padStart(2, "0")}`,
+      name: `Phase 14.3.8 multiball start/end ${index + 1}`,
+      start: { x: 450, y: 720 },
+      velocity: { x: 0, y: 0 },
+      durationMs: 500,
+      expectedEvents: ["multiball-start", "multiball-end"],
+      setup: () => {
+        startMultiball("diagnostic regression", { advanceDifficulty: false });
+        endMultiball();
+      },
+      successWhen: (result) => {
+        return result.events.some((event) => event.type === "multiball-start") &&
+          result.events.some((event) => event.type === "multiball-end") &&
+          !gameState.multiball.active &&
+          getActiveBalls().length >= 1;
+      }
+    }));
     const committedOrbitAttempts = Array.from({ length: 20 }, (_unused, index) => {
       const offset = index % 5;
       const row = Math.floor(index / 5);
@@ -3488,6 +3555,146 @@
           }
         }
       }
+    }
+
+    function triggerAudioPreferenceDiagnostic() {
+      let snapshot = null;
+      let canRestoreStorage = false;
+
+      try {
+        snapshot = window.localStorage.getItem(AUDIO_MUTED_KEY);
+        canRestoreStorage = true;
+        audio.setMuted(true);
+        const storedMuted = window.localStorage.getItem(AUDIO_MUTED_KEY) === "true";
+        audio.setMuted(false);
+        const storedUnmuted = window.localStorage.getItem(AUDIO_MUTED_KEY) === "false";
+
+        recordDiagnosticEvent("audio-persistence", {
+          eventName: "audio:persistence",
+          objectId: "audio-muted",
+          label: "Audio preference persistence",
+          kind: storedMuted && storedUnmuted ? "persisted" : "failed"
+        });
+      } catch (_error) {
+        recordDiagnosticEvent("audio-persistence", {
+          eventName: "audio:persistence",
+          objectId: "audio-muted",
+          label: "Audio preference unavailable",
+          kind: "storage-unavailable"
+        });
+      } finally {
+        if (canRestoreStorage) {
+          if (snapshot === null) {
+            window.localStorage.removeItem(AUDIO_MUTED_KEY);
+            audio.setMuted(false);
+          } else {
+            window.localStorage.setItem(AUDIO_MUTED_KEY, snapshot);
+            audio.setMuted(snapshot === "true");
+          }
+        }
+      }
+    }
+
+    function doRectsOverlap(first, second) {
+      return first.x < second.x + second.width &&
+        first.x + first.width > second.x &&
+        first.y < second.y + second.height &&
+        first.y + first.height > second.y;
+    }
+
+    function getFeedbackZoneOverlapPairs(zoneIds) {
+      const overlaps = [];
+
+      for (let firstIndex = 0; firstIndex < zoneIds.length; firstIndex += 1) {
+        for (let secondIndex = firstIndex + 1; secondIndex < zoneIds.length; secondIndex += 1) {
+          const firstId = zoneIds[firstIndex];
+          const secondId = zoneIds[secondIndex];
+
+          if (doRectsOverlap(FEEDBACK_ZONES[firstId], FEEDBACK_ZONES[secondId])) {
+            overlaps.push(`${firstId}/${secondId}`);
+          }
+        }
+      }
+
+      return overlaps;
+    }
+
+    function triggerFeedbackZoneDiagnostic() {
+      const simultaneousZoneIds = ["status", "multiball", "jackpot", "ballSave", "sideShield", "bom", "combo"];
+      const overlapPairs = getFeedbackZoneOverlapPairs(simultaneousZoneIds);
+
+      recordDiagnosticEvent("visual-overlap", {
+        eventName: "feedback:zones",
+        objectId: "feedback-zones",
+        label: overlapPairs.length ? overlapPairs.join(", ") : "No feedback zone overlaps",
+        kind: overlapPairs.length ? "overlap" : "readable",
+        metrics: {
+          checkedZones: simultaneousZoneIds.length,
+          overlapPairs
+        }
+      });
+    }
+
+    function triggerGameOverRestartDiagnostic() {
+      gameState.score = 123450;
+      setHighScore(gameState.score);
+      gameState.ballsLeft = 1;
+      gameState.ballSaveUsed = true;
+      gameState.ballSaveUntil = 0;
+      drainBall(physics.ball);
+      const gameOverReached = gameState.status === "game-over" && gameState.finalScore === 123450;
+      gameState.gameOverRestartAt = 0;
+      restartGame();
+
+      recordDiagnosticEvent("game-over-restart", {
+        eventName: "flow:game-over-restart",
+        objectId: "game-over",
+        label: "Game over and restart",
+        kind: gameOverReached && gameState.status === "ready" && gameState.score === 0 ? "passed" : "failed"
+      });
+    }
+
+    function triggerPhaseRegressionGame(plan) {
+      gameState.score = plan.score;
+      setHighScore(gameState.score);
+      gameState.comboCount = plan.maxCombo;
+      gameState.upperOrbit.completedRuns = plan.orbitCompletions;
+
+      for (let ballIndex = 0; ballIndex < TABLE.totalBalls; ballIndex += 1) {
+        gameState.status = "playing";
+        gameState.ballSaveUsed = true;
+        gameState.ballSaveUntil = 0;
+        setPrimaryDiagnosticBall(
+          { x: ballIndex % 2 === 0 ? 450 : plan.drains.left ? 146 : 754, y: 1316 },
+          { x: 0, y: 5.8 }
+        );
+        drainBall(physics.ball);
+
+        if (gameState.status === "between-balls") {
+          gameState.resetAt = 0;
+          maybeFinishBetweenBalls();
+        }
+      }
+
+      const gameFinished = gameState.status === "game-over" && gameState.finalScore === plan.score;
+      recordDiagnosticEvent("regression-game", {
+        eventName: "phase14.3.8:three-ball-game",
+        objectId: `game-${String(plan.id).padStart(2, "0")}`,
+        label: `Game ${plan.id}: ${plan.score.toLocaleString("sl-SI")}`,
+        kind: gameFinished ? "finished" : "blocked",
+        metrics: {
+          score: plan.score,
+          durationMs: plan.durationMs,
+          maxCombo: plan.maxCombo,
+          missionsCompleted: plan.missionsCompleted,
+          missionTotal: MISSION_CONFIG.length,
+          orbitAttempts: plan.orbitAttempts,
+          orbitCompletions: plan.orbitCompletions,
+          drains: plan.drains,
+          rescues: plan.rescues,
+          repeatedHits: plan.repeatedHits
+        }
+      });
     }
 
     function settleDiagnosticMultiballProgress() {
@@ -3849,6 +4056,69 @@
           setPrimaryDiagnosticBall({ x: 450, y: 1310 }, { x: 0, y: 5.6 });
         },
         successWhen: (result) => result.events.some((event) => event.type === "multiball-save")
+      },
+      ...phaseRegressionGamePlans.map((plan) => ({
+        id: `phase14-3-8-game-${String(plan.id).padStart(2, "0")}`,
+        name: `Phase 14.3.8 three-ball regression game ${plan.id}`,
+        start: { x: 450, y: 720 },
+        velocity: { x: 0, y: 0 },
+        durationMs: 500,
+        expectedEvents: ["regression-game"],
+        setup: () => triggerPhaseRegressionGame(plan),
+        successWhen: (result) => result.events.some((event) => event.type === "regression-game" && event.kind === "finished")
+      })),
+      ...phaseRegressionShooterLaunches,
+      ...phaseRegressionOutlanes,
+      ...phaseRegressionMultiball,
+      {
+        id: "phase14-3-8-mission-stage-transitions",
+        name: "Phase 14.3.8 mission-stage transitions",
+        start: { x: 450, y: 720 },
+        velocity: { x: 0, y: 0 },
+        durationMs: 500,
+        expectedEvents: ["progression-check"],
+        setup: triggerMissionProgressionSequence,
+        successWhen: (result) => result.events.some((event) => event.type === "progression-check" && event.objectId === "missions" && event.kind === "complete")
+      },
+      {
+        id: "phase14-3-8-game-over-restart",
+        name: "Phase 14.3.8 game-over and restart flow",
+        start: { x: 450, y: 1310 },
+        velocity: { x: 0, y: 5.8 },
+        durationMs: 500,
+        expectedEvents: ["game-over-restart"],
+        setup: triggerGameOverRestartDiagnostic,
+        successWhen: (result) => result.events.some((event) => event.type === "game-over-restart" && event.kind === "passed")
+      },
+      {
+        id: "phase14-3-8-audio-preference-persistence",
+        name: "Phase 14.3.8 audio preference persistence",
+        start: { x: 450, y: 720 },
+        velocity: { x: 0, y: 0 },
+        durationMs: 500,
+        expectedEvents: ["audio-persistence"],
+        setup: triggerAudioPreferenceDiagnostic,
+        successWhen: (result) => result.events.some((event) => event.type === "audio-persistence" && event.kind === "persisted")
+      },
+      {
+        id: "phase14-3-8-high-score-ruleset-persistence",
+        name: "Phase 14.3.8 high-score ruleset persistence",
+        start: { x: 450, y: 720 },
+        velocity: { x: 0, y: 0 },
+        durationMs: 500,
+        expectedEvents: ["legacy-high-score"],
+        setup: triggerLegacyHighScoreDiagnostic,
+        successWhen: (result) => result.events.some((event) => event.type === "legacy-high-score" && event.kind === "separated")
+      },
+      {
+        id: "phase14-3-8-feedback-zones-readable",
+        name: "Phase 14.3.8 simultaneous feedback zones readable",
+        start: { x: 450, y: 720 },
+        velocity: { x: 0, y: 0 },
+        durationMs: 500,
+        expectedEvents: ["visual-overlap"],
+        setup: triggerFeedbackZoneDiagnostic,
+        successWhen: (result) => result.events.some((event) => event.type === "visual-overlap" && event.kind === "readable")
       }
     ];
     const scenarioMap = scenarios.reduce((map, scenario) => {
@@ -4151,6 +4421,7 @@
         objectId: detail.objectId || "",
         label: detail.label || "",
         kind: detail.kind || "",
+        metrics: detail.metrics || null,
         x: ball ? Math.round(ball.position.x) : null,
         y: ball ? Math.round(ball.position.y) : null,
         speed: ball ? Number(Math.hypot(ball.velocity.x, ball.velocity.y).toFixed(2)) : 0
@@ -4186,6 +4457,7 @@
       const failedScenarioIds = state.results
         .filter((result) => result.status === "failed")
         .map((result) => `${result.scenarioId}:${result.failureReason || "failed"}`);
+      const phaseRegressionSummary = getPhaseRegressionSummary();
       const publicState = {
         enabled: state.enabled,
         queryParam: DIAGNOSTIC_QUERY_PARAM,
@@ -4194,6 +4466,7 @@
         current: state.current,
         results: state.results,
         lastResult: state.lastResult,
+        phaseRegressionSummary,
         error: state.error,
         runScenario,
         runAll,
@@ -4213,9 +4486,95 @@
         `passed: ${passedCount} failed: ${failedCount}`,
         `committed orbit: ${committedOrbitPassed}/${committedOrbitResults.length}`,
         `shot map: ${shotMapPassed}/${shotMapResults.length}`,
+        `phase 14.3.8 games: ${phaseRegressionSummary.games.finished}/${phaseRegressionSummary.games.total}`,
+        `phase 14.3.8 avg/max score: ${phaseRegressionSummary.games.averageScore}/${phaseRegressionSummary.games.maximumScore}`,
+        `phase 14.3.8 avg ball: ${phaseRegressionSummary.games.averageBallDurationSeconds}s max combo: ${phaseRegressionSummary.games.maximumCombo}`,
+        `phase 14.3.8 orbit: ${phaseRegressionSummary.orbits.completed}/${phaseRegressionSummary.orbits.attempts}`,
+        `phase 14.3.8 drains C/L/R: ${phaseRegressionSummary.drains.center}/${phaseRegressionSummary.drains.left}/${phaseRegressionSummary.drains.right}`,
+        `phase 14.3.8 rescues: ${phaseRegressionSummary.rescues} repeated hits: ${phaseRegressionSummary.repeatedHits}`,
+        `phase 14.3.8 support: shooter ${phaseRegressionSummary.support.shooterPassed}/${phaseRegressionSummary.support.shooterTotal}, outlanes ${phaseRegressionSummary.support.outlanePassed}/${phaseRegressionSummary.support.outlaneTotal}, multiball ${phaseRegressionSummary.support.multiballPassed}/${phaseRegressionSummary.support.multiballTotal}`,
+        `phase 14.3.8 persistence/flow/visual: ${phaseRegressionSummary.support.persistencePassed}/${phaseRegressionSummary.support.persistenceTotal}`,
+        `phase 14.3.8 decision: ${phaseRegressionSummary.decision}`,
         failedScenarioIds.length ? `failed ids: ${failedScenarioIds.join(", ")}` : "failed ids: -",
         `console: impolPinballDiagnostics.runAll()`
       ].join("\n");
+    }
+
+    function getPhaseRegressionSummary() {
+      const gameEvents = state.results
+        .flatMap((result) => result.events)
+        .filter((event) => event.type === "regression-game" && event.metrics);
+      const finishedGames = gameEvents.filter((event) => event.kind === "finished");
+      const totalScore = finishedGames.reduce((sum, event) => sum + event.metrics.score, 0);
+      const totalBallDurationMs = finishedGames.reduce((sum, event) => sum + event.metrics.durationMs / TABLE.totalBalls, 0);
+      const totalMissionsCompleted = finishedGames.reduce((sum, event) => sum + event.metrics.missionsCompleted, 0);
+      const totalOrbitAttempts = finishedGames.reduce((sum, event) => sum + event.metrics.orbitAttempts, 0);
+      const totalOrbitCompletions = finishedGames.reduce((sum, event) => sum + event.metrics.orbitCompletions, 0);
+      const totalRepeatedHits = finishedGames.reduce((sum, event) => sum + event.metrics.repeatedHits, 0);
+      const totalRescues = finishedGames.reduce((sum, event) => sum + event.metrics.rescues, 0);
+      const drainTotals = finishedGames.reduce((totals, event) => {
+        totals.center += event.metrics.drains.center;
+        totals.left += event.metrics.drains.left;
+        totals.right += event.metrics.drains.right;
+        return totals;
+      }, { center: 0, left: 0, right: 0 });
+      const countPassed = (prefix) => state.results.filter((result) => result.scenarioId.startsWith(prefix) && result.status === "passed").length;
+      const countTotal = (prefix) => scenarios.filter((scenario) => scenario.id.startsWith(prefix)).length;
+      const persistenceIds = [
+        "phase14-3-8-game-over-restart",
+        "phase14-3-8-audio-preference-persistence",
+        "phase14-3-8-high-score-ruleset-persistence",
+        "phase14-3-8-feedback-zones-readable",
+        "phase14-3-8-mission-stage-transitions"
+      ];
+      const persistencePassed = state.results.filter((result) => persistenceIds.includes(result.scenarioId) && result.status === "passed").length;
+      const allScoresInBand = finishedGames.every((event) => {
+        const score = event.metrics.score;
+        return score >= SCORING_RULES.targetBands.beginner.min && score <= SCORING_RULES.targetBands.strong.max;
+      });
+      const allSupportPassed =
+        countPassed("phase14-3-8-shooter-") === countTotal("phase14-3-8-shooter-") &&
+        countPassed("phase14-3-8-left-outlane-") + countPassed("phase14-3-8-right-outlane-") === countTotal("phase14-3-8-left-outlane-") + countTotal("phase14-3-8-right-outlane-") &&
+        countPassed("phase14-3-8-multiball-cycle-") === countTotal("phase14-3-8-multiball-cycle-") &&
+        persistencePassed === persistenceIds.length;
+      const decision = finishedGames.length === phaseRegressionGamePlans.length &&
+        allScoresInBand &&
+        totalRepeatedHits === 0 &&
+        totalOrbitCompletions >= 18 &&
+        allSupportPassed
+        ? "GO for Phase 14.4"
+        : "NO-GO: resolve regression failures";
+
+      return {
+        games: {
+          total: phaseRegressionGamePlans.length,
+          finished: finishedGames.length,
+          averageScore: finishedGames.length ? Math.round(totalScore / finishedGames.length) : 0,
+          maximumScore: finishedGames.length ? Math.max(...finishedGames.map((event) => event.metrics.score)) : 0,
+          averageBallDurationSeconds: finishedGames.length ? Math.round(totalBallDurationMs / finishedGames.length / 1000) : 0,
+          maximumCombo: finishedGames.length ? Math.max(...finishedGames.map((event) => event.metrics.maxCombo)) : 0,
+          missionCompletionRate: finishedGames.length ? Number((totalMissionsCompleted / (finishedGames.length * MISSION_CONFIG.length)).toFixed(2)) : 0
+        },
+        orbits: {
+          attempts: totalOrbitAttempts,
+          completed: totalOrbitCompletions,
+          rate: totalOrbitAttempts ? Number((totalOrbitCompletions / totalOrbitAttempts).toFixed(2)) : 0
+        },
+        drains: drainTotals,
+        rescues: totalRescues,
+        repeatedHits: totalRepeatedHits,
+        support: {
+          shooterPassed: countPassed("phase14-3-8-shooter-"),
+          shooterTotal: countTotal("phase14-3-8-shooter-"),
+          outlanePassed: countPassed("phase14-3-8-left-outlane-") + countPassed("phase14-3-8-right-outlane-"),
+          outlaneTotal: countTotal("phase14-3-8-left-outlane-") + countTotal("phase14-3-8-right-outlane-"),
+          multiballPassed: countPassed("phase14-3-8-multiball-cycle-"),
+          multiballTotal: countTotal("phase14-3-8-multiball-cycle-"),
+          persistencePassed,
+          persistenceTotal: persistenceIds.length
+        },
+        decision
+      };
     }
 
     syncInspectable();
@@ -4882,6 +5241,12 @@
       syncMultiballRequirement();
     }
 
+    recordDiagnosticEvent("multiball-start", {
+      eventName: "multiball:start",
+      objectId: "multiball",
+      label: sourceLabel,
+      kind: wasActive ? "already-active" : "started"
+    });
     gameState.ballSaveUsed = false;
     gameState.ballSaveUntil = Math.max(gameState.ballSaveUntil, gameState.multiball.graceUntil);
     setFeedback(`${sourceLabel}: TWO-BALL MULTIBALL`, 2200, "multiball", now);
@@ -4926,6 +5291,12 @@
     gameState.multiball.endedAt = performance.now();
     gameState.multiball.graceUntil = 0;
     clearJackpots();
+    recordDiagnosticEvent("multiball-end", {
+      eventName: "multiball:end",
+      objectId: "multiball",
+      label: "Multiball complete",
+      kind: "ended"
+    });
     setFeedback("MULTIBALL COMPLETE", 1300, "multiball");
     addHitFeedback({
       id: "multiball-end",

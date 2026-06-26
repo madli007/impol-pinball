@@ -548,8 +548,8 @@ h1 {
   }
 
   #game-canvas {
-    width: min(100%, calc((100vh - 186px) * 9 / 14), 620px);
-    width: min(100%, calc((100svh - 186px) * 9 / 14), 620px);
+    width: min(100%, calc((100vh - 226px) * 9 / 14), 620px);
+    width: min(100%, calc((100svh - 226px) * 9 / 14), 620px);
   }
 }
 

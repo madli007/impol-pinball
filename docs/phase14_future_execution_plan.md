@@ -21,7 +21,7 @@ For that command, the agent should:
 
 ## Shared Rules
 
-- Phase 14.4 remains blocked until Phase 14.3.8 is completed with a go decision.
+- Phase 14.4 is unblocked after Phase 14.3.8 completed with a GO decision.
 - Do not combine adjacent phases merely because they touch the same feature.
 - Preserve existing physics, scoring, mission, company, multiball, jackpot, persistence, input, audio, and responsive contracts unless the phase explicitly changes one.
 - Every new mechanism must expose inspectable state for browser verification.
