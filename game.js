@@ -22,6 +22,9 @@
     }
   };
   const DEBUG_PHYSICS = false;
+  const DIAGNOSTIC_QUERY_PARAM = "pinballDiagnostics";
+  const diagnosticQuery = new URLSearchParams(window.location.search);
+  const DIAGNOSTICS_ENABLED = diagnosticQuery.has(DIAGNOSTIC_QUERY_PARAM);
   const HIGH_SCORE_KEY = "impol-pinball.high-score";
   const AUDIO_MUTED_KEY = "impol-pinball.audio-muted";
   const COMBO_WINDOW_MS = 1800;
@@ -396,6 +399,7 @@
   };
   const assets = loadAssets(ASSET_CONFIG);
   const audio = createAudioManager();
+  let diagnosticHarness = null;
 
   function createMissionState() {
     const firstStageMissionIds = new Set(MISSION_STAGES[0]);
@@ -2693,7 +2697,514 @@
         isMuted: audio.isMuted,
         isUnlocked: audio.isUnlocked
       },
-      input: { ...inputState }
+      input: { ...inputState },
+      diagnosticsEnabled: Boolean(diagnosticHarness)
+    };
+
+    if (diagnosticHarness) {
+      diagnosticHarness.syncInspectable();
+    }
+  }
+
+  function recordDiagnosticEvent(type, detail = {}) {
+    if (!diagnosticHarness) {
+      return;
+    }
+
+    diagnosticHarness.recordEvent(type, detail);
+  }
+
+  function createDiagnosticHarness() {
+    const scenarios = [
+      {
+        id: "upper-orbit-completion",
+        name: "Upper orbit entry and completion",
+        start: { x: 148, y: 824 },
+        velocity: { x: 0.9, y: -17.2 },
+        durationMs: 5200,
+        expectedEvents: ["orbit-complete"],
+        successWhen: (result) => result.events.some((event) => event.type === "orbit-complete")
+      },
+      {
+        id: "left-flipper-target-attempt",
+        name: "Left flipper target attempt",
+        start: { x: 336, y: 1168 },
+        velocity: { x: -2.2, y: 4.2 },
+        durationMs: 2800,
+        controls: [{ fromMs: 80, toMs: 620, left: true }],
+        expectedEvents: ["hit"],
+        successWhen: (result) => result.events.some((event) => event.type === "hit")
+      },
+      {
+        id: "right-flipper-target-attempt",
+        name: "Right flipper target attempt",
+        start: { x: 564, y: 1168 },
+        velocity: { x: 2.2, y: 4.2 },
+        durationMs: 2800,
+        controls: [{ fromMs: 80, toMs: 620, right: true }],
+        expectedEvents: ["hit"],
+        successWhen: (result) => result.events.some((event) => event.type === "hit")
+      },
+      {
+        id: "shooter-lane-low-power",
+        name: "Shooter-lane exit at low launch power",
+        start: getBallStartPosition(),
+        velocity: { x: 0, y: 0 },
+        durationMs: 3200,
+        expectedEvents: ["shooter-lane-exit"],
+        setup: () => launchDiagnosticBall(0.58),
+        successWhen: (result) => result.events.some((event) => event.type === "shooter-lane-exit")
+      },
+      {
+        id: "shooter-lane-medium-power",
+        name: "Shooter-lane exit at medium launch power",
+        start: getBallStartPosition(),
+        velocity: { x: 0, y: 0 },
+        durationMs: 3200,
+        expectedEvents: ["shooter-lane-exit"],
+        setup: () => launchDiagnosticBall(0.78),
+        successWhen: (result) => result.events.some((event) => event.type === "shooter-lane-exit")
+      },
+      {
+        id: "shooter-lane-high-power",
+        name: "Shooter-lane exit at high launch power",
+        start: getBallStartPosition(),
+        velocity: { x: 0, y: 0 },
+        durationMs: 3200,
+        expectedEvents: ["shooter-lane-exit"],
+        setup: () => launchDiagnosticBall(1),
+        successWhen: (result) => result.events.some((event) => event.type === "shooter-lane-exit")
+      },
+      {
+        id: "left-inlane-approach",
+        name: "Left inlane approach",
+        start: { x: 276, y: 1126 },
+        velocity: { x: 1.1, y: 7.6 },
+        durationMs: 2200,
+        expectedEvents: ["hit:INLANE"],
+        successWhen: (result) => result.events.some((event) => event.eventName === "hit:INLANE")
+      },
+      {
+        id: "right-inlane-approach",
+        name: "Right inlane approach",
+        start: { x: 624, y: 1126 },
+        velocity: { x: -1.1, y: 7.6 },
+        durationMs: 2200,
+        expectedEvents: ["hit:INLANE"],
+        successWhen: (result) => result.events.some((event) => event.eventName === "hit:INLANE")
+      },
+      {
+        id: "left-outlane-approach",
+        name: "Left outlane approach",
+        start: { x: 134, y: 1124 },
+        velocity: { x: 0.35, y: 7.8 },
+        durationMs: 2400,
+        expectedEvents: ["hit:OUTLANE"],
+        setup: armSideShield,
+        successWhen: (result) => result.events.some((event) => event.eventName === "hit:OUTLANE")
+      },
+      {
+        id: "right-outlane-approach",
+        name: "Right outlane approach",
+        start: { x: 766, y: 1124 },
+        velocity: { x: -0.35, y: 7.8 },
+        durationMs: 2400,
+        expectedEvents: ["hit:OUTLANE"],
+        setup: armSideShield,
+        successWhen: (result) => result.events.some((event) => event.eventName === "hit:OUTLANE")
+      },
+      {
+        id: "bumper-cluster-entry",
+        name: "Bumper-cluster entry",
+        start: { x: 450, y: 494 },
+        velocity: { x: 0.6, y: -5.8 },
+        durationMs: 2600,
+        expectedEvents: ["hit:MES", "hit:ERP", "hit:GREEN"],
+        successWhen: (result) => result.events.some((event) => ["hit:MES", "hit:ERP", "hit:GREEN"].includes(event.eventName))
+      },
+      {
+        id: "lower-trap-rescue",
+        name: "Lower trap rescue",
+        start: { x: 188, y: 1184 },
+        velocity: { x: 0, y: 0 },
+        durationMs: 2300,
+        holdPositionUntilMs: 980,
+        expectedEvents: ["trap-rescue"],
+        successWhen: (result) => result.events.some((event) => event.type === "trap-rescue" && event.kind === "lower")
+      },
+      {
+        id: "upper-trap-rescue",
+        name: "Upper trap rescue",
+        start: { x: 450, y: 344 },
+        velocity: { x: 0, y: 0 },
+        durationMs: 2300,
+        holdPositionUntilMs: 920,
+        expectedEvents: ["trap-rescue"],
+        successWhen: (result) => result.events.some((event) => event.type === "trap-rescue" && event.kind === "upper")
+      },
+      {
+        id: "multiball-drain-grace-save",
+        name: "Multiball drain and grace save",
+        start: { x: 450, y: 1310 },
+        velocity: { x: 0, y: 5.6 },
+        durationMs: 2200,
+        expectedEvents: ["multiball-save"],
+        setup: () => {
+          startMultiball("diagnostic harness", { advanceDifficulty: false });
+          setPrimaryDiagnosticBall({ x: 450, y: 1310 }, { x: 0, y: 5.6 });
+        },
+        successWhen: (result) => result.events.some((event) => event.type === "multiball-save")
+      }
+    ];
+    const scenarioMap = scenarios.reduce((map, scenario) => {
+      map[scenario.id] = scenario;
+      return map;
+    }, {});
+    const state = {
+      enabled: true,
+      status: "idle",
+      scenarios: scenarios.map((scenario) => ({
+        id: scenario.id,
+        name: scenario.name,
+        durationMs: scenario.durationMs,
+        expectedEvents: [...(scenario.expectedEvents || [])]
+      })),
+      current: null,
+      results: [],
+      lastResult: null,
+      error: ""
+    };
+    const panel = createDiagnosticPanel();
+    let pendingScenarioIds = [];
+    let highScoreSnapshot = gameState.highScore;
+
+    function createDiagnosticPanel() {
+      const element = document.createElement("pre");
+      element.setAttribute("aria-label", "Pinball diagnostics");
+      element.style.position = "fixed";
+      element.style.right = "12px";
+      element.style.bottom = "12px";
+      element.style.zIndex = "20";
+      element.style.maxWidth = "360px";
+      element.style.maxHeight = "46vh";
+      element.style.margin = "0";
+      element.style.padding = "10px";
+      element.style.overflow = "auto";
+      element.style.border = "1px solid rgba(49, 168, 255, 0.55)";
+      element.style.borderRadius = "6px";
+      element.style.background = "rgba(5, 11, 16, 0.88)";
+      element.style.color = "#edf7fb";
+      element.style.font = "12px/1.35 Consolas, monospace";
+      document.body.appendChild(element);
+      return element;
+    }
+
+    function launchDiagnosticBall(power) {
+      gameState.status = "charging";
+      gameState.plungerPower = power;
+      launchBall();
+    }
+
+    function setPrimaryDiagnosticBall(position, velocity) {
+      const ball = physics?.ball;
+
+      if (!ball) {
+        return;
+      }
+
+      MatterLib.Body.setStatic(ball, false);
+      MatterLib.Body.setPosition(ball, position);
+      MatterLib.Body.setVelocity(ball, velocity);
+      MatterLib.Body.setAngularVelocity(ball, (velocity.x || 0) * 0.04);
+    }
+
+    function resetForScenario(scenario) {
+      highScoreSnapshot = gameState.highScore;
+      restartGame();
+      removeExtraBalls();
+      resetCombo();
+      inputState.left = false;
+      inputState.right = false;
+      inputState.leftPulse = false;
+      inputState.rightPulse = false;
+      inputState.space = false;
+      inputState.chargingSince = 0;
+      gameState.status = "playing";
+      gameState.ballSaveUntil = 0;
+      gameState.ballSaveUsed = true;
+      gameState.feedback = `DIAGNOSTIC: ${scenario.name}`;
+      gameState.feedbackUntil = performance.now() + 1200;
+      setPrimaryDiagnosticBall(scenario.start, scenario.velocity);
+
+      if (scenario.setup) {
+        scenario.setup();
+      }
+
+      syncInspectableState(physics);
+    }
+
+    function createResult(scenario) {
+      const ball = physics?.ball;
+
+      return {
+        scenarioId: scenario.id,
+        scenarioName: scenario.name,
+        status: "running",
+        startedAt: performance.now(),
+        endedAt: 0,
+        durationMs: 0,
+        startPosition: ball
+          ? { x: Math.round(ball.position.x), y: Math.round(ball.position.y) }
+          : { x: Math.round(scenario.start.x), y: Math.round(scenario.start.y) },
+        endPosition: null,
+        events: [],
+        maxSpeed: 0,
+        repeatedHits: {},
+        comboCount: 0,
+        drainReason: "",
+        rescueActivation: false,
+        failureReason: ""
+      };
+    }
+
+    function runScenario(id) {
+      const scenario = scenarioMap[id];
+
+      if (!scenario) {
+        state.error = `Unknown diagnostic scenario: ${id}`;
+        syncInspectable();
+        return null;
+      }
+
+      if (!physics || !MatterLib) {
+        const result = createResult(scenario);
+        result.status = "failed";
+        result.endedAt = performance.now();
+        result.durationMs = 0;
+        result.failureReason = "physics-unavailable";
+        state.results.push(result);
+        state.lastResult = result;
+        state.current = null;
+        state.error = "Matter physics unavailable";
+        syncInspectable();
+        startNextQueuedScenario();
+        return result;
+      }
+
+      resetForScenario(scenario);
+      state.status = "running";
+      state.current = createResult(scenario);
+      state.error = "";
+      syncInspectable();
+      return state.current;
+    }
+
+    function runAll() {
+      pendingScenarioIds = scenarios.map((scenario) => scenario.id);
+      state.results = [];
+      state.lastResult = null;
+      state.error = "";
+      startNextQueuedScenario();
+      return state;
+    }
+
+    function startNextQueuedScenario() {
+      if (state.current || !pendingScenarioIds.length) {
+        if (!state.current && !pendingScenarioIds.length) {
+          state.status = "idle";
+          syncInspectable();
+        }
+        return;
+      }
+
+      runScenario(pendingScenarioIds.shift());
+    }
+
+    function stop(reason = "stopped") {
+      if (state.current) {
+        finishCurrentScenario("failed", reason);
+      }
+      pendingScenarioIds = [];
+      state.status = "idle";
+      syncInspectable();
+    }
+
+    function clear() {
+      state.results = [];
+      state.lastResult = null;
+      state.error = "";
+      syncInspectable();
+    }
+
+    function updateBeforeStep() {
+      const current = state.current;
+
+      if (!current) {
+        return;
+      }
+
+      const scenario = scenarioMap[current.scenarioId];
+      const elapsed = performance.now() - current.startedAt;
+      const activeControl = (scenario.controls || []).find((control) => elapsed >= control.fromMs && elapsed <= control.toMs);
+      inputState.left = Boolean(activeControl?.left);
+      inputState.right = Boolean(activeControl?.right);
+
+      if (scenario.holdPositionUntilMs && elapsed <= scenario.holdPositionUntilMs) {
+        setPrimaryDiagnosticBall(scenario.start, { x: 0, y: 0 });
+      }
+    }
+
+    function updateAfterStep() {
+      const current = state.current;
+
+      if (!current) {
+        return;
+      }
+
+      const scenario = scenarioMap[current.scenarioId];
+      const ball = physics?.ball;
+      const elapsed = performance.now() - current.startedAt;
+
+      if (ball) {
+        current.maxSpeed = Math.max(current.maxSpeed, Math.hypot(ball.velocity.x, ball.velocity.y));
+        current.endPosition = { x: Math.round(ball.position.x), y: Math.round(ball.position.y) };
+      }
+
+      current.comboCount = gameState.comboCount;
+
+      if (scenario.successWhen && scenario.successWhen(current)) {
+        finishCurrentScenario("passed", "");
+        return;
+      }
+
+      if (elapsed >= scenario.durationMs) {
+        finishCurrentScenario("failed", getFailureReason(scenario, current));
+      }
+    }
+
+    function getFailureReason(scenario, result) {
+      if (result.drainReason) {
+        return `drained:${result.drainReason}`;
+      }
+
+      const missingEvent = (scenario.expectedEvents || []).find((expected) => {
+        return !result.events.some((event) => event.type === expected || event.eventName === expected);
+      });
+
+      if (missingEvent) {
+        return `missing-event:${missingEvent}`;
+      }
+
+      return "timed-out";
+    }
+
+    function finishCurrentScenario(status, failureReason) {
+      const result = state.current;
+      const ball = physics?.ball;
+
+      if (!result) {
+        return;
+      }
+
+      result.status = status;
+      result.endedAt = performance.now();
+      result.durationMs = Math.round(result.endedAt - result.startedAt);
+      result.maxSpeed = Number(result.maxSpeed.toFixed(2));
+      result.comboCount = gameState.comboCount;
+      result.failureReason = failureReason;
+      result.endPosition = ball
+        ? { x: Math.round(ball.position.x), y: Math.round(ball.position.y) }
+        : result.endPosition;
+      state.results.push(result);
+      state.lastResult = result;
+      state.current = null;
+      gameState.highScore = highScoreSnapshot;
+      saveHighScore();
+      updateHud();
+      syncInspectable();
+      startNextQueuedScenario();
+    }
+
+    function recordEvent(type, detail = {}) {
+      const current = state.current;
+
+      if (!current) {
+        return;
+      }
+
+      const ball = detail.ball || physics?.ball;
+      const event = {
+        atMs: Math.round(performance.now() - current.startedAt),
+        type,
+        eventName: detail.eventName || "",
+        objectId: detail.objectId || "",
+        label: detail.label || "",
+        kind: detail.kind || "",
+        x: ball ? Math.round(ball.position.x) : null,
+        y: ball ? Math.round(ball.position.y) : null,
+        speed: ball ? Number(Math.hypot(ball.velocity.x, ball.velocity.y).toFixed(2)) : 0
+      };
+
+      current.events.push(event);
+
+      if (type === "hit" && event.objectId) {
+        const count = current.events.filter((candidate) => candidate.type === "hit" && candidate.objectId === event.objectId).length;
+        if (count > 1) {
+          current.repeatedHits[event.objectId] = count;
+        }
+      }
+
+      if (type === "drain") {
+        current.drainReason = detail.reason || "drain-sensor";
+      }
+
+      if (type === "ball-save" || type === "multiball-save" || type === "side-shield-save" || type === "trap-rescue") {
+        current.rescueActivation = true;
+      }
+
+      syncInspectable();
+    }
+
+    function syncInspectable() {
+      const publicState = {
+        enabled: state.enabled,
+        queryParam: DIAGNOSTIC_QUERY_PARAM,
+        status: state.status,
+        scenarios: state.scenarios,
+        current: state.current,
+        results: state.results,
+        lastResult: state.lastResult,
+        error: state.error,
+        runScenario,
+        runAll,
+        stop,
+        clear
+      };
+
+      window.impolPinballDiagnostics = publicState;
+      panel.textContent = [
+        "Impol diagnostics",
+        `status: ${state.status}`,
+        state.current ? `current: ${state.current.scenarioName}` : "current: -",
+        state.lastResult
+          ? `last: ${state.lastResult.scenarioId} ${state.lastResult.status}${state.lastResult.failureReason ? ` (${state.lastResult.failureReason})` : ""}`
+          : "last: -",
+        `results: ${state.results.length}/${scenarios.length}`,
+        `console: impolPinballDiagnostics.runAll()`
+      ].join("\n");
+    }
+
+    syncInspectable();
+
+    return {
+      recordEvent,
+      updateBeforeStep,
+      updateAfterStep,
+      syncInspectable,
+      runScenario,
+      runAll,
+      stop,
+      clear
     };
   }
 
@@ -3014,10 +3525,12 @@
         const labels = [pair.bodyA.label, pair.bodyB.label];
         const pairBall = getPairBall(pair);
         if (pairBall && labels.includes("drain-sensor") && labels.includes("pinball")) {
+          recordDiagnosticEvent("drain", { ball: pairBall, reason: "drain-sensor" });
           drainBall(pairBall);
         }
 
         if (pairBall && labels.includes("launch-lane-top-exit") && labels.includes("pinball")) {
+          recordDiagnosticEvent("shooter-lane-exit", { ball: pairBall, reason: "top-exit-sensor" });
           guideBallOutOfShooterLane(pairBall);
         }
 
@@ -3416,6 +3929,12 @@
     MatterLib.Body.setAngularVelocity(ball, 0);
     gameState.feedback = "MULTIBALL BALL SAVE";
     gameState.feedbackUntil = performance.now() + 1200;
+    recordDiagnosticEvent("multiball-save", {
+      ball,
+      eventName: "multiball:grace-save",
+      objectId: ball.gameBallId || "ball",
+      label: "Multiball grace save"
+    });
     addHitFeedback({
       id: `multiball-save-${ball.gameBallId || "ball"}`,
       x: 450,
@@ -3501,6 +4020,12 @@
     gameState.score += points + combo.bonus;
     setHighScore(gameState.score);
     gameState.lastEvent = object.event;
+    recordDiagnosticEvent("hit", {
+      ball,
+      eventName: object.event,
+      objectId: object.id,
+      label: object.label
+    });
     gameState.feedback = combo.bonus
       ? `${combo.count}x COMBO +${combo.bonus.toLocaleString("sl-SI")}`
       : `+${points.toLocaleString("sl-SI")} ${object.label}`;
@@ -3561,6 +4086,12 @@
     gameState.upperOrbit.ballId = ball.gameBallId;
     gameState.upperOrbit.startedAt = performance.now();
     gameState.hitCounts["upper-orbit-entry"] = performance.now();
+    recordDiagnosticEvent("orbit-entry", {
+      ball,
+      eventName: "upper-orbit-entry",
+      objectId: UPPER_ORBIT.id,
+      label: UPPER_ORBIT.label
+    });
     gameState.feedback = "ALU FLOW ORBIT";
     gameState.feedbackUntil = performance.now() + 700;
     MatterLib.Body.setVelocity(ball, {
@@ -3600,6 +4131,12 @@
     state.lastAward = award;
     gameState.lastEvent = UPPER_ORBIT.event;
     gameState.hitCounts[UPPER_ORBIT.id] = now;
+    recordDiagnosticEvent("orbit-complete", {
+      ball,
+      eventName: UPPER_ORBIT.event,
+      objectId: UPPER_ORBIT.id,
+      label: UPPER_ORBIT.label
+    });
     gameState.feedback = combo.bonus
       ? `ORBIT ${combo.count}x COMBO +${award.toLocaleString("sl-SI")}`
       : `ORBIT COMPLETE +${award.toLocaleString("sl-SI")}`;
@@ -3759,6 +4296,13 @@
     MatterLib.Body.setAngularVelocity(ball, lane.side === "left" ? 0.16 : -0.16);
     gameState.feedback = "SIDE SHIELD SAVE";
     gameState.feedbackUntil = performance.now() + 1100;
+    recordDiagnosticEvent("side-shield-save", {
+      ball,
+      eventName: `hit:${lane.type.toUpperCase()}`,
+      objectId: lane.id,
+      label: lane.label,
+      kind: lane.side
+    });
     addHitFeedback({
       id: `side-shield-${lane.id}`,
       x: lane.x,
@@ -3782,6 +4326,12 @@
     gameState.lanes.lit[lane.id] = true;
     gameState.hitCounts[lane.id] = now;
     gameState.lastEvent = `hit:${lane.type.toUpperCase()}`;
+    recordDiagnosticEvent("hit", {
+      ball,
+      eventName: gameState.lastEvent,
+      objectId: lane.id,
+      label: lane.label
+    });
 
     const points = lane.points * getActiveMultiplier();
     const combo = registerComboHit(lane);
@@ -4174,6 +4724,12 @@
     resetBall(ball, true);
     gameState.feedback = "BALL SAVE";
     gameState.feedbackUntil = performance.now() + 1400;
+    recordDiagnosticEvent("ball-save", {
+      ball,
+      eventName: "ball-save",
+      objectId: ball.gameBallId || "ball",
+      label: "Ball save"
+    });
     addHitFeedback({
       id: "ball-save",
       x: 450,
@@ -4377,6 +4933,13 @@
       x: direction * 1.35,
       y: -2.8
     });
+    recordDiagnosticEvent("trap-rescue", {
+      ball: trappedBall,
+      eventName: "trap-rescue:lower",
+      objectId: trappedBall.gameBallId || "ball",
+      label: "Lower trap rescue",
+      kind: "lower"
+    });
     gameState.lowerTrapSince = 0;
   }
 
@@ -4415,6 +4978,13 @@
     MatterLib.Body.setVelocity(trappedBall, {
       x: direction * 2.4,
       y: 4.2
+    });
+    recordDiagnosticEvent("trap-rescue", {
+      ball: trappedBall,
+      eventName: "trap-rescue:upper",
+      objectId: trappedBall.gameBallId || "ball",
+      label: "Upper trap rescue",
+      kind: "upper"
     });
     gameState.upperTrapSince = 0;
     gameState.upperTrapBallId = "";
@@ -4850,6 +5420,20 @@
   if (physics) {
     resetBall(physics.ball, true);
   }
+  if (DIAGNOSTICS_ENABLED) {
+    diagnosticHarness = createDiagnosticHarness();
+    const requestedDiagnosticRun = diagnosticQuery.get(DIAGNOSTIC_QUERY_PARAM);
+
+    if (requestedDiagnosticRun && requestedDiagnosticRun !== "1" && requestedDiagnosticRun !== "true") {
+      window.setTimeout(() => {
+        if (requestedDiagnosticRun === "all") {
+          diagnosticHarness.runAll();
+        } else {
+          diagnosticHarness.runScenario(requestedDiagnosticRun);
+        }
+      }, 0);
+    }
+  }
   renderMissionList();
   renderCompanyList();
   updateHud();
@@ -4860,6 +5444,9 @@
   function stepPhysics() {
     if (physics) {
       updatePlungerPower();
+      if (diagnosticHarness) {
+        diagnosticHarness.updateBeforeStep();
+      }
       updateFlippers();
       updateBomModeTimeout();
       updateComboTimeout();
@@ -4874,6 +5461,9 @@
       maybeRescueLowerFlipperTrap();
       maybeRescueUpperPlayfieldTrap();
       maybeFinishBetweenBalls();
+      if (diagnosticHarness) {
+        diagnosticHarness.updateAfterStep();
+      }
     }
   }
 

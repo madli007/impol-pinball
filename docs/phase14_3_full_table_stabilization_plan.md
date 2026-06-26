@@ -38,7 +38,7 @@ Observed during the June 25, 2026 playtest:
 
 ## Phase 14.3.1 - Deterministic Physics Test Harness
 
-Status: planned
+Status: completed
 
 Depends on: Phase 14.3
 
@@ -76,6 +76,15 @@ Acceptance criteria:
 Deliverable:
 
 - A reusable harness that later phases use for before/after measurements.
+
+Implementation notes:
+
+- Added the `?pinballDiagnostics=1` query gate and the `window.impolPinballDiagnostics` inspectable object.
+- Added `?pinballDiagnostics=all` for a queued full scenario run, or `?pinballDiagnostics=<scenario-id>` for one scenario.
+- Added named deterministic scenarios for orbit completion, flipper target attempts, shooter-lane launch powers, inlane/outlane approaches, bumper entry, trap rescues, and multiball grace save.
+- Diagnostic results record scenario metadata, start/end position, events, duration, maximum speed, repeated hits, combo count, drain reason, rescue activation, and explicit failure reasons.
+- Diagnostic hooks are no-ops during ordinary play, and the panel/object are created only when the query parameter is present.
+- Browser smoke was attempted through the local server; the environment served the updated source and loaded the page, but the in-app browser control session timed out during the automated diagnostic-page reload. Syntax and HTTP smoke checks passed.
 
 ## Phase 14.3.2 - Upper Orbit And Shot-Map Retune
 

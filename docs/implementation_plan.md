@@ -912,11 +912,12 @@ Priority order:
 
 The detailed scope, exclusions, dependencies, acceptance criteria, and deliverables for Phases 14.3.1-14.3.8 are defined in `docs/phase14_3_full_table_stabilization_plan.md`. Phase 14.4 is blocked until Phase 14.3.8 is completed.
 
-- [ ] Phase 14.3.1 - Deterministic physics test harness - Status: planned
+- [x] Phase 14.3.1 - Deterministic physics test harness - Status: completed
   - Add repeatable diagnostic scenarios and measurements for routes, targets, drains, traps, launches, and multiball.
   - Keep diagnostics disabled during ordinary gameplay.
   - Detailed scope and acceptance criteria: `docs/phase14_3_full_table_stabilization_plan.md`.
   - Visible result: later physics changes can be measured and reproduced.
+  - Added `?pinballDiagnostics=1`, `?pinballDiagnostics=all`, and `window.impolPinballDiagnostics` with named deterministic scenarios and explicit pass/fail result reporting.
 
 - [ ] Phase 14.3.2 - Upper orbit and shot-map retune - Status: planned
   - Make the orbit intentionally hittable and map repeatable shots to every required target.
