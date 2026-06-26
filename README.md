@@ -92,7 +92,7 @@ http://127.0.0.1:4173/index.html?bust=<short-label>
 When changing gameplay physics, also bump the query string on the local script tag in `index.html`, for example:
 
 ```html
-<script src="game.js?v=14.3.2-feel-6"></script>
+<script src="game.js?v=14.3.4-score-economy-1"></script>
 ```
 
 Diagnostics can be combined with the cache-bust URL:

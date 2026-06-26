@@ -25,8 +25,63 @@
   const DIAGNOSTIC_QUERY_PARAM = "pinballDiagnostics";
   const diagnosticQuery = new URLSearchParams(window.location.search);
   const DIAGNOSTICS_ENABLED = diagnosticQuery.has(DIAGNOSTIC_QUERY_PARAM);
-  const HIGH_SCORE_KEY = "impol-pinball.high-score";
+  const HIGH_SCORE_BASE_KEY = "impol-pinball.high-score";
   const AUDIO_MUTED_KEY = "impol-pinball.audio-muted";
+  const SCORING_RULES = {
+    version: "14.3.4-score-economy-1",
+    highScorePolicy: "live-current-ruleset",
+    legacyHighScoreKey: `${HIGH_SCORE_BASE_KEY}.legacy-pre-14.3.4`,
+    targetBands: {
+      beginner: { min: 75000, max: 200000 },
+      competent: { min: 200000, max: 500000 },
+      strong: { min: 500000, max: 1000000 }
+    },
+    values: {
+      bumpers: { mes: 600, erp: 750, co2: 600 },
+      targets: {
+        "measurement-left": 1200,
+        "measurement-right": 1200,
+        furnace: 2600,
+        coil: 2600,
+        alcad: 2100,
+        "e-odprema": 2300,
+        kosovnica: 3200
+      },
+      slingshot: 140,
+      rollover: 160,
+      inlane: 220,
+      outlane: 100,
+      rolloverSet: 2500,
+      laneSet: 1600,
+      upperOrbit: 6500,
+      skillShot: 8000,
+      bomSuccess: 45000,
+      jackpotNormal: 35000,
+      jackpotSuper: 90000,
+      comboByCount: {
+        2: 1200,
+        3: 3000,
+        4: 5200,
+        5: 8000
+      },
+      comboMediumSix: 11000,
+      comboMax: 14000,
+      missions: {
+        measurement: 18000,
+        mes: 25000,
+        erp: 35000,
+        green: 28000,
+        coil: 30000,
+        eodprema: 22000,
+        alcad: 22000,
+        furnace: 32000,
+        kosovnica: 40000
+      },
+      metaMissions: 120000,
+      metaCompanies: 90000
+    }
+  };
+  SCORING_RULES.highScoreKey = `${HIGH_SCORE_BASE_KEY}.${SCORING_RULES.version}`;
   const COMBO_WINDOW_MS = 1800;
   const GAME_OVER_RESTART_DELAY_MS = 1400;
   const MULTIBALL = {
@@ -41,17 +96,17 @@
   const JACKPOT = {
     normalTargetIds: ["coil", "furnace"],
     superTargetId: "kosovnica",
-    normalValue: 12000,
-    superValue: 25000
+    normalValue: SCORING_RULES.values.jackpotNormal,
+    superValue: SCORING_RULES.values.jackpotSuper
   };
   const FLIPPER_TIP_EXTENSION = 0.16;
   const COMBO_BONUS_BY_COUNT = {
-    2: 1000,
-    3: 2500,
-    4: 4500,
-    5: 7000
+    2: SCORING_RULES.values.comboByCount[2],
+    3: SCORING_RULES.values.comboByCount[3],
+    4: SCORING_RULES.values.comboByCount[4],
+    5: SCORING_RULES.values.comboByCount[5]
   };
-  const MAX_COMBO_BONUS = 10000;
+  const MAX_COMBO_BONUS = SCORING_RULES.values.comboMax;
   const COMBO_MAX_COUNT = 10;
   const COMBO_MAX_SAME_ZONE_STREAK = 2;
   const COMBO_HISTORY_LIMIT = 10;
@@ -71,14 +126,14 @@
     lane: { objectCooldownMs: 760, ballObjectCooldownMs: 1200 },
     route: { objectCooldownMs: 1400, ballObjectCooldownMs: 2200 }
   };
-  const ROLLOVER_COMPLETE_BONUS = 3000;
-  const LANE_SET_BONUS = 1800;
+  const ROLLOVER_COMPLETE_BONUS = SCORING_RULES.values.rolloverSet;
+  const LANE_SET_BONUS = SCORING_RULES.values.laneSet;
   const SIDE_SHIELD_DURATION = 6500;
   const UPPER_ORBIT = {
     id: "upper-orbit",
     label: "ALU FLOW ORBIT",
     event: "hit:UPPER_ORBIT",
-    points: 4500,
+    points: SCORING_RULES.values.upperOrbit,
     accent: "#31a8ff",
     timeoutMs: 4400,
     committedX: 258,
@@ -132,33 +187,33 @@
   };
   const TABLE_CONFIG = {
     bumpers: [
-      { id: "mes", label: "MES", x: 300, y: 392, radius: 56, accent: "#31a8ff", event: "hit:MES", points: 1000 },
-      { id: "erp", label: "ERP", x: 450, y: 334, radius: 60, accent: "#ff9b3d", event: "hit:ERP", points: 1500 },
-      { id: "co2", label: "CO2", x: 612, y: 392, radius: 56, accent: "#7bdc6c", event: "hit:GREEN", points: 1000 }
+      { id: "mes", label: "MES", x: 300, y: 392, radius: 56, accent: "#31a8ff", event: "hit:MES", points: SCORING_RULES.values.bumpers.mes },
+      { id: "erp", label: "ERP", x: 450, y: 334, radius: 60, accent: "#ff9b3d", event: "hit:ERP", points: SCORING_RULES.values.bumpers.erp },
+      { id: "co2", label: "CO2", x: 612, y: 392, radius: 56, accent: "#7bdc6c", event: "hit:GREEN", points: SCORING_RULES.values.bumpers.co2 }
     ],
     targets: [
-      { id: "measurement-left", label: "MERILNI", x: 275, y: 592, width: 178, height: 52, accent: "#31a8ff", event: "hit:MEASUREMENT", points: 500 },
-      { id: "measurement-right", label: "PROTOKOL", x: 625, y: 592, width: 178, height: 52, accent: "#31a8ff", event: "hit:MEASUREMENT", points: 500 },
-      { id: "furnace", label: "FURNACE", x: 450, y: 696, width: 200, height: 56, accent: "#ff9b3d", event: "hit:FURNACE", points: 750 },
-      { id: "coil", label: "COIL COLLECTOR", x: 450, y: 899, width: 234, height: 58, accent: "#7bdc6c", event: "hit:COIL", points: 750 },
-      { id: "alcad", label: "ALCAD", x: 346, y: 828, width: 104, height: 42, accent: "#9ab3bf", event: "hit:ALCAD", points: 500 },
-      { id: "e-odprema", label: "E-ODPREMA", x: 646, y: 784, width: 156, height: 48, accent: "#9ab3bf", event: "hit:EODPREMA", points: 500 },
-      { id: "kosovnica", label: "KOSOVNICA", x: 450, y: 508, width: 168, height: 34, accent: "#ff9b3d", event: "hit:KOSOVNICA", points: 700 }
+      { id: "measurement-left", label: "MERILNI", x: 275, y: 592, width: 178, height: 52, accent: "#31a8ff", event: "hit:MEASUREMENT", points: SCORING_RULES.values.targets["measurement-left"] },
+      { id: "measurement-right", label: "PROTOKOL", x: 625, y: 592, width: 178, height: 52, accent: "#31a8ff", event: "hit:MEASUREMENT", points: SCORING_RULES.values.targets["measurement-right"] },
+      { id: "furnace", label: "FURNACE", x: 450, y: 696, width: 200, height: 56, accent: "#ff9b3d", event: "hit:FURNACE", points: SCORING_RULES.values.targets.furnace },
+      { id: "coil", label: "COIL COLLECTOR", x: 450, y: 899, width: 234, height: 58, accent: "#7bdc6c", event: "hit:COIL", points: SCORING_RULES.values.targets.coil },
+      { id: "alcad", label: "ALCAD", x: 346, y: 828, width: 104, height: 42, accent: "#9ab3bf", event: "hit:ALCAD", points: SCORING_RULES.values.targets.alcad },
+      { id: "e-odprema", label: "E-ODPREMA", x: 646, y: 784, width: 156, height: 48, accent: "#9ab3bf", event: "hit:EODPREMA", points: SCORING_RULES.values.targets["e-odprema"] },
+      { id: "kosovnica", label: "KOSOVNICA", x: 450, y: 508, width: 168, height: 34, accent: "#ff9b3d", event: "hit:KOSOVNICA", points: SCORING_RULES.values.targets.kosovnica }
     ],
     slingshots: [
-      { id: "left-slingshot", label: "SEVAL", x: 266, y: 1102, width: 100, height: 22, angle: 0.72, visualX: 248, visualY: 1100, visualWidth: 108, visualHeight: 115, visualAngle: 0, accent: "#31a8ff", event: "hit:LEFT_SLINGSHOT", points: 350, impulse: { x: 6.7, y: -10.2 } },
-      { id: "right-slingshot", label: "IMPOL-PC", x: 634, y: 1102, width: 100, height: 22, angle: -0.72, visualX: 652, visualY: 1100, visualWidth: 108, visualHeight: 115, visualAngle: 0, accent: "#31a8ff", event: "hit:RIGHT_SLINGSHOT", points: 350, impulse: { x: -6.7, y: -10.2 } }
+      { id: "left-slingshot", label: "SEVAL", x: 266, y: 1102, width: 100, height: 22, angle: 0.72, visualX: 248, visualY: 1100, visualWidth: 108, visualHeight: 115, visualAngle: 0, accent: "#31a8ff", event: "hit:LEFT_SLINGSHOT", points: SCORING_RULES.values.slingshot, impulse: { x: 6.7, y: -10.2 } },
+      { id: "right-slingshot", label: "IMPOL-PC", x: 634, y: 1102, width: 100, height: 22, angle: -0.72, visualX: 652, visualY: 1100, visualWidth: 108, visualHeight: 115, visualAngle: 0, accent: "#31a8ff", event: "hit:RIGHT_SLINGSHOT", points: SCORING_RULES.values.slingshot, impulse: { x: -6.7, y: -10.2 } }
     ],
     rollovers: [
-      { id: "rollover-flow", label: "FLOW", x: 348, y: 1008, radius: 22, accent: "#31a8ff", event: "hit:ROLLOVER", points: 250 },
-      { id: "rollover-alloy", label: "ALLOY", x: 450, y: 986, radius: 22, accent: "#ff9b3d", event: "hit:ROLLOVER", points: 250 },
-      { id: "rollover-scan", label: "SCAN", x: 552, y: 1008, radius: 22, accent: "#7bdc6c", event: "hit:ROLLOVER", points: 250 }
+      { id: "rollover-flow", label: "FLOW", x: 348, y: 1008, radius: 22, accent: "#31a8ff", event: "hit:ROLLOVER", points: SCORING_RULES.values.rollover },
+      { id: "rollover-alloy", label: "ALLOY", x: 450, y: 986, radius: 22, accent: "#ff9b3d", event: "hit:ROLLOVER", points: SCORING_RULES.values.rollover },
+      { id: "rollover-scan", label: "SCAN", x: 552, y: 1008, radius: 22, accent: "#7bdc6c", event: "hit:ROLLOVER", points: SCORING_RULES.values.rollover }
     ],
     lanes: [
-      { id: "left-outlane", label: "LEFT OUT", shortLabel: "OUT", side: "left", type: "outlane", x: 142, y: 1214, width: 72, height: 150, angle: -0.42, points: 150, accent: "#ff7567", returnX: 268, returnY: 1168, returnVelocity: { x: 5.8, y: -7.4 } },
-      { id: "left-inlane", label: "LEFT RETURN", shortLabel: "IN", side: "left", type: "inlane", x: 286, y: 1200, width: 76, height: 136, angle: 0.54, points: 300, accent: "#31a8ff" },
-      { id: "right-inlane", label: "RIGHT RETURN", shortLabel: "IN", side: "right", type: "inlane", x: 614, y: 1200, width: 76, height: 136, angle: -0.54, points: 300, accent: "#31a8ff" },
-      { id: "right-outlane", label: "RIGHT OUT", shortLabel: "OUT", side: "right", type: "outlane", x: 758, y: 1214, width: 72, height: 150, angle: 0.42, points: 150, accent: "#ff7567", returnX: 632, returnY: 1168, returnVelocity: { x: -5.8, y: -7.4 } }
+      { id: "left-outlane", label: "LEFT OUT", shortLabel: "OUT", side: "left", type: "outlane", x: 142, y: 1214, width: 72, height: 150, angle: -0.42, points: SCORING_RULES.values.outlane, accent: "#ff7567", returnX: 268, returnY: 1168, returnVelocity: { x: 5.8, y: -7.4 } },
+      { id: "left-inlane", label: "LEFT RETURN", shortLabel: "IN", side: "left", type: "inlane", x: 286, y: 1200, width: 76, height: 136, angle: 0.54, points: SCORING_RULES.values.inlane, accent: "#31a8ff" },
+      { id: "right-inlane", label: "RIGHT RETURN", shortLabel: "IN", side: "right", type: "inlane", x: 614, y: 1200, width: 76, height: 136, angle: -0.54, points: SCORING_RULES.values.inlane, accent: "#31a8ff" },
+      { id: "right-outlane", label: "RIGHT OUT", shortLabel: "OUT", side: "right", type: "outlane", x: 758, y: 1214, width: 72, height: 150, angle: 0.42, points: SCORING_RULES.values.outlane, accent: "#ff7567", returnX: 632, returnY: 1168, returnVelocity: { x: -5.8, y: -7.4 } }
     ],
     upperOrbit: UPPER_ORBIT
   };
@@ -168,7 +223,7 @@
       label: "MERILNI PROTOKOL",
       event: "hit:MEASUREMENT",
       required: 3,
-      bonus: 5000,
+      bonus: SCORING_RULES.values.missions.measurement,
       reward: "Quality bonus"
     },
     {
@@ -176,7 +231,7 @@
       label: "MES ONLINE",
       event: "hit:MES",
       required: 5,
-      bonus: 8000,
+      bonus: SCORING_RULES.values.missions.mes,
       reward: "Real-time bonus"
     },
     {
@@ -184,7 +239,7 @@
       label: "ERP GO-LIVE",
       event: "hit:ERP",
       required: 3,
-      bonus: 10000,
+      bonus: SCORING_RULES.values.missions.erp,
       multiplierReward: 2,
       reward: "2x multiplier"
     },
@@ -193,7 +248,7 @@
       label: "GREEN ALUMINIUM",
       event: "hit:GREEN",
       required: 4,
-      bonus: 9000,
+      bonus: SCORING_RULES.values.missions.green,
       reward: "CO2 bonus"
     },
     {
@@ -201,7 +256,7 @@
       label: "COIL COLLECTOR",
       event: "hit:COIL",
       required: 3,
-      bonus: 8500,
+      bonus: SCORING_RULES.values.missions.coil,
       reward: "Coil bonus"
     },
     {
@@ -209,7 +264,7 @@
       label: "E-ODPREMA",
       event: "hit:EODPREMA",
       required: 2,
-      bonus: 7000,
+      bonus: SCORING_RULES.values.missions.eodprema,
       reward: "Dispatch bonus"
     },
     {
@@ -217,7 +272,7 @@
       label: "ALCAD SORTIRANJE",
       event: "hit:ALCAD",
       required: 2,
-      bonus: 7000,
+      bonus: SCORING_RULES.values.missions.alcad,
       reward: "Recycle bonus"
     },
     {
@@ -225,7 +280,7 @@
       label: "LIVARNA READY",
       event: "hit:FURNACE",
       required: 3,
-      bonus: 9500,
+      bonus: SCORING_RULES.values.missions.furnace,
       reward: "Furnace bonus"
     },
     {
@@ -233,7 +288,7 @@
       label: "KOSOVNICA MIRNA",
       event: "hit:KOSOVNICA",
       required: 2,
-      bonus: 11000,
+      bonus: SCORING_RULES.values.missions.kosovnica,
       reward: "No revision bonus"
     }
   ];
@@ -306,12 +361,12 @@
     sequence: ["hit:MES", "hit:ERP", "hit:COIL"],
     labels: ["MES", "ERP", "COIL"],
     duration: 10000,
-    successBonus: 15000
+    successBonus: SCORING_RULES.values.bomSuccess
   };
   const META_REWARDS = {
     missions: {
       label: "INDUSTRY 4.0 JACKPOT",
-      bonus: 40000,
+      bonus: SCORING_RULES.values.metaMissions,
       multiplier: 3,
       duration: 22000,
       ballSaveExtension: 9000,
@@ -319,7 +374,7 @@
     },
     companies: {
       label: "IMPOL GROUP SYNERGY",
-      bonus: 30000,
+      bonus: SCORING_RULES.values.metaCompanies,
       multiplier: 4,
       duration: 18000,
       ballSaveExtension: 7000,
@@ -724,6 +779,116 @@
     return COMPANY_CONFIG.filter((company) => gameState.companies[company.id].rank >= COMPANY_STATUS.bonus.rank).length;
   }
 
+  function getScoreBandStatus(total, band) {
+    if (total < band.min) {
+      return "below";
+    }
+
+    if (total > band.max) {
+      return "above";
+    }
+
+    return "in-band";
+  }
+
+  function sumScoreParts(parts) {
+    return Object.values(parts).reduce((total, value) => total + value, 0);
+  }
+
+  function getScoreEconomySamples() {
+    const values = SCORING_RULES.values;
+    const beginnerParts = {
+      skillShot: values.skillShot,
+      passiveContacts: values.slingshot * 10 + values.rollover * 6 + values.inlane * 4 + values.outlane * 2,
+      setBonuses: values.rolloverSet + values.laneSet,
+      routes: values.upperOrbit * 3,
+      intentionalTargets: values.targets["measurement-left"] * 3 + values.bumpers.mes * 5,
+      missionCompletion: values.missions.measurement + values.missions.mes
+    };
+    const competentParts = {
+      skillShot: values.skillShot,
+      passiveContacts: values.slingshot * 18 + values.rollover * 10 + values.inlane * 8 + values.outlane * 3,
+      setBonuses: values.rolloverSet * 2 + values.laneSet,
+      routes: values.upperOrbit * 8,
+      intentionalTargets:
+        values.targets["measurement-left"] * 3 +
+        values.bumpers.mes * 5 +
+        values.bumpers.erp * 3 +
+        values.bumpers.co2 * 4 +
+        values.targets.coil * 3 +
+        values.targets.furnace * 2 +
+        values.targets.alcad * 2,
+      missionCompletion:
+        values.missions.measurement +
+        values.missions.mes +
+        values.missions.erp +
+        values.missions.green +
+        values.missions.coil,
+      comboBonuses: values.comboByCount[2] * 5 + values.comboByCount[3] * 4 + values.comboByCount[4] * 2,
+      jackpots: values.jackpotNormal * 2
+    };
+    const strongParts = {
+      skillShot: values.skillShot,
+      passiveContacts: values.slingshot * 28 + values.rollover * 16 + values.inlane * 12 + values.outlane * 4,
+      setBonuses: values.rolloverSet * 3 + values.laneSet * 2,
+      routes: values.upperOrbit * 12,
+      intentionalTargets:
+        values.targets["measurement-left"] * 3 +
+        values.bumpers.mes * 5 +
+        values.bumpers.erp * 3 +
+        values.bumpers.co2 * 4 +
+        values.targets.coil * 3 +
+        values.targets["e-odprema"] * 2 +
+        values.targets.alcad * 2 +
+        values.targets.furnace * 3 +
+        values.targets.kosovnica * 2,
+      missionCompletion: Object.values(values.missions).reduce((total, bonus) => total + bonus, 0),
+      comboBonuses: values.comboByCount[3] * 4 + values.comboByCount[4] * 4 + values.comboByCount[5] * 3 + values.comboMediumSix * 2 + values.comboMax * 2,
+      jackpots: (values.jackpotNormal * 2 + values.jackpotSuper) * MULTIBALL.multiplier,
+      metaRewards: values.metaMissions
+    };
+    const sampleDefinitions = [
+      { id: "beginner", label: "Beginner three-ball", band: SCORING_RULES.targetBands.beginner, parts: beginnerParts },
+      { id: "competent", label: "Competent three-ball", band: SCORING_RULES.targetBands.competent, parts: competentParts },
+      { id: "strong", label: "Strong mission/multiball game", band: SCORING_RULES.targetBands.strong, parts: strongParts }
+    ];
+
+    return sampleDefinitions.map((sample) => {
+      const total = sumScoreParts(sample.parts);
+      const passiveShare = sample.parts.passiveContacts / total;
+
+      return {
+        ...sample,
+        total,
+        passiveShare: Number(passiveShare.toFixed(3)),
+        status: getScoreBandStatus(total, sample.band)
+      };
+    });
+  }
+
+  function getScoreEconomyReport() {
+    const samples = getScoreEconomySamples();
+
+    return {
+      version: SCORING_RULES.version,
+      highScorePolicy: SCORING_RULES.highScorePolicy,
+      highScoreKey: SCORING_RULES.highScoreKey,
+      legacyHighScoreKey: SCORING_RULES.legacyHighScoreKey,
+      legacyHighScore: loadLegacyHighScore(),
+      currentHighScore: gameState.highScore,
+      targetBands: SCORING_RULES.targetBands,
+      values: SCORING_RULES.values,
+      checks: {
+        orbitAboveOrdinaryTarget: UPPER_ORBIT.points > Math.max(...Object.values(SCORING_RULES.values.targets)),
+        jackpotsLargestRepeatable: JACKPOT.normalValue > UPPER_ORBIT.points && JACKPOT.superValue > JACKPOT.normalValue,
+        passiveContactsBelowRoutes: Math.max(SCORING_RULES.values.slingshot, SCORING_RULES.values.rollover, SCORING_RULES.values.inlane, SCORING_RULES.values.outlane) < UPPER_ORBIT.points,
+        samplesInBands: samples.every((sample) => sample.status === "in-band"),
+        passiveShareUnderTwentyPercent: samples.every((sample) => sample.passiveShare < 0.2)
+      },
+      samples
+    };
+  }
+
   function areAllRequiredMissionsComplete() {
     return getCompletedMissionCount() === MISSION_CONFIG.length;
   }
@@ -819,7 +984,8 @@
 
   function loadHighScore() {
     try {
-      const stored = window.localStorage.getItem(HIGH_SCORE_KEY);
+      separateLegacyHighScore();
+      const stored = window.localStorage.getItem(SCORING_RULES.highScoreKey);
       const parsed = Number.parseInt(stored || "0", 10);
       return Number.isFinite(parsed) ? parsed : 0;
     } catch (_error) {
@@ -829,9 +995,28 @@
 
   function saveHighScore() {
     try {
-      window.localStorage.setItem(HIGH_SCORE_KEY, String(gameState.highScore));
+      window.localStorage.setItem(SCORING_RULES.highScoreKey, String(gameState.highScore));
     } catch (_error) {
       // Keep the game playable if browser storage is unavailable.
+    }
+  }
+
+  function separateLegacyHighScore() {
+    const legacyScore = window.localStorage.getItem(HIGH_SCORE_BASE_KEY);
+
+    if (legacyScore !== null && window.localStorage.getItem(SCORING_RULES.legacyHighScoreKey) === null) {
+      window.localStorage.setItem(SCORING_RULES.legacyHighScoreKey, legacyScore);
+    }
+  }
+
+  function loadLegacyHighScore() {
+    try {
+      separateLegacyHighScore();
+      const stored = window.localStorage.getItem(SCORING_RULES.legacyHighScoreKey);
+      const parsed = Number.parseInt(stored || "0", 10);
+      return Number.isFinite(parsed) ? parsed : 0;
+    } catch (_error) {
+      return 0;
     }
   }
 
@@ -2622,7 +2807,8 @@
     const activeBalls = physics ? getActiveBalls() : [];
 
     window.ImpolPinball = {
-      phase: "14.3.3",
+      phase: "14.3.4",
+      scoring: getScoreEconomyReport(),
       matterLoaded: Boolean(MatterLib),
       staticBodyCount: physics ? physics.staticBodies.length : 0,
       tableObjectCount: physics ? physics.bumperBodies.length + physics.targetBodies.length + physics.slingshotBodies.length + physics.rolloverBodies.length + physics.laneBodies.length + physics.orbitSensorBodies.length : 0,
@@ -2957,6 +3143,73 @@
       });
     }
 
+    function triggerScoreEconomyDiagnostic(sampleId) {
+      const sample = getScoreEconomyReport().samples.find((candidate) => candidate.id === sampleId);
+
+      if (!sample) {
+        return;
+      }
+
+      recordDiagnosticEvent("score-economy", {
+        eventName: "score:economy",
+        objectId: sample.id,
+        label: `${sample.label} ${sample.total.toLocaleString("sl-SI")}`,
+        kind: sample.status
+      });
+    }
+
+    function triggerLegacyHighScoreDiagnostic() {
+      let baseSnapshot = null;
+      let legacySnapshot = null;
+      let currentSnapshot = null;
+      let canRestoreStorage = false;
+
+      try {
+        baseSnapshot = window.localStorage.getItem(HIGH_SCORE_BASE_KEY);
+        legacySnapshot = window.localStorage.getItem(SCORING_RULES.legacyHighScoreKey);
+        currentSnapshot = window.localStorage.getItem(SCORING_RULES.highScoreKey);
+        canRestoreStorage = true;
+        window.localStorage.setItem(HIGH_SCORE_BASE_KEY, "9999999");
+        window.localStorage.removeItem(SCORING_RULES.legacyHighScoreKey);
+        separateLegacyHighScore();
+        const legacyScore = window.localStorage.getItem(SCORING_RULES.legacyHighScoreKey);
+        const currentScore = window.localStorage.getItem(SCORING_RULES.highScoreKey);
+        recordDiagnosticEvent("legacy-high-score", {
+          eventName: "score:legacy-high-score",
+          objectId: "legacy-high-score",
+          label: `Legacy high score ${legacyScore || "0"}`,
+          kind: legacyScore === "9999999" && currentScore === currentSnapshot ? "separated" : "failed"
+        });
+      } catch (_error) {
+        recordDiagnosticEvent("legacy-high-score", {
+          eventName: "score:legacy-high-score",
+          objectId: "legacy-high-score",
+          label: "Legacy high score unavailable",
+          kind: "storage-unavailable"
+        });
+      } finally {
+        if (canRestoreStorage) {
+          if (baseSnapshot === null) {
+            window.localStorage.removeItem(HIGH_SCORE_BASE_KEY);
+          } else {
+            window.localStorage.setItem(HIGH_SCORE_BASE_KEY, baseSnapshot);
+          }
+
+          if (legacySnapshot === null) {
+            window.localStorage.removeItem(SCORING_RULES.legacyHighScoreKey);
+          } else {
+            window.localStorage.setItem(SCORING_RULES.legacyHighScoreKey, legacySnapshot);
+          }
+
+          if (currentSnapshot === null) {
+            window.localStorage.removeItem(SCORING_RULES.highScoreKey);
+          } else {
+            window.localStorage.setItem(SCORING_RULES.highScoreKey, currentSnapshot);
+          }
+        }
+      }
+    }
+
     const scenarios = [
       {
         id: "upper-orbit-completion",
@@ -3138,6 +3391,46 @@
           ]);
         },
         successWhen: () => gameState.comboCount === COMBO_MAX_COUNT && gameState.comboTier === "max"
+      },
+      {
+        id: "score-economy-beginner-band",
+        name: "Score economy: beginner band",
+        start: { x: 450, y: 720 },
+        velocity: { x: 0, y: 0 },
+        durationMs: 500,
+        expectedEvents: ["score-economy"],
+        setup: () => triggerScoreEconomyDiagnostic("beginner"),
+        successWhen: (result) => result.events.some((event) => event.type === "score-economy" && event.objectId === "beginner" && event.kind === "in-band")
+      },
+      {
+        id: "score-economy-competent-band",
+        name: "Score economy: competent band",
+        start: { x: 450, y: 720 },
+        velocity: { x: 0, y: 0 },
+        durationMs: 500,
+        expectedEvents: ["score-economy"],
+        setup: () => triggerScoreEconomyDiagnostic("competent"),
+        successWhen: (result) => result.events.some((event) => event.type === "score-economy" && event.objectId === "competent" && event.kind === "in-band")
+      },
+      {
+        id: "score-economy-strong-band",
+        name: "Score economy: strong band",
+        start: { x: 450, y: 720 },
+        velocity: { x: 0, y: 0 },
+        durationMs: 500,
+        expectedEvents: ["score-economy"],
+        setup: () => triggerScoreEconomyDiagnostic("strong"),
+        successWhen: (result) => result.events.some((event) => event.type === "score-economy" && event.objectId === "strong" && event.kind === "in-band")
+      },
+      {
+        id: "score-economy-legacy-high-score",
+        name: "Score economy: legacy high score separated",
+        start: { x: 450, y: 720 },
+        velocity: { x: 0, y: 0 },
+        durationMs: 500,
+        expectedEvents: ["legacy-high-score"],
+        setup: triggerLegacyHighScoreDiagnostic,
+        successWhen: (result) => result.events.some((event) => event.type === "legacy-high-score" && event.kind === "separated")
       },
       {
         id: "lower-trap-rescue",
@@ -4324,7 +4617,7 @@
       return;
     }
 
-    const points = 3500 * getActiveMultiplier();
+    const points = SCORING_RULES.values.skillShot * getActiveMultiplier();
     gameState.skillShotAwarded = true;
     gameState.score += points;
     setHighScore(gameState.score);
@@ -4505,7 +4798,7 @@
         return COMBO_BONUS_BY_COUNT[4];
       }
 
-      return count === 5 ? COMBO_BONUS_BY_COUNT[5] : 8500;
+      return count === 5 ? COMBO_BONUS_BY_COUNT[5] : SCORING_RULES.values.comboMediumSix;
     }
 
     if (tier === "small") {

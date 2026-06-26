@@ -935,11 +935,12 @@ The detailed scope, exclusions, dependencies, acceptance criteria, and deliverab
   - Added inspectable scoring re-hit cooldowns, passive-sensor combo filtering, bounded 10-hit combo tiers, and diversity requirements for medium/max combos.
   - Verified with `?pinballDiagnostics=all`: 46/46 diagnostics passed, including the new sensor re-hit, passive sensor, and bounded combo scenarios.
 
-- [ ] Phase 14.3.4 - Score economy rebalance - Status: planned
+- [x] Phase 14.3.4 - Score economy rebalance - Status: completed
   - Rebalance incidental hits, targets, routes, missions, multiball, and jackpots.
   - Version the scoring rules and handle inflated legacy high scores.
   - Depends on Phase 14.3.3.
   - Visible result: normal three-ball games fit documented score ranges.
+  - Added ruleset `14.3.4-score-economy-1`, separated legacy high scores, exposed score economy diagnostics, and documented measured samples in `docs/phase14_3_4_score_economy.md`.
 
 - [ ] Phase 14.3.5 - Mission and company progression retune - Status: planned
   - Align mission requirements and company states with intentional, repeatable shots.

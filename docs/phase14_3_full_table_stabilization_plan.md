@@ -184,7 +184,7 @@ Implementation notes:
 
 ## Phase 14.3.4 - Score Economy Rebalance
 
-Status: planned
+Status: completed
 
 Depends on: Phase 14.3.3
 
@@ -224,6 +224,13 @@ Acceptance criteria:
 Deliverable:
 
 - Versioned and documented score rules with measured sample results.
+
+Result:
+
+- Added scoring ruleset `14.3.4-score-economy-1` with centralized values for passive contacts, intentional targets, orbit, combos, skill shot, missions, BOM, jackpots, and meta rewards.
+- Separated legacy high scores under `impol-pinball.high-score.legacy-pre-14.3.4`; current records use `impol-pinball.high-score.14.3.4-score-economy-1`.
+- Added inspectable score economy diagnostics and sample-band scenarios.
+- Documented measured samples in `docs/phase14_3_4_score_economy.md`: beginner 84,640, competent 335,630, strong 947,070.
 
 ## Phase 14.3.5 - Mission And Company Progression Retune
 
