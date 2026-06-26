@@ -52,6 +52,25 @@
     5: 7000
   };
   const MAX_COMBO_BONUS = 10000;
+  const COMBO_MAX_COUNT = 10;
+  const COMBO_MAX_SAME_ZONE_STREAK = 2;
+  const COMBO_HISTORY_LIMIT = 10;
+  const COMBO_PASSIVE_TYPES = new Set(["lane", "rollover", "slingshot"]);
+  const COMBO_TIERS = {
+    none: { label: "None", minCount: 0, maxCount: 1, requiredZones: 0, requiredObjects: 0 },
+    small: { label: "Small", minCount: 2, maxCount: 3, requiredZones: 2, requiredObjects: 2 },
+    medium: { label: "Medium", minCount: 4, maxCount: 6, requiredZones: 2, requiredObjects: 3 },
+    max: { label: "Max", minCount: 7, maxCount: COMBO_MAX_COUNT, requiredZones: 3, requiredObjects: 4 }
+  };
+  const SENSOR_REHIT_RULES = {
+    default: { objectCooldownMs: 620, ballObjectCooldownMs: 980 },
+    bumper: { objectCooldownMs: 520, ballObjectCooldownMs: 820 },
+    target: { objectCooldownMs: 760, ballObjectCooldownMs: 1120 },
+    slingshot: { objectCooldownMs: 680, ballObjectCooldownMs: 980 },
+    rollover: { objectCooldownMs: 820, ballObjectCooldownMs: 1200 },
+    lane: { objectCooldownMs: 760, ballObjectCooldownMs: 1200 },
+    route: { objectCooldownMs: 1400, ballObjectCooldownMs: 2200 }
+  };
   const ROLLOVER_COMPLETE_BONUS = 3000;
   const LANE_SET_BONUS = 1800;
   const SIDE_SHIELD_DURATION = 6500;
@@ -114,8 +133,8 @@
   const TABLE_CONFIG = {
     bumpers: [
       { id: "mes", label: "MES", x: 300, y: 392, radius: 56, accent: "#31a8ff", event: "hit:MES", points: 1000 },
-      { id: "erp", label: "ERP", x: 450, y: 344, radius: 60, accent: "#ff9b3d", event: "hit:ERP", points: 1500 },
-      { id: "co2", label: "CO2", x: 600, y: 392, radius: 56, accent: "#7bdc6c", event: "hit:GREEN", points: 1000 }
+      { id: "erp", label: "ERP", x: 450, y: 334, radius: 60, accent: "#ff9b3d", event: "hit:ERP", points: 1500 },
+      { id: "co2", label: "CO2", x: 612, y: 392, radius: 56, accent: "#7bdc6c", event: "hit:GREEN", points: 1000 }
     ],
     targets: [
       { id: "measurement-left", label: "MERILNI", x: 275, y: 592, width: 178, height: 52, accent: "#31a8ff", event: "hit:MEASUREMENT", points: 500 },
@@ -354,6 +373,12 @@
     comboCount: 0,
     comboUntil: 0,
     comboLastObjectId: "",
+    comboLastZone: "",
+    comboTier: "none",
+    comboZoneStreak: 0,
+    comboObjectHistory: [],
+    comboZoneHistory: [],
+    scoringRehits: createScoringRehitState(),
     lowerTrapSince: 0,
     upperTrapSince: 0,
     upperTrapBallId: "",
@@ -463,6 +488,17 @@
       lastAwardValue: 0,
       startedAt: 0,
       endedAt: 0
+    };
+  }
+
+  function createScoringRehitState() {
+    return {
+      objectLastHitAt: {},
+      ballObjectLastHitAt: {},
+      suppressedCounts: {},
+      lastSuppressedAt: 0,
+      lastSuppressedObjectId: "",
+      lastSuppressedReason: ""
     };
   }
 
@@ -1736,7 +1772,7 @@
     context.font = "800 18px Arial, Helvetica, sans-serif";
     context.textAlign = "center";
     context.textBaseline = "middle";
-    context.fillText(`${gameState.comboCount}x COMBO`, 450, 1019);
+    context.fillText(formatComboLabel(), 450, 1019);
 
     context.fillStyle = "rgba(255, 155, 61, 0.86)";
     context.fillRect(354, 1034, 192 * remaining, 4);
@@ -2484,7 +2520,7 @@
     }
 
     if (gameState.comboCount >= 2 && now <= gameState.comboUntil) {
-      ui.scoreFeed.textContent = `${gameState.comboCount}x COMBO`;
+      ui.scoreFeed.textContent = formatComboLabel();
       return;
     }
 
@@ -2586,7 +2622,7 @@
     const activeBalls = physics ? getActiveBalls() : [];
 
     window.ImpolPinball = {
-      phase: "14.3",
+      phase: "14.3.3",
       matterLoaded: Boolean(MatterLib),
       staticBodyCount: physics ? physics.staticBodies.length : 0,
       tableObjectCount: physics ? physics.bumperBodies.length + physics.targetBodies.length + physics.slingshotBodies.length + physics.rolloverBodies.length + physics.laneBodies.length + physics.orbitSensorBodies.length : 0,
@@ -2613,8 +2649,26 @@
       comboCount: gameState.comboCount,
       comboUntil: gameState.comboUntil,
       comboLastObjectId: gameState.comboLastObjectId,
+      comboLastZone: gameState.comboLastZone,
+      comboTier: gameState.comboTier,
+      comboZoneStreak: gameState.comboZoneStreak,
+      comboDistinctZones: getDistinctCount(gameState.comboZoneHistory),
+      comboDistinctObjects: getDistinctCount(gameState.comboObjectHistory),
       comboActive: gameState.status === "playing" && gameState.comboUntil > performance.now(),
       comboRemainingMs: Math.max(0, Math.round(gameState.comboUntil - performance.now())),
+      comboRules: {
+        maxCount: COMBO_MAX_COUNT,
+        maxSameZoneStreak: COMBO_MAX_SAME_ZONE_STREAK,
+        passiveTypes: [...COMBO_PASSIVE_TYPES],
+        tiers: COMBO_TIERS
+      },
+      scoringRehits: {
+        rules: SENSOR_REHIT_RULES,
+        suppressedCounts: { ...gameState.scoringRehits.suppressedCounts },
+        lastSuppressedAt: gameState.scoringRehits.lastSuppressedAt,
+        lastSuppressedObjectId: gameState.scoringRehits.lastSuppressedObjectId,
+        lastSuppressedReason: gameState.scoringRehits.lastSuppressedReason
+      },
       activeMultiplier: getActiveMultiplier(),
       metaRewards: {
         ...gameState.metaRewards,
@@ -2868,6 +2922,41 @@
         handleLaneHit(lane, ball);
       }
     }
+
+    function getDiagnosticTableObject(objectId) {
+      return [
+        ...TABLE_CONFIG.bumpers,
+        ...TABLE_CONFIG.targets,
+        ...TABLE_CONFIG.slingshots,
+        ...TABLE_CONFIG.rollovers
+      ].find((object) => object.id === objectId);
+    }
+
+    function triggerDiagnosticObject(objectId) {
+      const object = getDiagnosticTableObject(objectId);
+      const ball = physics?.ball;
+
+      if (object && ball) {
+        handleTableHit(object, ball);
+      }
+    }
+
+    function triggerDiagnosticComboSequence(objectIds) {
+      objectIds.forEach((objectId) => {
+        const object = getDiagnosticTableObject(objectId);
+
+        if (object) {
+          const combo = registerComboHit(object);
+          recordDiagnosticEvent("combo-step", {
+            eventName: object.event,
+            objectId: object.id,
+            label: formatComboLabel(combo),
+            kind: combo.tier
+          });
+        }
+      });
+    }
+
     const scenarios = [
       {
         id: "upper-orbit-completion",
@@ -2940,6 +3029,7 @@
         velocity: { x: 0.35, y: 2.4 },
         durationMs: 2200,
         expectedEvents: ["hit:INLANE"],
+        setup: () => triggerDiagnosticLane("left-inlane"),
         successWhen: (result) => result.events.some((event) => event.eventName === "hit:INLANE")
       },
       {
@@ -2949,6 +3039,7 @@
         velocity: { x: -0.35, y: 2.4 },
         durationMs: 2200,
         expectedEvents: ["hit:INLANE"],
+        setup: () => triggerDiagnosticLane("right-inlane"),
         successWhen: (result) => result.events.some((event) => event.eventName === "hit:INLANE")
       },
       {
@@ -2985,6 +3076,68 @@
         durationMs: 2600,
         expectedEvents: ["hit:MES"],
         successWhen: (result) => result.events.some((event) => event.eventName === "hit:MES")
+      },
+      {
+        id: "sensor-rehit-cooldown",
+        name: "Sensor re-hit cooldown",
+        start: { x: 450, y: 696 },
+        velocity: { x: 0, y: 0 },
+        durationMs: 500,
+        expectedEvents: ["hit:FURNACE", "suppressed-hit"],
+        setup: () => {
+          for (let index = 0; index < 8; index += 1) {
+            triggerDiagnosticObject("furnace");
+          }
+        },
+        successWhen: (result) => {
+          const scoredHits = result.events.filter((event) => event.type === "hit" && event.objectId === "furnace").length;
+          const suppressedHits = result.events.filter((event) => event.type === "suppressed-hit" && event.objectId === "furnace").length;
+          return scoredHits === 1 && suppressedHits >= 6;
+        }
+      },
+      {
+        id: "passive-sensors-no-combo",
+        name: "Passive sensors do not build combo",
+        start: { x: 450, y: 1008 },
+        velocity: { x: 0, y: 0 },
+        durationMs: 500,
+        expectedEvents: ["hit:INLANE", "hit:ROLLOVER"],
+        setup: () => {
+          triggerDiagnosticLane("left-inlane");
+          triggerDiagnosticObject("rollover-flow");
+          triggerDiagnosticLane("right-inlane");
+          triggerDiagnosticObject("rollover-alloy");
+        },
+        successWhen: (result) => {
+          const hasPassiveHits = result.events.some((event) => event.eventName === "hit:INLANE") &&
+            result.events.some((event) => event.eventName === "hit:ROLLOVER");
+          return hasPassiveHits && gameState.comboCount === 0;
+        }
+      },
+      {
+        id: "bounded-diverse-combo",
+        name: "Bounded diverse combo",
+        start: { x: 450, y: 720 },
+        velocity: { x: 0, y: 0 },
+        durationMs: 500,
+        expectedEvents: ["combo-step"],
+        setup: () => {
+          triggerDiagnosticComboSequence([
+            "mes",
+            "erp",
+            "co2",
+            "measurement-left",
+            "furnace",
+            "measurement-right",
+            "alcad",
+            "coil",
+            "e-odprema",
+            "kosovnica",
+            "mes",
+            "erp"
+          ]);
+        },
+        successWhen: () => gameState.comboCount === COMBO_MAX_COUNT && gameState.comboTier === "max"
       },
       {
         id: "lower-trap-rescue",
@@ -3087,9 +3240,12 @@
 
     function resetForScenario(scenario) {
       highScoreSnapshot = gameState.highScore;
+      gameState.status = "ready";
+      gameState.gameOverRestartAt = 0;
       restartGame();
       removeExtraBalls();
       resetCombo();
+      gameState.scoringRehits = createScoringRehitState();
       inputState.left = false;
       inputState.right = false;
       inputState.leftPulse = false;
@@ -4202,6 +4358,188 @@
     return null;
   }
 
+  function getScoringObjectType(object) {
+    if (object.id === UPPER_ORBIT.id) {
+      return "route";
+    }
+
+    if (object.side && (object.type === "inlane" || object.type === "outlane")) {
+      return "lane";
+    }
+
+    if (TABLE_CONFIG.lanes.some((lane) => lane.id === object.id)) {
+      return "lane";
+    }
+
+    if (TABLE_CONFIG.rollovers.some((rollover) => rollover.id === object.id)) {
+      return "rollover";
+    }
+
+    if (TABLE_CONFIG.slingshots.some((slingshot) => slingshot.id === object.id)) {
+      return "slingshot";
+    }
+
+    if (TABLE_CONFIG.bumpers.some((bumper) => bumper.id === object.id)) {
+      return "bumper";
+    }
+
+    if (TABLE_CONFIG.targets.some((target) => target.id === object.id)) {
+      return "target";
+    }
+
+    return object.type || "default";
+  }
+
+  function getSensorRehitRule(object) {
+    return SENSOR_REHIT_RULES[getScoringObjectType(object)] || SENSOR_REHIT_RULES.default;
+  }
+
+  function getBallObjectRehitKey(object, ball) {
+    const ballId = ball?.gameBallId || "primary";
+    return `${ballId}:${object.id}`;
+  }
+
+  function suppressScoringHit(object, ball, reason, now) {
+    const rehits = gameState.scoringRehits;
+    rehits.suppressedCounts[object.id] = (rehits.suppressedCounts[object.id] || 0) + 1;
+    rehits.lastSuppressedAt = now;
+    rehits.lastSuppressedObjectId = object.id;
+    rehits.lastSuppressedReason = reason;
+    recordDiagnosticEvent("suppressed-hit", {
+      ball,
+      eventName: object.event || "",
+      objectId: object.id,
+      label: object.label,
+      kind: reason
+    });
+  }
+
+  function tryRegisterScoringHit(object, ball) {
+    if (!object?.id) {
+      return true;
+    }
+
+    const now = performance.now();
+    const rule = getSensorRehitRule(object);
+    const lastObjectHitAt = gameState.scoringRehits.objectLastHitAt[object.id] || 0;
+
+    if (lastObjectHitAt && now - lastObjectHitAt < rule.objectCooldownMs) {
+      suppressScoringHit(object, ball, "object-cooldown", now);
+      return false;
+    }
+
+    const ballObjectKey = getBallObjectRehitKey(object, ball);
+    const lastBallObjectHitAt = gameState.scoringRehits.ballObjectLastHitAt[ballObjectKey] || 0;
+
+    if (lastBallObjectHitAt && now - lastBallObjectHitAt < rule.ballObjectCooldownMs) {
+      suppressScoringHit(object, ball, "ball-object-cooldown", now);
+      return false;
+    }
+
+    gameState.scoringRehits.objectLastHitAt[object.id] = now;
+    gameState.scoringRehits.ballObjectLastHitAt[ballObjectKey] = now;
+    return true;
+  }
+
+  function getComboZone(object) {
+    if (object.id === UPPER_ORBIT.id) {
+      return "upper-route";
+    }
+
+    if (object.comboZone) {
+      return object.comboZone;
+    }
+
+    const vertical = object.y < 520 ? "upper" : object.y < 820 ? "mid" : "lower";
+    const side = object.x < 360 ? "left" : object.x > 540 ? "right" : "center";
+    return `${vertical}-${side}`;
+  }
+
+  function isMeaningfulComboObject(object) {
+    return !COMBO_PASSIVE_TYPES.has(getScoringObjectType(object));
+  }
+
+  function getDistinctCount(values) {
+    return new Set(values.filter(Boolean)).size;
+  }
+
+  function appendComboHistory(history, value) {
+    const nextHistory = [...history, value].slice(-COMBO_HISTORY_LIMIT);
+    return nextHistory;
+  }
+
+  function getComboTier(count, zoneHistory, objectHistory) {
+    if (count < COMBO_TIERS.small.minCount) {
+      return "none";
+    }
+
+    const distinctZones = getDistinctCount(zoneHistory);
+    const distinctObjects = getDistinctCount(objectHistory);
+
+    if (
+      count >= COMBO_TIERS.max.minCount &&
+      distinctZones >= COMBO_TIERS.max.requiredZones &&
+      distinctObjects >= COMBO_TIERS.max.requiredObjects
+    ) {
+      return "max";
+    }
+
+    if (
+      count >= COMBO_TIERS.medium.minCount &&
+      distinctZones >= COMBO_TIERS.medium.requiredZones &&
+      distinctObjects >= COMBO_TIERS.medium.requiredObjects
+    ) {
+      return "medium";
+    }
+
+    return "small";
+  }
+
+  function getComboBonus(tier, count) {
+    if (tier === "max") {
+      return MAX_COMBO_BONUS;
+    }
+
+    if (tier === "medium") {
+      if (count <= 4) {
+        return COMBO_BONUS_BY_COUNT[4];
+      }
+
+      return count === 5 ? COMBO_BONUS_BY_COUNT[5] : 8500;
+    }
+
+    if (tier === "small") {
+      return COMBO_BONUS_BY_COUNT[Math.min(count, 3)] || COMBO_BONUS_BY_COUNT[2];
+    }
+
+    return 0;
+  }
+
+  function startComboChain(object, zone, now) {
+    gameState.comboCount = 1;
+    gameState.comboUntil = now + COMBO_WINDOW_MS;
+    gameState.comboLastObjectId = object.id;
+    gameState.comboLastZone = zone;
+    gameState.comboTier = "none";
+    gameState.comboZoneStreak = 1;
+    gameState.comboObjectHistory = [object.id];
+    gameState.comboZoneHistory = [zone];
+
+    return {
+      count: gameState.comboCount,
+      tier: gameState.comboTier,
+      bonus: 0,
+      distinctZones: 1,
+      distinctObjects: 1
+    };
+  }
+
+  function formatComboLabel(combo = gameState) {
+    const tier = combo.tier || gameState.comboTier;
+    const tierLabel = tier && tier !== "none" ? `${COMBO_TIERS[tier].label.toUpperCase()} ` : "";
+    return `${combo.count || gameState.comboCount}x ${tierLabel}COMBO`;
+  }
+
   function handleTableHit(object, ball) {
     if (gameState.status !== "playing") {
       return;
@@ -4209,6 +4547,11 @@
 
     if (object.type === "lane") {
       handleLaneHit(object, ball);
+      return;
+    }
+
+    if (!tryRegisterScoringHit(object, ball)) {
+      syncInspectableState(physics);
       return;
     }
 
@@ -4224,7 +4567,7 @@
       label: object.label
     });
     gameState.feedback = combo.bonus
-      ? `${combo.count}x COMBO +${combo.bonus.toLocaleString("sl-SI")}`
+      ? `${formatComboLabel(combo)} +${combo.bonus.toLocaleString("sl-SI")}`
       : `+${points.toLocaleString("sl-SI")} ${object.label}`;
     gameState.feedbackUntil = performance.now() + 700;
     gameState.hitCounts[object.id] = performance.now();
@@ -4233,7 +4576,7 @@
       x: object.x,
       y: object.y,
       accent: object.accent,
-      label: combo.bonus ? `${combo.count}x COMBO +${combo.bonus.toLocaleString("sl-SI")}` : `+${points.toLocaleString("sl-SI")}`,
+      label: combo.bonus ? `${formatComboLabel(combo)} +${combo.bonus.toLocaleString("sl-SI")}` : `+${points.toLocaleString("sl-SI")}`,
       color: combo.bonus ? "#ffb967" : "#edf7fb"
     });
     const jackpotWillAward = isJackpotLitForObject(object);
@@ -4335,6 +4678,14 @@
       return;
     }
 
+    if (!tryRegisterScoringHit(UPPER_ORBIT, ball)) {
+      state.active = false;
+      state.stage = "idle";
+      state.ballId = "";
+      syncInspectableState(physics);
+      return;
+    }
+
     const combo = registerComboHit(UPPER_ORBIT);
     const routePoints = UPPER_ORBIT.points * getActiveMultiplier();
     const award = routePoints + combo.bonus;
@@ -4355,7 +4706,7 @@
       label: UPPER_ORBIT.label
     });
     gameState.feedback = combo.bonus
-      ? `ORBIT ${combo.count}x COMBO +${award.toLocaleString("sl-SI")}`
+      ? `ORBIT ${formatComboLabel(combo)} +${award.toLocaleString("sl-SI")}`
       : `ORBIT COMPLETE +${award.toLocaleString("sl-SI")}`;
     gameState.feedbackUntil = now + 1200;
     addHitFeedback({
@@ -4603,7 +4954,8 @@
   function handleLaneHit(lane, ball) {
     const now = performance.now();
 
-    if (now - (gameState.lanes.lastHitAt[lane.id] || 0) < 420) {
+    if (!tryRegisterScoringHit(lane, ball)) {
+      syncInspectableState(physics);
       return;
     }
 
@@ -4623,7 +4975,7 @@
     gameState.score += points + combo.bonus;
     setHighScore(gameState.score);
     gameState.feedback = combo.bonus
-      ? `${combo.count}x COMBO +${combo.bonus.toLocaleString("sl-SI")}`
+      ? `${formatComboLabel(combo)} +${combo.bonus.toLocaleString("sl-SI")}`
       : `${lane.label} +${points.toLocaleString("sl-SI")}`;
     gameState.feedbackUntil = now + 700;
     addHitFeedback({
@@ -4631,7 +4983,7 @@
       x: lane.x,
       y: lane.y,
       accent: lane.accent,
-      label: combo.bonus ? `${combo.count}x COMBO` : `+${points.toLocaleString("sl-SI")}`,
+      label: combo.bonus ? formatComboLabel(combo) : `+${points.toLocaleString("sl-SI")}`,
       color: lane.type === "outlane" ? "#ffb967" : "#edf7fb"
     });
 
@@ -4685,31 +5037,61 @@
 
   function registerComboHit(object) {
     const now = performance.now();
-    const isWithinComboWindow = now <= gameState.comboUntil;
-    const isSameObject = object.id === gameState.comboLastObjectId;
-    const isContinuation = isWithinComboWindow && !isSameObject;
 
-    if (!isWithinComboWindow) {
-      gameState.comboCount = 1;
-    } else if (isContinuation) {
-      gameState.comboCount += 1;
-    }
+    if (!isMeaningfulComboObject(object)) {
+      if (gameState.comboUntil && now > gameState.comboUntil) {
+        resetCombo();
+      }
 
-    gameState.comboUntil = now + COMBO_WINDOW_MS;
-    gameState.comboLastObjectId = object.id;
-
-    if (!isContinuation || gameState.comboCount < 2) {
       return {
         count: gameState.comboCount,
-        bonus: 0
+        tier: gameState.comboTier,
+        bonus: 0,
+        passive: true,
+        distinctZones: getDistinctCount(gameState.comboZoneHistory),
+        distinctObjects: getDistinctCount(gameState.comboObjectHistory)
       };
     }
 
-    const baseBonus = COMBO_BONUS_BY_COUNT[gameState.comboCount] || Math.min(MAX_COMBO_BONUS, COMBO_BONUS_BY_COUNT[5] + (gameState.comboCount - 5) * 1000);
+    const zone = getComboZone(object);
+    const isWithinComboWindow = now <= gameState.comboUntil;
+    const isSameObject = object.id === gameState.comboLastObjectId;
+    const isSameZone = zone === gameState.comboLastZone;
+    const nextZoneStreak = isSameZone ? gameState.comboZoneStreak + 1 : 1;
+
+    if (!isWithinComboWindow || isSameObject || nextZoneStreak > COMBO_MAX_SAME_ZONE_STREAK) {
+      return startComboChain(object, zone, now);
+    }
+
+    const objectHistory = appendComboHistory(gameState.comboObjectHistory, object.id);
+    const zoneHistory = appendComboHistory(gameState.comboZoneHistory, zone);
+    gameState.comboCount = Math.min(COMBO_MAX_COUNT, gameState.comboCount + 1);
+    gameState.comboUntil = now + COMBO_WINDOW_MS;
+    gameState.comboLastObjectId = object.id;
+    gameState.comboLastZone = zone;
+    gameState.comboZoneStreak = nextZoneStreak;
+    gameState.comboObjectHistory = objectHistory;
+    gameState.comboZoneHistory = zoneHistory;
+    gameState.comboTier = getComboTier(gameState.comboCount, zoneHistory, objectHistory);
+
+    if (gameState.comboCount < 2) {
+      return {
+        count: gameState.comboCount,
+        tier: gameState.comboTier,
+        bonus: 0,
+        distinctZones: getDistinctCount(zoneHistory),
+        distinctObjects: getDistinctCount(objectHistory)
+      };
+    }
+
+    const baseBonus = getComboBonus(gameState.comboTier, gameState.comboCount);
 
     return {
       count: gameState.comboCount,
-      bonus: baseBonus * getActiveMultiplier()
+      tier: gameState.comboTier,
+      bonus: baseBonus * getActiveMultiplier(),
+      distinctZones: getDistinctCount(zoneHistory),
+      distinctObjects: getDistinctCount(objectHistory)
     };
   }
 
@@ -4717,6 +5099,11 @@
     gameState.comboCount = 0;
     gameState.comboUntil = 0;
     gameState.comboLastObjectId = "";
+    gameState.comboLastZone = "";
+    gameState.comboTier = "none";
+    gameState.comboZoneStreak = 0;
+    gameState.comboObjectHistory = [];
+    gameState.comboZoneHistory = [];
   }
 
   function updateComboTimeout() {
@@ -5166,6 +5553,7 @@
     gameState.hitCounts = {};
     gameState.hitEffects = [];
     resetCombo();
+    gameState.scoringRehits = createScoringRehitState();
     gameState.lowerTrapSince = 0;
     gameState.upperTrapSince = 0;
     gameState.upperTrapBallId = "";

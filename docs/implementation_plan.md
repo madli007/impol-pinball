@@ -927,11 +927,13 @@ The detailed scope, exclusions, dependencies, acceptance criteria, and deliverab
   - Widened and clarified the ALU FLOW orbit mouth, moved/reduced the ALCAD footprint, added committed-entry and fail-safe route handling, and documented the shot map in `docs/phase14_3_2_shot_map.md`.
   - Verified with `?pinballDiagnostics=all`: 43/43 diagnostics passed, including 20/20 committed orbit attempts and 9/9 shot-map scenarios.
 
-- [ ] Phase 14.3.3 - Sensor cooldowns and combo rules - Status: planned
+- [x] Phase 14.3.3 - Sensor cooldowns and combo rules - Status: completed
   - Stop repeated sensor farming and unbounded combo chains.
   - Reward movement between meaningful table zones.
   - Depends on Phase 14.3.2.
   - Visible result: no passive score farming or 100+ combos.
+  - Added inspectable scoring re-hit cooldowns, passive-sensor combo filtering, bounded 10-hit combo tiers, and diversity requirements for medium/max combos.
+  - Verified with `?pinballDiagnostics=all`: 46/46 diagnostics passed, including the new sensor re-hit, passive sensor, and bounded combo scenarios.
 
 - [ ] Phase 14.3.4 - Score economy rebalance - Status: planned
   - Rebalance incidental hits, targets, routes, missions, multiball, and jackpots.

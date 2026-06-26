@@ -136,7 +136,7 @@ Completed notes:
 
 ## Phase 14.3.3 - Sensor Cooldowns And Combo Rules
 
-Status: planned
+Status: completed
 
 Depends on: Phase 14.3.2
 
@@ -173,6 +173,14 @@ Acceptance criteria:
 Deliverable:
 
 - Bounded, inspectable combo and sensor-rehit rules.
+
+Implementation notes:
+
+- Added shared per-object and per-ball/object scoring cooldown rules for bumpers, targets, slingshots, rollovers, lanes, and route awards.
+- Added bounded combo state with a maximum visible count of 10, passive lane/rollover/slingshot filtering, same-zone chain breaks, and small/medium/max tiers that require object and zone diversity.
+- Exposed cooldown, suppression, combo tier, and diversity state through `window.ImpolPinball`.
+- Added diagnostics for sensor re-hit suppression, passive sensors not building combos, and bounded diverse combo growth.
+- Verified with `?pinballDiagnostics=all`: 46/46 diagnostics passed, including 20/20 committed orbit attempts, 9/9 shot-map scenarios, and the new Phase 14.3.3 cooldown/combo scenarios.
 
 ## Phase 14.3.4 - Score Economy Rebalance
 
