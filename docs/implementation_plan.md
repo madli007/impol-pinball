@@ -987,7 +987,13 @@ The remaining Phase 14 work is split into agent-sized phases in `docs/phase14_fu
   - Added a 9-second safety timeout plus inconsistent-hold recovery that restores the same ball body to the shooter lane, closes the house, and clears qualification progress without awarding a kickout reward.
   - Restart, drain interruption, ball save, and game-over cleanup clear holding state safely, with restart ensuring a primary ball body exists if the held ball was the only active ball.
   - Added diagnostic scenario `phase14-4-2-lock-house-capture-hold` for 20 deterministic captures, safe recoveries, closed-entry rejection, and multiball-disabled rejection.
-- [ ] Phase 14.4.3 - Kickout, reward, and requalification - Status: planned
+- [x] Phase 14.4.3 - Kickout, reward, and requalification - Status: completed
+  - Added the normal lock-house loop after capture: 1.6-second hold, `kicking` state, controlled left/down kickout from the house mouth, and a 1.2-second no-recapture grace window.
+  - Awarded `22,000 x multiplier` through the current scoring ruleset on normal kickout only, with visible score feedback and inspectable `lastRewardValue`/`lastRewardAt`.
+  - Closed the house after kickout, cleared ALU FLOW/COIL qualification progress, and exposed a requalification loop counter while keeping the same documented qualification sequence.
+  - Added lock-house closed/opening/locked/reward/kickout synthesized sounds and kickout presentation text.
+  - Exposed kickout config/runtime state through `window.ImpolPinball.lockHouse` and added diagnostic scenario `phase14-4-3-lock-house-kickout-reward`.
+  - Verification: `node --check game.js` passed. Browser diagnostic testing was stopped per user request before a passing browser result was recorded.
 - [ ] Phase 14.4.4 - Lock house regression and presentation - Status: planned
 
 #### Phase 14.5: Bonus Mini-Game Program

@@ -119,7 +119,7 @@ Implementation notes:
 
 ### Phase 14.4.3 - Kickout, Reward, And Requalification
 
-Status: planned
+Status: completed
 
 Depends on: Phase 14.4.2
 
@@ -150,6 +150,16 @@ Acceptance criteria:
 Deliverable:
 
 - A complete qualify-capture-reward-kickout loop.
+
+Implementation notes:
+
+- Normal lock-house holds now last 1.6 seconds before a controlled kickout; the existing 9-second hold timeout remains a recovery-only path back to the shooter lane.
+- Kickout restores the held ball at the lock-house mouth and sends it left/down toward the controllable mid/lower playfield with a temporary 1.2-second no-recapture grace window while the visible state is `kicking`.
+- Awarded a documented `22,000 x multiplier` lock-house reward exactly once per normal kickout through the current `14.3.4-score-economy-1` scoring ruleset, with score feedback and inspectable reward timing/value.
+- Added synthesized closed-contact, opening/qualified, locked-hold, reward, and kickout sounds.
+- After kickout, the house closes, clears ALU FLOW/COIL qualification progress, increments an inspectable requalification loop counter, and requires the same documented ALU FLOW plus COIL sequence again.
+- Exposed hold duration, kickout velocity/position, reward value, kickout counts, no-recapture timing, and requalification level through `window.ImpolPinball.lockHouse`.
+- Added diagnostic scenario `phase14-4-3-lock-house-kickout-reward`; `node --check game.js` passed. Browser diagnostic rerun was stopped per user request before a green result was recorded.
 
 ### Phase 14.4.4 - Lock House Regression And Presentation
 
