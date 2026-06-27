@@ -75,7 +75,7 @@ Implementation notes:
 
 ### Phase 14.4.2 - Ball Capture And Safe Hold
 
-Status: planned
+Status: completed
 
 Depends on: Phase 14.4.1
 
@@ -107,6 +107,15 @@ Acceptance criteria:
 Deliverable:
 
 - Reliable single-ball capture and hold behavior.
+
+Implementation notes:
+
+- Enabled lock-house capture after qualification only; closed or unqualified contacts now record a blocked capture reason and leave the active ball untouched.
+- Implemented the Phase 14.4.2 multiball policy as `capture-disabled-during-multiball`, so a qualified house remains readable but does not capture while multiball is active or while more than one ball is in play.
+- A captured ball is removed from Matter active play, held by original ball ID, and exposed through `window.ImpolPinball.lockHouse.heldBallId`, `holdStartedAt`, `holdRemainingMs`, `holdPosition`, and `holdingBodyPresent`.
+- Added safety recovery: inconsistent holds or the 9-second hold timeout restore the same ball body to the shooter lane, close the house, clear qualification progress, and expose `recoveryReason`/`recoveryAt`.
+- Restart, drain interruption, ball save, and game-over cleanup clear lock-house holding state; restart also guarantees a primary ball body exists if the held ball was the only ball.
+- Added diagnostic scenario `phase14-4-2-lock-house-capture-hold`, including 20 deterministic eligible captures, recovery checks, closed-entry rejection, and multiball-disabled rejection.
 
 ### Phase 14.4.3 - Kickout, Reward, And Requalification
 

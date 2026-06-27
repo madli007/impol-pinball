@@ -980,7 +980,13 @@ The remaining Phase 14 work is split into agent-sized phases in `docs/phase14_fu
   - Documented qualification as one `ALU FLOW ORBIT` completion plus one `COIL COLLECTOR` hit, in either order; lock-house contact and unrelated events do not advance progress.
   - Exposed placement, qualification config, runtime progress, contact counts, and capture-disabled state through `window.ImpolPinball.lockHouse`.
   - Added diagnostic scenario `phase14-4-1-lock-house-qualification`.
-- [ ] Phase 14.4.2 - Ball capture and safe hold - Status: planned
+- [x] Phase 14.4.2 - Ball capture and safe hold - Status: completed
+  - Enabled qualified-only lock-house capture; closed/unqualified entries record blocked reasons and never capture.
+  - Documented and implemented multiball behavior as `capture-disabled-during-multiball`, so lock-house capture requires exactly one active ball.
+  - Captured balls are removed from Matter active play, held by original ball ID, and exposed through `window.ImpolPinball.lockHouse` with hold timing, position, timeout, recovery, capture, and blocked-capture fields.
+  - Added a 9-second safety timeout plus inconsistent-hold recovery that restores the same ball body to the shooter lane, closes the house, and clears qualification progress without awarding a kickout reward.
+  - Restart, drain interruption, ball save, and game-over cleanup clear holding state safely, with restart ensuring a primary ball body exists if the held ball was the only active ball.
+  - Added diagnostic scenario `phase14-4-2-lock-house-capture-hold` for 20 deterministic captures, safe recoveries, closed-entry rejection, and multiball-disabled rejection.
 - [ ] Phase 14.4.3 - Kickout, reward, and requalification - Status: planned
 - [ ] Phase 14.4.4 - Lock house regression and presentation - Status: planned
 

@@ -172,7 +172,9 @@
     placement: "right-mid playfield beside the CO2 bumper and above the E-ODPREMA lane, clear of the shooter lane",
     states: ["closed", "qualified", "open", "holding", "kicking"],
     initialState: "closed",
-    captureEnabled: false,
+    captureEnabled: true,
+    holdTimeoutMs: 9000,
+    multiballPolicy: "capture-disabled-during-multiball",
     x: 704,
     y: 502,
     width: 88,
@@ -540,6 +542,7 @@
   const assets = loadAssets(ASSET_CONFIG);
   const audio = createAudioManager();
   let diagnosticHarness = null;
+  let heldLockHouseBallBody = null;
 
   function createMissionState() {
     const firstStageMissionIds = new Set(MISSION_STAGES[0]);
@@ -674,7 +677,15 @@
       lastContactAt: 0,
       lastContactState: "",
       contactCount: 0,
-      captureEnabled: LOCK_HOUSE.captureEnabled
+      captureEnabled: LOCK_HOUSE.captureEnabled,
+      heldBallId: "",
+      holdStartedAt: 0,
+      holdPosition: null,
+      recoveryReason: "",
+      recoveryAt: 0,
+      captureCount: 0,
+      blockedCaptureCount: 0,
+      lastCaptureBlockedReason: ""
     };
   }
 
@@ -789,6 +800,10 @@
     const progress = getLockHouseProgressCount();
     const total = getLockHouseProgressTotal();
 
+    if (gameState.lockHouse.state === "holding") {
+      return gameState.lockHouse.heldBallId ? `LOCK HOUSE HOLDING ${gameState.lockHouse.heldBallId}` : "LOCK HOUSE HOLDING";
+    }
+
     if (isLockHouseQualified()) {
       return "LOCK HOUSE QUALIFIED";
     }
@@ -798,6 +813,18 @@
     });
 
     return `LOCK HOUSE ${progress}/${total}${nextRequirement ? `: ${nextRequirement.label}` : ""}`;
+  }
+
+  function isLockHouseEntranceOpen() {
+    const state = gameState.lockHouse;
+    return Boolean(state.captureEnabled && (state.state === "qualified" || state.state === "open") && isLockHouseQualified());
+  }
+
+  function clearLockHouseQualificationProgress() {
+    LOCK_HOUSE.qualificationEvents.forEach((requirement) => {
+      gameState.lockHouse.progress[requirement.id] = 0;
+    });
+    gameState.lockHouse.qualifiedAt = 0;
   }
 
   function advanceLockHouseQualification(eventName, ball) {
@@ -1978,7 +2005,8 @@
   function drawLockHouse() {
     const config = TABLE_CONFIG.lockHouse;
     const state = gameState.lockHouse;
-    const isQualified = state.state === "qualified" || state.state === "open";
+    const isHolding = state.state === "holding";
+    const isQualified = state.state === "qualified" || state.state === "open" || isHolding;
     const wasContacted = state.lastContactAt && performance.now() - state.lastContactAt < 320;
     const pulse = isQualified ? 0.55 + Math.sin(performance.now() / 155) * 0.24 : wasContacted ? 0.75 : 0;
     const x = config.x;
@@ -2034,7 +2062,13 @@
     fillRoundedRect(left + 10, top + 80, width - 20, 34, 7, isQualified ? "rgba(6, 24, 18, 0.92)" : "rgba(44, 25, 12, 0.92)");
     strokeRoundedRect(left + 10, top + 80, width - 20, 34, 7, isQualified ? "#7bdc6c" : "#ff9b3d", isQualified ? 4 : 3);
 
-    if (isQualified) {
+    if (isHolding) {
+      context.fillStyle = "rgba(49, 168, 255, 0.22)";
+      context.beginPath();
+      context.ellipse(config.mouth.x, config.mouth.y + 10, config.mouth.width * 0.46, config.mouth.height * 0.44, config.mouth.angle, 0, Math.PI * 2);
+      context.fill();
+      drawFeedbackText("HELD", x, top + 99, width - 24, "#31a8ff", 14, { minSize: 10, weight: 900 });
+    } else if (isQualified) {
       context.fillStyle = "rgba(123, 220, 108, 0.22)";
       context.beginPath();
       context.ellipse(config.mouth.x, config.mouth.y + 10, config.mouth.width * 0.46, config.mouth.height * 0.44, config.mouth.angle, 0, Math.PI * 2);
@@ -3317,7 +3351,7 @@
     const activeBalls = physics ? getActiveBalls() : [];
 
     window.ImpolPinball = {
-      phase: "14.4.1",
+      phase: "14.4.2",
       feedback: getFeedbackReport(),
       scoring: getScoreEconomyReport(),
       progression: getProgressionReport(),
@@ -3449,6 +3483,8 @@
           placement: LOCK_HOUSE.placement,
           states: [...LOCK_HOUSE.states],
           captureEnabled: LOCK_HOUSE.captureEnabled,
+          holdTimeoutMs: LOCK_HOUSE.holdTimeoutMs,
+          multiballPolicy: LOCK_HOUSE.multiballPolicy,
           mouth: { ...LOCK_HOUSE.mouth },
           qualificationEvents: LOCK_HOUSE.qualificationEvents.map((requirement) => ({ ...requirement }))
         },
@@ -3464,7 +3500,21 @@
         lastContactAt: gameState.lockHouse.lastContactAt,
         lastContactState: gameState.lockHouse.lastContactState,
         contactCount: gameState.lockHouse.contactCount,
-        captureEnabled: gameState.lockHouse.captureEnabled
+        captureEnabled: gameState.lockHouse.captureEnabled,
+        entranceOpen: isLockHouseEntranceOpen(),
+        heldBallId: gameState.lockHouse.heldBallId,
+        holdStartedAt: gameState.lockHouse.holdStartedAt,
+        holdRemainingMs: gameState.lockHouse.state === "holding"
+          ? Math.max(0, Math.round(LOCK_HOUSE.holdTimeoutMs - (performance.now() - gameState.lockHouse.holdStartedAt)))
+          : 0,
+        holdPosition: gameState.lockHouse.holdPosition ? { ...gameState.lockHouse.holdPosition } : null,
+        recoveryReason: gameState.lockHouse.recoveryReason,
+        recoveryAt: gameState.lockHouse.recoveryAt,
+        captureCount: gameState.lockHouse.captureCount,
+        blockedCaptureCount: gameState.lockHouse.blockedCaptureCount,
+        lastCaptureBlockedReason: gameState.lockHouse.lastCaptureBlockedReason,
+        holdingBodyPresent: Boolean(heldLockHouseBallBody),
+        multiballPolicy: LOCK_HOUSE.multiballPolicy
       },
       skillShotAwarded: gameState.skillShotAwarded,
       gameOver: {
@@ -4034,6 +4084,8 @@
     function triggerLockHouseQualificationDiagnostic() {
       gameState.lockHouse = createLockHouseState();
       const ball = physics?.ball;
+      const previousCaptureEnabled = gameState.lockHouse.captureEnabled;
+      gameState.lockHouse.captureEnabled = false;
       const initialProgress = getLockHouseProgressCount();
       handleLockHouseContact(ball);
       const contactProgress = getLockHouseProgressCount();
@@ -4042,6 +4094,7 @@
       const partialProgress = getLockHouseProgressCount();
       advanceLockHouseQualification(UPPER_ORBIT.event, ball);
       handleLockHouseContact(ball);
+      gameState.lockHouse.captureEnabled = previousCaptureEnabled;
 
       const qualified = isLockHouseQualified() && gameState.lockHouse.state === "qualified";
       const contactDidNotQualify = initialProgress === 0 && contactProgress === 0 && !ignoredProgress;
@@ -4059,6 +4112,112 @@
           finalProgress: getLockHouseProgressCount(),
           finalState: gameState.lockHouse.state,
           contactCount: gameState.lockHouse.contactCount
+        }
+      });
+      gameState.status = "ready";
+    }
+
+    function qualifyLockHouseForDiagnostic() {
+      LOCK_HOUSE.qualificationEvents.forEach((requirement) => {
+        gameState.lockHouse.progress[requirement.id] = requirement.required;
+      });
+      gameState.lockHouse.state = "qualified";
+      gameState.lockHouse.qualifiedAt = performance.now();
+    }
+
+    function prepareLockHouseDiagnosticBall() {
+      const ball = ensurePrimaryBallBody();
+
+      gameState.status = "playing";
+      gameState.ballSaveUntil = 0;
+      gameState.ballSaveUsed = true;
+      gameState.multiball.active = false;
+      gameState.multiball.graceUntil = 0;
+      MatterLib.Body.setStatic(ball, false);
+      MatterLib.Body.setPosition(ball, {
+        x: LOCK_HOUSE.mouth.x,
+        y: LOCK_HOUSE.mouth.y
+      });
+      MatterLib.Body.setVelocity(ball, { x: 0, y: 0 });
+      MatterLib.Body.setAngularVelocity(ball, 0);
+      return ball;
+    }
+
+    function triggerLockHouseCaptureDiagnostic() {
+      let captures = 0;
+      let recoveries = 0;
+      let duplicateOrLostBall = false;
+
+      for (let attempt = 0; attempt < 20; attempt += 1) {
+        gameState.lockHouse = createLockHouseState();
+        qualifyLockHouseForDiagnostic();
+        const ball = prepareLockHouseDiagnosticBall();
+        const ballId = ball.gameBallId;
+        handleLockHouseContact(ball);
+
+        const captured =
+          gameState.lockHouse.state === "holding" &&
+          gameState.lockHouse.heldBallId === ballId &&
+          getActiveBalls().length === 0 &&
+          heldLockHouseBallBody === ball;
+
+        if (captured) {
+          captures += 1;
+        }
+
+        recoverLockHouseHold("diagnostic-reset", { silent: true });
+        const recoveredBallIds = getActiveBalls().map((activeBall) => activeBall.gameBallId);
+        const recovered = gameState.status === "ready" && recoveredBallIds.length === 1 && recoveredBallIds[0] === ballId;
+
+        if (recovered) {
+          recoveries += 1;
+        } else {
+          duplicateOrLostBall = true;
+        }
+      }
+
+      gameState.lockHouse = createLockHouseState();
+      const closedBall = prepareLockHouseDiagnosticBall();
+      const closedActiveCount = getActiveBalls().length;
+      handleLockHouseContact(closedBall);
+      const closedBlocked =
+        gameState.lockHouse.state === "closed" &&
+        gameState.lockHouse.lastCaptureBlockedReason === "not-qualified" &&
+        getActiveBalls().length === closedActiveCount;
+
+      gameState.lockHouse = createLockHouseState();
+      qualifyLockHouseForDiagnostic();
+      const multiballBall = prepareLockHouseDiagnosticBall();
+      startMultiball("lock-house diagnostic", { advanceDifficulty: false });
+      const multiballActiveCount = getActiveBalls().length;
+      handleLockHouseContact(multiballBall);
+      const multiballBlocked =
+        gameState.lockHouse.state === "qualified" &&
+        gameState.lockHouse.lastCaptureBlockedReason === LOCK_HOUSE.multiballPolicy &&
+        getActiveBalls().length === multiballActiveCount;
+
+      gameState.multiball.active = false;
+      gameState.multiball.graceUntil = 0;
+      clearJackpots();
+      removeExtraBalls();
+      resetBall(physics.ball, true);
+      gameState.status = "ready";
+
+      const passed = captures === 20 && recoveries === 20 && closedBlocked && multiballBlocked && !duplicateOrLostBall;
+
+      recordDiagnosticEvent("lock-house-capture-rule", {
+        eventName: "lock-house:capture-rule",
+        objectId: LOCK_HOUSE.id,
+        label: "Phase 14.4.2 capture and hold",
+        kind: passed ? "passed" : "failed",
+        metrics: {
+          captures,
+          recoveries,
+          closedBlocked,
+          multiballBlocked,
+          duplicateOrLostBall,
+          finalActiveBallCount: getActiveBalls().length,
+          multiballPolicy: LOCK_HOUSE.multiballPolicy
         }
       });
     }
@@ -4325,6 +4484,18 @@
           return result.events.some((event) => event.type === "lock-house-rule" && event.kind === "qualified") &&
             gameState.lockHouse.state === "qualified" &&
             gameState.lockHouse.contactCount >= 2;
+        }
+      },
+      {
+        id: "phase14-4-2-lock-house-capture-hold",
+        name: "Phase 14.4.2 lock house capture and hold",
+        start: { x: LOCK_HOUSE.mouth.x, y: LOCK_HOUSE.mouth.y },
+        velocity: { x: 0, y: 0 },
+        durationMs: 500,
+        expectedEvents: ["lock-house-capture-rule"],
+        setup: triggerLockHouseCaptureDiagnostic,
+        successWhen: (result) => {
+          return result.events.some((event) => event.type === "lock-house-capture-rule" && event.kind === "passed");
         }
       },
       {
@@ -5413,6 +5584,95 @@
     syncPrimaryBall();
   }
 
+  function removeBallFromActivePlayForHold(ball) {
+    if (!physics || !ball) {
+      return false;
+    }
+
+    MatterLib.Body.setStatic(ball, true);
+    MatterLib.Body.setPosition(ball, {
+      x: LOCK_HOUSE.mouth.x,
+      y: LOCK_HOUSE.mouth.y
+    });
+    MatterLib.Body.setVelocity(ball, { x: 0, y: 0 });
+    MatterLib.Body.setAngularVelocity(ball, 0);
+    MatterLib.Composite.remove(physics.engine.world, ball);
+    physics.activeBalls = physics.activeBalls.filter((activeBall) => activeBall !== ball);
+    heldLockHouseBallBody = ball;
+    syncPrimaryBall();
+    return true;
+  }
+
+  function restoreHeldLockHouseBallToShooter() {
+    if (!physics) {
+      return null;
+    }
+
+    let ball = heldLockHouseBallBody;
+
+    if (!ball) {
+      ball = createBallBody(gameState.lockHouse.heldBallId || `ball-${physics.nextBallId}`, getBallStartPosition());
+      if (!gameState.lockHouse.heldBallId) {
+        physics.nextBallId += 1;
+      }
+    }
+
+    ball.isRemoved = false;
+    MatterLib.Composite.add(physics.engine.world, ball);
+    if (!physics.activeBalls.includes(ball)) {
+      physics.activeBalls.push(ball);
+    }
+    resetBall(ball, true);
+    physics.ball = ball;
+    heldLockHouseBallBody = null;
+    syncPrimaryBall();
+    return ball;
+  }
+
+  function clearHeldLockHouseBall(reason = "cleared") {
+    if (!heldLockHouseBallBody && !gameState.lockHouse.heldBallId && gameState.lockHouse.state !== "holding") {
+      return;
+    }
+
+    if (heldLockHouseBallBody && physics) {
+      MatterLib.Composite.remove(physics.engine.world, heldLockHouseBallBody);
+      if (physics.ball === heldLockHouseBallBody) {
+        physics.ball = physics.activeBalls[0] || null;
+      }
+    }
+
+    heldLockHouseBallBody = null;
+    gameState.lockHouse.heldBallId = "";
+    gameState.lockHouse.holdStartedAt = 0;
+    gameState.lockHouse.holdPosition = null;
+    gameState.lockHouse.recoveryReason = reason;
+    gameState.lockHouse.recoveryAt = performance.now();
+
+    if (gameState.lockHouse.state === "holding") {
+      gameState.lockHouse.state = isLockHouseQualified() ? "qualified" : "closed";
+    }
+  }
+
+  function ensurePrimaryBallBody() {
+    if (!physics) {
+      return null;
+    }
+
+    const activeBalls = getActiveBalls();
+
+    if (activeBalls.length) {
+      physics.ball = activeBalls[0];
+      return physics.ball;
+    }
+
+    const ball = createBallBody(`ball-${physics.nextBallId}`, getBallStartPosition());
+    physics.nextBallId += 1;
+    MatterLib.Composite.add(physics.engine.world, ball);
+    physics.activeBalls = [ball];
+    physics.ball = ball;
+    return ball;
+  }
+
   function removeExtraBalls() {
     if (!physics) {
       return;
@@ -5724,6 +5984,179 @@
     return null;
   }
 
+  function getLockHouseCaptureBlockedReason(ball) {
+    if (!ball) {
+      return "missing-ball";
+    }
+
+    if (gameState.status !== "playing") {
+      return "not-playing";
+    }
+
+    if (!gameState.lockHouse.captureEnabled) {
+      return "capture-disabled";
+    }
+
+    if (!isLockHouseEntranceOpen()) {
+      return "not-qualified";
+    }
+
+    if (gameState.lockHouse.state === "holding" || gameState.lockHouse.heldBallId) {
+      return "already-holding";
+    }
+
+    if (gameState.multiball.active || getActiveBalls().length !== 1) {
+      return LOCK_HOUSE.multiballPolicy;
+    }
+
+    if (!getActiveBalls().includes(ball)) {
+      return "ball-not-active";
+    }
+
+    return "";
+  }
+
+  function captureLockHouseBall(ball) {
+    const blockedReason = getLockHouseCaptureBlockedReason(ball);
+    const now = performance.now();
+    const state = gameState.lockHouse;
+
+    if (blockedReason) {
+      state.blockedCaptureCount += 1;
+      state.lastCaptureBlockedReason = blockedReason;
+      recordDiagnosticEvent("lock-house-capture-blocked", {
+        ball,
+        eventName: "lock-house:capture-blocked",
+        objectId: LOCK_HOUSE.id,
+        label: LOCK_HOUSE.label,
+        kind: blockedReason
+      });
+      return false;
+    }
+
+    const heldBallId = ball.gameBallId || "ball";
+    const removed = removeBallFromActivePlayForHold(ball);
+
+    if (!removed) {
+      state.blockedCaptureCount += 1;
+      state.lastCaptureBlockedReason = "remove-failed";
+      return false;
+    }
+
+    state.state = "holding";
+    state.heldBallId = heldBallId;
+    state.holdStartedAt = now;
+    state.holdPosition = {
+      x: Math.round(LOCK_HOUSE.mouth.x),
+      y: Math.round(LOCK_HOUSE.mouth.y)
+    };
+    state.recoveryReason = "";
+    state.recoveryAt = 0;
+    state.captureCount += 1;
+    state.lastCaptureBlockedReason = "";
+    gameState.upperOrbit.active = false;
+    gameState.upperOrbit.stage = "idle";
+    gameState.upperOrbit.ballId = "";
+    resetCombo();
+
+    recordDiagnosticEvent("lock-house-capture", {
+      ball,
+      eventName: "lock-house:capture",
+      objectId: LOCK_HOUSE.id,
+      label: heldBallId,
+      kind: "holding",
+      metrics: {
+        activeBallCount: getActiveBalls().length,
+        captureCount: state.captureCount
+      }
+    });
+    setFeedback("LOCK HOUSE HOLD", 1500, "progress", now);
+    addHitFeedback({
+      id: `${LOCK_HOUSE.id}-hold`,
+      x: LOCK_HOUSE.mouth.x,
+      y: LOCK_HOUSE.mouth.y,
+      accent: LOCK_HOUSE.qualifiedAccent,
+      label: "HELD",
+      color: "#7bdc6c"
+    });
+    audio.play("mission-progress");
+    updateHud();
+    syncInspectableState(physics);
+    return true;
+  }
+
+  function recoverLockHouseHold(reason = "hold-timeout", options = {}) {
+    const state = gameState.lockHouse;
+
+    if (state.state !== "holding" && !state.heldBallId && !heldLockHouseBallBody) {
+      return false;
+    }
+
+    const ball = restoreHeldLockHouseBallToShooter();
+    const now = performance.now();
+    state.state = "closed";
+    clearLockHouseQualificationProgress();
+    state.heldBallId = "";
+    state.holdStartedAt = 0;
+    state.holdPosition = null;
+    state.recoveryReason = reason;
+    state.recoveryAt = now;
+    state.lastCaptureBlockedReason = "";
+    gameState.status = "ready";
+    gameState.resetAt = 0;
+    gameState.plungerPower = 0;
+    gameState.ballSaveUntil = 0;
+    gameState.ballSaveUsed = false;
+    gameState.bomMode.active = false;
+    gameState.bomMode.step = 0;
+    gameState.bomMode.deadline = 0;
+    resetCombo();
+
+    recordDiagnosticEvent("lock-house-recovery", {
+      ball,
+      eventName: "lock-house:recovery",
+      objectId: LOCK_HOUSE.id,
+      label: LOCK_HOUSE.label,
+      kind: reason,
+      metrics: {
+        activeBallCount: getActiveBalls().length
+      }
+    });
+
+    if (!options.silent) {
+      setFeedback("LOCK HOUSE RECOVERY", 1400, "system", now);
+      addHitFeedback({
+        id: `${LOCK_HOUSE.id}-recovery`,
+        x: LOCK_HOUSE.mouth.x,
+        y: LOCK_HOUSE.mouth.y,
+        accent: LOCK_HOUSE.accent,
+        label: "RECOVER",
+        color: "#ffb967"
+      });
+    }
+
+    updateHud();
+    syncInspectableState(physics);
+    return true;
+  }
+
+  function updateLockHouseHold() {
+    const state = gameState.lockHouse;
+
+    if (state.state !== "holding") {
+      return;
+    }
+
+    if (!state.heldBallId || !heldLockHouseBallBody) {
+      recoverLockHouseHold("inconsistent-hold");
+      return;
+    }
+
+    if (performance.now() - state.holdStartedAt >= LOCK_HOUSE.holdTimeoutMs) {
+      recoverLockHouseHold("hold-timeout");
+    }
+  }
+
   function handleLockHouseContact(ball) {
     if (gameState.status !== "playing") {
       return;
@@ -5743,14 +6176,19 @@
       kind: state.state
     });
 
-    if (state.state === "qualified") {
-      setFeedback("LOCK HOUSE READY", 700, "progress", now);
+    if (captureLockHouseBall(ball)) {
+      return;
+    }
+
+    if (isLockHouseEntranceOpen()) {
+      const blockedReason = state.lastCaptureBlockedReason;
+      setFeedback(blockedReason === LOCK_HOUSE.multiballPolicy ? "LOCK DISABLED IN MULTIBALL" : "LOCK HOUSE READY", 700, "progress", now);
       addHitFeedback({
         id: LOCK_HOUSE.id,
         x: LOCK_HOUSE.mouth.x,
         y: LOCK_HOUSE.mouth.y,
         accent: LOCK_HOUSE.qualifiedAccent,
-        label: "READY",
+        label: blockedReason === LOCK_HOUSE.multiballPolicy ? "MB OFF" : "READY",
         color: "#7bdc6c"
       });
     } else {
@@ -6850,6 +7288,7 @@
     gameState.upperOrbit.active = false;
     gameState.upperOrbit.stage = "idle";
     gameState.upperOrbit.ballId = "";
+    clearHeldLockHouseBall("ball-save");
     resetCombo();
     resetBall(ball, true);
     setFeedback("BALL SAVE", 1400, "save");
@@ -6877,6 +7316,8 @@
     if (gameState.status !== "playing" || !ball || ball.isRemoved) {
       return;
     }
+
+    clearHeldLockHouseBall("drain");
 
     if (tryMultiballSave(ball)) {
       return;
@@ -6942,6 +7383,7 @@
     inputState.space = false;
     inputState.chargingSince = 0;
     resetMultiballState();
+    clearHeldLockHouseBall("game-over");
     removeExtraBalls();
     resetBall(ball, true);
     audio.play("game-over");
@@ -6990,6 +7432,7 @@
     gameState.rollovers = createRolloverState();
     gameState.lanes = createLaneState();
     gameState.upperOrbit = createUpperOrbitState();
+    clearHeldLockHouseBall("restart");
     gameState.lockHouse = createLockHouseState();
     gameState.missionStageIndex = 0;
     gameState.activeMissionId = "measurement";
@@ -7000,6 +7443,7 @@
     gameState.metaRewards = createMetaRewardState();
 
     if (physics) {
+      ensurePrimaryBallBody();
       removeExtraBalls();
       resetBall(physics.ball, true);
     }
@@ -7613,6 +8057,7 @@
       updateBallSaveTimeout();
       updateSideShieldTimeout();
       updateMetaRewardTimeout();
+      updateLockHouseHold();
       holdBallInLaunchLane();
       MatterLib.Engine.update(physics.engine, physicsClock.step * physicsClock.simulationScale);
       maybeDetectLaneSensorOverlaps();
