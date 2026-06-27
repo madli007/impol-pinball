@@ -373,9 +373,14 @@ h1 {
 
 .status-copy {
   margin: 0;
+  overflow: hidden;
   color: var(--muted);
   font-size: 0.92rem;
   line-height: 1.45;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
 }
 
 .control-button {

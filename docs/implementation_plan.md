@@ -974,7 +974,12 @@ The remaining Phase 14 work is split into agent-sized phases in `docs/phase14_fu
 
 #### Phase 14.4: Lock House Program
 
-- [ ] Phase 14.4.1 - Lock house state model and closed target - Status: planned
+- [x] Phase 14.4.1 - Lock house state model and closed target - Status: completed
+  - Added a right-mid playfield `LOCK HOUSE` with sensor-only closed/qualified entrance, shutter/open-mouth art, requirement lamps, and concise HUD/status progress.
+  - Defined lock-house states `closed`, `qualified`, `open`, `holding`, and `kicking`; Phase 14.4.1 actively uses `closed` and `qualified` only, with capture disabled until Phase 14.4.2.
+  - Documented qualification as one `ALU FLOW ORBIT` completion plus one `COIL COLLECTOR` hit, in either order; lock-house contact and unrelated events do not advance progress.
+  - Exposed placement, qualification config, runtime progress, contact counts, and capture-disabled state through `window.ImpolPinball.lockHouse`.
+  - Added diagnostic scenario `phase14-4-1-lock-house-qualification`.
 - [ ] Phase 14.4.2 - Ball capture and safe hold - Status: planned
 - [ ] Phase 14.4.3 - Kickout, reward, and requalification - Status: planned
 - [ ] Phase 14.4.4 - Lock house regression and presentation - Status: planned

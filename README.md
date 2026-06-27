@@ -110,6 +110,76 @@ In the current Codex desktop environment, browser smoke testing is limited:
 
 When that happens, avoid retrying the same browser path. Use `node --check game.js`, `git diff --check`, and the local server HTTP status check above, then verify visual/gameplay changes manually in a normal browser.
 
+### Agent Local Preview And Responsive Checks
+
+For agent handoffs, use this exact local preview flow before claiming layout or gameplay verification:
+
+1. Start from the repository root:
+
+   ```powershell
+   cd C:\Matej\Development\impol-pinball
+   ```
+
+2. Start a static server. Prefer `python` if it is on `PATH`:
+
+   ```powershell
+   python -m http.server 4173 --bind 127.0.0.1
+   ```
+
+   In Codex desktop, `python` may not be on `PATH`. Ask the workspace dependency helper for the bundled Python path, then run:
+
+   ```powershell
+   & '<bundled-python.exe>' -m http.server 4173 --bind 127.0.0.1
+   ```
+
+3. Open the game through the local server, not directly from the filesystem:
+
+   ```text
+   http://127.0.0.1:4173/
+   ```
+
+4. Use cache-bust URLs whenever checking recent CSS or JS changes:
+
+   ```text
+   http://127.0.0.1:4173/index.html?bust=<phase-or-check-label>
+   ```
+
+5. If the in-app Browser is available, use the `browser:control-in-app-browser` skill and the in-app browser target (`iab`). For responsive work, set explicit viewport sizes and evaluate:
+
+   ```js
+   document.documentElement.scrollWidth <= document.documentElement.clientWidth
+   ```
+
+   Required responsive smoke widths from Phase 14.3.7:
+
+   ```text
+   390x844
+   768x1024
+   800x1024
+   1024x900
+   1440x900
+   ```
+
+   Useful DOM measurements:
+
+   ```js
+   document.getElementById("game-canvas").getBoundingClientRect()
+   document.querySelector(".score-feed").getBoundingClientRect()
+   document.querySelector(".controls-hint").getBoundingClientRect()
+   ```
+
+   Also check a tall desktop viewport such as `1440x1080` when validating larger table scale. Phase 14.3.7 reached about `629px` canvas width there without horizontal overflow.
+
+6. If the browser cannot connect, do not spin on the same failing browser path. Run the non-browser checks and give the manual preview URL:
+
+   ```powershell
+   node --check game.js
+   git diff --check
+   Invoke-WebRequest -UseBasicParsing http://127.0.0.1:4173/ | Select-Object -ExpandProperty StatusCode
+   ```
+
+   Expected results: `node --check game.js` prints nothing, `git diff --check` has no whitespace errors, and the HTTP status is `200`. Git CRLF warnings on Windows are normal.
+
 ## Documentation
 
 - Implementation plan: `docs/implementation_plan.md`

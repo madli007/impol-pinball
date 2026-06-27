@@ -166,6 +166,26 @@
       { x: 232, y: 570, width: 14, height: 438, angle: 0 }
     ]
   };
+  const LOCK_HOUSE = {
+    id: "lock-house",
+    label: "LOCK HOUSE",
+    placement: "right-mid playfield beside the CO2 bumper and above the E-ODPREMA lane, clear of the shooter lane",
+    states: ["closed", "qualified", "open", "holding", "kicking"],
+    initialState: "closed",
+    captureEnabled: false,
+    x: 704,
+    y: 502,
+    width: 88,
+    height: 122,
+    mouth: { x: 704, y: 540, width: 68, height: 54, angle: -0.08 },
+    accent: "#ff9b3d",
+    qualifiedAccent: "#7bdc6c",
+    event: "lock-house:contact",
+    qualificationEvents: [
+      { id: "alu-flow-orbit", label: "ALU FLOW", event: UPPER_ORBIT.event, required: 1 },
+      { id: "coil-collector", label: "COIL", event: "hit:COIL", required: 1 }
+    ]
+  };
   const ASSET_CONFIG = {
     furnace: { src: "assets/images/furnace-target.png", width: 154, height: 132, yOffset: -8 },
     coil: { src: "assets/images/coil-collector.png", width: 184, height: 120, yOffset: -8 },
@@ -237,7 +257,8 @@
       { id: "right-inlane", label: "RIGHT RETURN", shortLabel: "IN", side: "right", type: "inlane", x: 614, y: 1200, width: 76, height: 136, angle: -0.54, points: SCORING_RULES.values.inlane, accent: "#31a8ff" },
       { id: "right-outlane", label: "RIGHT OUT", shortLabel: "OUT", side: "right", type: "outlane", x: 758, y: 1214, width: 72, height: 150, angle: 0.42, points: SCORING_RULES.values.outlane, accent: "#ff7567", returnX: 632, returnY: 1168, returnVelocity: { x: -5.8, y: -7.4 } }
     ],
-    upperOrbit: UPPER_ORBIT
+    upperOrbit: UPPER_ORBIT,
+    lockHouse: LOCK_HOUSE
   };
   const MISSION_CONFIG = [
     {
@@ -489,6 +510,7 @@
     rollovers: createRolloverState(),
     lanes: createLaneState(),
     upperOrbit: createUpperOrbitState(),
+    lockHouse: createLockHouseState(),
     missionStageIndex: 0,
     activeMissionId: "measurement",
     lastCompletedMissionId: "",
@@ -639,6 +661,23 @@
     };
   }
 
+  function createLockHouseState() {
+    return {
+      state: LOCK_HOUSE.initialState,
+      progress: LOCK_HOUSE.qualificationEvents.reduce((progress, requirement) => {
+        progress[requirement.id] = 0;
+        return progress;
+      }, {}),
+      qualifiedAt: 0,
+      lastProgressAt: 0,
+      lastProgressEvent: "",
+      lastContactAt: 0,
+      lastContactState: "",
+      contactCount: 0,
+      captureEnabled: LOCK_HOUSE.captureEnabled
+    };
+  }
+
   function renderMissionList() {
     ui.missionList.innerHTML = "";
     ui.missions = {};
@@ -728,6 +767,87 @@
     }
 
     return `HIT ${getMissionTargetLabel(mission)} ${state.progress}/${mission.required}`;
+  }
+
+  function getLockHouseProgressTotal() {
+    return LOCK_HOUSE.qualificationEvents.reduce((total, requirement) => total + requirement.required, 0);
+  }
+
+  function getLockHouseProgressCount() {
+    return LOCK_HOUSE.qualificationEvents.reduce((total, requirement) => {
+      return total + Math.min(requirement.required, gameState.lockHouse.progress[requirement.id] || 0);
+    }, 0);
+  }
+
+  function isLockHouseQualified() {
+    return LOCK_HOUSE.qualificationEvents.every((requirement) => {
+      return (gameState.lockHouse.progress[requirement.id] || 0) >= requirement.required;
+    });
+  }
+
+  function getLockHouseProgressLabel() {
+    const progress = getLockHouseProgressCount();
+    const total = getLockHouseProgressTotal();
+
+    if (isLockHouseQualified()) {
+      return "LOCK HOUSE QUALIFIED";
+    }
+
+    const nextRequirement = LOCK_HOUSE.qualificationEvents.find((requirement) => {
+      return (gameState.lockHouse.progress[requirement.id] || 0) < requirement.required;
+    });
+
+    return `LOCK HOUSE ${progress}/${total}${nextRequirement ? `: ${nextRequirement.label}` : ""}`;
+  }
+
+  function advanceLockHouseQualification(eventName, ball) {
+    if (gameState.status !== "playing" || isLockHouseQualified()) {
+      return false;
+    }
+
+    const requirement = LOCK_HOUSE.qualificationEvents.find((candidate) => candidate.event === eventName);
+
+    if (!requirement) {
+      return false;
+    }
+
+    const current = gameState.lockHouse.progress[requirement.id] || 0;
+
+    if (current >= requirement.required) {
+      return false;
+    }
+
+    const now = performance.now();
+    gameState.lockHouse.progress[requirement.id] = current + 1;
+    gameState.lockHouse.lastProgressAt = now;
+    gameState.lockHouse.lastProgressEvent = eventName;
+    gameState.hitCounts[`${LOCK_HOUSE.id}-${requirement.id}`] = now;
+    recordDiagnosticEvent("lock-house-progress", {
+      ball,
+      eventName,
+      objectId: LOCK_HOUSE.id,
+      label: requirement.label,
+      kind: getLockHouseProgressLabel()
+    });
+
+    if (isLockHouseQualified()) {
+      gameState.lockHouse.state = "qualified";
+      gameState.lockHouse.qualifiedAt = now;
+      setFeedback("LOCK HOUSE QUALIFIED", 1300, "progress", now);
+      addHitFeedback({
+        id: LOCK_HOUSE.id,
+        x: LOCK_HOUSE.mouth.x,
+        y: LOCK_HOUSE.mouth.y,
+        accent: LOCK_HOUSE.qualifiedAccent,
+        label: "LOCK READY",
+        color: "#7bdc6c"
+      });
+      audio.play("mission-progress");
+    } else {
+      setFeedback(getLockHouseProgressLabel(), 950, "progress", now);
+    }
+
+    return true;
   }
 
   function isCurrentMissionEvent(eventName) {
@@ -1853,6 +1973,106 @@
       context.fillText(rollover.label, rollover.x, rollover.y + 1);
       context.restore();
     });
+  }
+
+  function drawLockHouse() {
+    const config = TABLE_CONFIG.lockHouse;
+    const state = gameState.lockHouse;
+    const isQualified = state.state === "qualified" || state.state === "open";
+    const wasContacted = state.lastContactAt && performance.now() - state.lastContactAt < 320;
+    const pulse = isQualified ? 0.55 + Math.sin(performance.now() / 155) * 0.24 : wasContacted ? 0.75 : 0;
+    const x = config.x;
+    const y = config.y;
+    const width = config.width;
+    const height = config.height;
+    const left = x - width / 2;
+    const top = y - height / 2;
+    const accent = isQualified ? config.qualifiedAccent : config.accent;
+
+    context.save();
+
+    if (pulse > 0) {
+      const glow = context.createRadialGradient(x, y + 14, 12, x, y + 14, 92);
+      glow.addColorStop(0, `${accent}88`);
+      glow.addColorStop(0.56, `${accent}28`);
+      glow.addColorStop(1, "rgba(0, 0, 0, 0)");
+      context.fillStyle = glow;
+      context.beginPath();
+      context.ellipse(x, y + 12, 86 + pulse * 14, 74 + pulse * 10, 0, 0, Math.PI * 2);
+      context.fill();
+    }
+
+    context.fillStyle = "rgba(0, 0, 0, 0.26)";
+    context.beginPath();
+    context.ellipse(x + 6, y + 58, width * 0.55, 20, 0, 0, Math.PI * 2);
+    context.fill();
+
+    const bodyGradient = context.createLinearGradient(left, top, left + width, top + height);
+    bodyGradient.addColorStop(0, "rgba(194, 207, 212, 0.9)");
+    bodyGradient.addColorStop(0.28, "rgba(82, 108, 119, 0.9)");
+    bodyGradient.addColorStop(0.62, "rgba(16, 39, 54, 0.96)");
+    bodyGradient.addColorStop(1, "rgba(5, 11, 16, 0.94)");
+
+    roundedRect(left, top + 18, width, height - 18, 10);
+    context.fillStyle = bodyGradient;
+    context.fill();
+    context.strokeStyle = isQualified ? "rgba(123, 220, 108, 0.9)" : "rgba(255, 155, 61, 0.78)";
+    context.lineWidth = isQualified ? 4 : 3;
+    context.stroke();
+
+    context.fillStyle = "rgba(8, 18, 25, 0.92)";
+    context.beginPath();
+    context.moveTo(left + 8, top + 26);
+    context.lineTo(x, top - 10);
+    context.lineTo(left + width - 8, top + 26);
+    context.closePath();
+    context.fill();
+    context.strokeStyle = "rgba(237, 247, 251, 0.46)";
+    context.lineWidth = 2;
+    context.stroke();
+
+    fillRoundedRect(left + 10, top + 80, width - 20, 34, 7, isQualified ? "rgba(6, 24, 18, 0.92)" : "rgba(44, 25, 12, 0.92)");
+    strokeRoundedRect(left + 10, top + 80, width - 20, 34, 7, isQualified ? "#7bdc6c" : "#ff9b3d", isQualified ? 4 : 3);
+
+    if (isQualified) {
+      context.fillStyle = "rgba(123, 220, 108, 0.22)";
+      context.beginPath();
+      context.ellipse(config.mouth.x, config.mouth.y + 10, config.mouth.width * 0.46, config.mouth.height * 0.44, config.mouth.angle, 0, Math.PI * 2);
+      context.fill();
+      drawFeedbackText("OPEN", x, top + 99, width - 24, "#7bdc6c", 14, { minSize: 10, weight: 900 });
+    } else {
+      context.strokeStyle = "rgba(237, 247, 251, 0.34)";
+      context.lineWidth = 2;
+      for (let stripe = 0; stripe < 4; stripe += 1) {
+        const stripeY = top + 88 + stripe * 6;
+        context.beginPath();
+        context.moveTo(left + 18, stripeY);
+        context.lineTo(left + width - 18, stripeY);
+        context.stroke();
+      }
+      drawFeedbackText("CLOSED", x, top + 99, width - 24, "#ffb967", 13, { minSize: 9, weight: 900 });
+    }
+
+    drawFeedbackText("LOCK", x, top + 48, width - 20, "#edf7fb", 16, { minSize: 11, weight: 900 });
+    drawFeedbackText(`${getLockHouseProgressCount()}/${getLockHouseProgressTotal()}`, x, top + 66, width - 20, accent, 12, {
+      minSize: 9,
+      weight: 900
+    });
+
+    const lampStartX = x - 18;
+    LOCK_HOUSE.qualificationEvents.forEach((requirement, index) => {
+      const lampX = lampStartX + index * 36;
+      const lampY = top + 116;
+      const lit = (state.progress[requirement.id] || 0) >= requirement.required;
+      context.fillStyle = lit ? requirement.id === "alu-flow-orbit" ? "#31a8ff" : "#7bdc6c" : "rgba(8, 18, 25, 0.9)";
+      context.beginPath();
+      context.arc(lampX, lampY, lit ? 8 : 6, 0, Math.PI * 2);
+      context.fill();
+      context.strokeStyle = lit ? "#edf7fb" : "rgba(126, 147, 156, 0.8)";
+      context.lineWidth = 2;
+      context.stroke();
+    });
+    context.restore();
   }
 
   function drawUpperOrbit() {
@@ -3012,23 +3232,35 @@
     if (ui.statusCopy && activeCompany) {
       const activeState = gameState.companies[activeCompany.id];
       const objective = getObjectiveCopy();
-      const metaLabel = gameState.metaRewards.lastAwardLabel ? ` Last reward: ${gameState.metaRewards.lastAwardLabel}.` : "";
       const litJackpots = getJackpotLitLabels();
-      const jackpotStatus = litJackpots.length ? ` Jackpot lit: ${litJackpots.join(" / ")}.` : "";
       const shieldStatus = isSideShieldActive()
-        ? ` Side shield ${Math.ceil(Math.max(0, gameState.lanes.sideShieldUntil - performance.now()) / 1000)}s.`
+        ? `Shield ${Math.ceil(Math.max(0, gameState.lanes.sideShieldUntil - performance.now()) / 1000)}s`
         : gameState.lanes.sideShieldOpenReason
-          ? ` Side shield open: ${gameState.lanes.sideShieldOpenReason}.`
+          ? "Shield open"
           : "";
       const multiballStatus = gameState.multiball.active
-        ? " Multiball active: 2x scoring, missions and companies paused."
-        : ` Multiball missions ${gameState.multiball.progress}/${gameState.multiball.nextRequirement}.`;
+        ? "MB 2x active"
+        : `MB ${gameState.multiball.progress}/${gameState.multiball.nextRequirement}`;
       const orbitStatus = gameState.upperOrbit.active
-        ? ` ALU FLOW ${gameState.upperOrbit.stage}.`
+        ? `ALU ${gameState.upperOrbit.stage}`
         : gameState.upperOrbit.completedRuns
-          ? ` ALU FLOW runs ${gameState.upperOrbit.completedRuns}.`
+          ? `ALU runs ${gameState.upperOrbit.completedRuns}`
           : "";
-      ui.statusCopy.textContent = `${objective}. ${activeCompany.label}: ${activeState.detail}. Group bonus ${bonusCompanyCount}/${COMPANY_CONFIG.length}.${multiballStatus}${shieldStatus}${orbitStatus}${jackpotStatus}${metaLabel}`;
+      const lockHouseStatus = getLockHouseProgressLabel().replace("LOCK HOUSE", "Lock");
+      const jackpotStatus = litJackpots.length ? `JP ${litJackpots.join("/")}` : "";
+      const metaLabel = gameState.metaRewards.lastAwardLabel ? `Reward ${gameState.metaRewards.lastAwardLabel}` : "";
+      const segments = [
+        objective,
+        `${activeCompany.label}: ${activeState.detail}`,
+        `Group ${bonusCompanyCount}/${COMPANY_CONFIG.length}`,
+        multiballStatus,
+        lockHouseStatus,
+        shieldStatus,
+        orbitStatus,
+        jackpotStatus,
+        metaLabel
+      ].filter(Boolean);
+      ui.statusCopy.textContent = segments.join(" | ");
     }
   }
 
@@ -3085,17 +3317,18 @@
     const activeBalls = physics ? getActiveBalls() : [];
 
     window.ImpolPinball = {
-      phase: "14.3.8",
+      phase: "14.4.1",
       feedback: getFeedbackReport(),
       scoring: getScoreEconomyReport(),
       progression: getProgressionReport(),
       matterLoaded: Boolean(MatterLib),
       staticBodyCount: physics ? physics.staticBodies.length : 0,
-      tableObjectCount: physics ? physics.bumperBodies.length + physics.targetBodies.length + physics.slingshotBodies.length + physics.rolloverBodies.length + physics.laneBodies.length + physics.orbitSensorBodies.length : 0,
+      tableObjectCount: physics ? physics.bumperBodies.length + physics.targetBodies.length + physics.slingshotBodies.length + physics.rolloverBodies.length + physics.laneBodies.length + physics.orbitSensorBodies.length + physics.lockHouseSensorBodies.length : 0,
       slingshotCount: physics ? physics.slingshotBodies.length : 0,
       rolloverCount: physics ? physics.rolloverBodies.length : 0,
       laneCount: physics ? physics.laneBodies.length : 0,
       orbitSensorCount: physics ? physics.orbitSensorBodies.length : 0,
+      lockHouseSensorCount: physics ? physics.lockHouseSensorBodies.length : 0,
       assetLoadedCount: Object.values(assets).filter((asset) => asset.loaded).length,
       ballSpawned: Boolean(physics && physics.ball),
       activeBallCount: activeBalls.length,
@@ -3208,6 +3441,30 @@
         remainingMs: gameState.upperOrbit.active
           ? Math.max(0, Math.round(UPPER_ORBIT.timeoutMs - (performance.now() - gameState.upperOrbit.startedAt)))
           : 0
+      },
+      lockHouse: {
+        config: {
+          id: LOCK_HOUSE.id,
+          label: LOCK_HOUSE.label,
+          placement: LOCK_HOUSE.placement,
+          states: [...LOCK_HOUSE.states],
+          captureEnabled: LOCK_HOUSE.captureEnabled,
+          mouth: { ...LOCK_HOUSE.mouth },
+          qualificationEvents: LOCK_HOUSE.qualificationEvents.map((requirement) => ({ ...requirement }))
+        },
+        state: gameState.lockHouse.state,
+        progress: { ...gameState.lockHouse.progress },
+        progressCount: getLockHouseProgressCount(),
+        progressTotal: getLockHouseProgressTotal(),
+        progressLabel: getLockHouseProgressLabel(),
+        qualified: isLockHouseQualified(),
+        qualifiedAt: gameState.lockHouse.qualifiedAt,
+        lastProgressAt: gameState.lockHouse.lastProgressAt,
+        lastProgressEvent: gameState.lockHouse.lastProgressEvent,
+        lastContactAt: gameState.lockHouse.lastContactAt,
+        lastContactState: gameState.lockHouse.lastContactState,
+        contactCount: gameState.lockHouse.contactCount,
+        captureEnabled: gameState.lockHouse.captureEnabled
       },
       skillShotAwarded: gameState.skillShotAwarded,
       gameOver: {
@@ -3774,6 +4031,38 @@
       });
     }
 
+    function triggerLockHouseQualificationDiagnostic() {
+      gameState.lockHouse = createLockHouseState();
+      const ball = physics?.ball;
+      const initialProgress = getLockHouseProgressCount();
+      handleLockHouseContact(ball);
+      const contactProgress = getLockHouseProgressCount();
+      const ignoredProgress = advanceLockHouseQualification("hit:MEASUREMENT", ball);
+      advanceLockHouseQualification("hit:COIL", ball);
+      const partialProgress = getLockHouseProgressCount();
+      advanceLockHouseQualification(UPPER_ORBIT.event, ball);
+      handleLockHouseContact(ball);
+
+      const qualified = isLockHouseQualified() && gameState.lockHouse.state === "qualified";
+      const contactDidNotQualify = initialProgress === 0 && contactProgress === 0 && !ignoredProgress;
+      const eventProgressOnly = partialProgress === 1 && getLockHouseProgressCount() === getLockHouseProgressTotal();
+
+      recordDiagnosticEvent("lock-house-rule", {
+        eventName: "lock-house:qualification",
+        objectId: LOCK_HOUSE.id,
+        label: getLockHouseProgressLabel(),
+        kind: contactDidNotQualify && eventProgressOnly && qualified ? "qualified" : "failed",
+        metrics: {
+          initialProgress,
+          contactProgress,
+          partialProgress,
+          finalProgress: getLockHouseProgressCount(),
+          finalState: gameState.lockHouse.state,
+          contactCount: gameState.lockHouse.contactCount
+        }
+      });
+    }
+
     const scenarios = [
       {
         id: "upper-orbit-completion",
@@ -4022,6 +4311,20 @@
           const missionsComplete = result.events.some((event) => event.type === "progression-check" && event.objectId === "missions" && event.kind === "complete");
           const companiesComplete = result.events.some((event) => event.type === "progression-check" && event.objectId === "companies" && event.kind === "complete");
           return missionsComplete && companiesComplete && getObjectiveCopy().includes("ALL MISSIONS COMPLETE");
+        }
+      },
+      {
+        id: "phase14-4-1-lock-house-qualification",
+        name: "Phase 14.4.1 lock house qualification",
+        start: { x: LOCK_HOUSE.mouth.x, y: LOCK_HOUSE.mouth.y },
+        velocity: { x: 0, y: 0 },
+        durationMs: 500,
+        expectedEvents: ["lock-house-rule"],
+        setup: triggerLockHouseQualificationDiagnostic,
+        successWhen: (result) => {
+          return result.events.some((event) => event.type === "lock-house-rule" && event.kind === "qualified") &&
+            gameState.lockHouse.state === "qualified" &&
+            gameState.lockHouse.contactCount >= 2;
         }
       },
       {
@@ -4681,6 +4984,7 @@
 
     drawConfiguredBumpers();
     drawConfiguredTargets();
+    drawLockHouse();
     drawConfiguredRollovers();
     drawDecorativeLamps();
     drawConfiguredSlingshots();
@@ -4879,6 +5183,20 @@
         }
       )
     ];
+    const lockHouseSensorBodies = [
+      Bodies.rectangle(
+        TABLE_CONFIG.lockHouse.mouth.x,
+        TABLE_CONFIG.lockHouse.mouth.y,
+        TABLE_CONFIG.lockHouse.mouth.width,
+        TABLE_CONFIG.lockHouse.mouth.height,
+        {
+          isStatic: true,
+          isSensor: true,
+          label: "lock-house-entrance",
+          angle: TABLE_CONFIG.lockHouse.mouth.angle
+        }
+      )
+    ];
 
     const ball = createBallBody("ball-1", getBallStartPosition());
 
@@ -4891,12 +5209,13 @@
       ...laneBodies,
       ...orbitRailBodies,
       ...orbitSensorBodies,
+      ...lockHouseSensorBodies,
       flippers.left,
       flippers.right,
       ball
     ]);
 
-    [...staticBodies, ...bumperBodies, ...targetBodies, ...slingshotBodies, ...rolloverBodies, ...laneBodies, ...orbitRailBodies, ...orbitSensorBodies, flippers.left, flippers.right].forEach((body) => {
+    [...staticBodies, ...bumperBodies, ...targetBodies, ...slingshotBodies, ...rolloverBodies, ...laneBodies, ...orbitRailBodies, ...orbitSensorBodies, ...lockHouseSensorBodies, flippers.left, flippers.right].forEach((body) => {
       Body.setStatic(body, true);
     });
 
@@ -4928,6 +5247,10 @@
           completeUpperOrbit(pairBall);
         }
 
+        if (pairBall && labels.includes("lock-house-entrance")) {
+          handleLockHouseContact(pairBall);
+        }
+
         const hitObject = getHitObject(pair);
         if (hitObject) {
           handleTableHit(hitObject, pairBall);
@@ -4945,6 +5268,7 @@
       laneBodies,
       orbitRailBodies,
       orbitSensorBodies,
+      lockHouseSensorBodies,
       flippers,
       ball,
       activeBalls: [ball],
@@ -5400,6 +5724,43 @@
     return null;
   }
 
+  function handleLockHouseContact(ball) {
+    if (gameState.status !== "playing") {
+      return;
+    }
+
+    const now = performance.now();
+    const state = gameState.lockHouse;
+    state.lastContactAt = now;
+    state.lastContactState = state.state;
+    state.contactCount += 1;
+    gameState.hitCounts[LOCK_HOUSE.id] = now;
+    recordDiagnosticEvent("lock-house-contact", {
+      ball,
+      eventName: LOCK_HOUSE.event,
+      objectId: LOCK_HOUSE.id,
+      label: LOCK_HOUSE.label,
+      kind: state.state
+    });
+
+    if (state.state === "qualified") {
+      setFeedback("LOCK HOUSE READY", 700, "progress", now);
+      addHitFeedback({
+        id: LOCK_HOUSE.id,
+        x: LOCK_HOUSE.mouth.x,
+        y: LOCK_HOUSE.mouth.y,
+        accent: LOCK_HOUSE.qualifiedAccent,
+        label: "READY",
+        color: "#7bdc6c"
+      });
+    } else {
+      setFeedback(getLockHouseProgressLabel(), 620, "hit", now);
+    }
+
+    updateHud();
+    syncInspectableState(physics);
+  }
+
   function getScoringObjectType(object) {
     if (object.id === UPPER_ORBIT.id) {
       return "route";
@@ -5652,6 +6013,7 @@
       }
       updateBomMode(object.event);
     }
+    advanceLockHouseQualification(object.event, ball);
     if (object.type === "rollover") {
       updateRolloverLamps(object);
     }
@@ -5771,6 +6133,7 @@
     updateCompanyForEvent(UPPER_ORBIT.event);
     updateCompanyForCombo(UPPER_ORBIT, combo);
     advanceMissions(UPPER_ORBIT.event);
+    advanceLockHouseQualification(UPPER_ORBIT.event, ball);
     updateHud();
     syncInspectableState(physics);
   }
@@ -6627,6 +6990,7 @@
     gameState.rollovers = createRolloverState();
     gameState.lanes = createLaneState();
     gameState.upperOrbit = createUpperOrbitState();
+    gameState.lockHouse = createLockHouseState();
     gameState.missionStageIndex = 0;
     gameState.activeMissionId = "measurement";
     gameState.lastCompletedMissionId = "";
@@ -7290,7 +7654,7 @@
     drawPlayfieldFrame();
 
     if (physics) {
-      drawPhysicsOverlay([...physics.staticBodies, ...physics.bumperBodies, ...physics.targetBodies, ...physics.rolloverBodies, ...physics.laneBodies, ...physics.orbitRailBodies, ...physics.orbitSensorBodies]);
+      drawPhysicsOverlay([...physics.staticBodies, ...physics.bumperBodies, ...physics.targetBodies, ...physics.rolloverBodies, ...physics.laneBodies, ...physics.orbitRailBodies, ...physics.orbitSensorBodies, ...physics.lockHouseSensorBodies]);
       drawFlipper(physics.flippers.left, inputState.left);
       drawFlipper(physics.flippers.right, inputState.right);
       drawPlungerCharge();

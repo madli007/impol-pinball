@@ -32,7 +32,7 @@ For that command, the agent should:
 
 ### Phase 14.4.1 - Lock House State Model And Closed Target
 
-Status: planned
+Status: completed
 
 Depends on: Phase 14.3.8
 
@@ -64,6 +64,14 @@ Acceptance criteria:
 Deliverable:
 
 - A stable lock-house state model and qualified opening.
+
+Implementation notes:
+
+- Final placement: right-mid playfield beside the CO2 bumper, above the E-ODPREMA lane, and clear of the shooter lane. The Phase 14.4.1 entrance is sensor-only at the house mouth, so the closed feature reports contact without trapping or rejecting the ball.
+- Runtime states are defined as `closed`, `qualified`, `open`, `holding`, and `kicking`; Phase 14.4.1 actively uses `closed` and `qualified`, with capture disabled for the later hold/kickout phases.
+- Qualification rule: complete one `ALU FLOW ORBIT` route event and hit `COIL COLLECTOR` once, in either order. Lock-house contact and unrelated targets do not advance qualification.
+- Added playfield art, shutter/open-mouth states, two requirement lamps, concise status-copy progress, and `window.ImpolPinball.lockHouse` config/runtime exposure.
+- Added diagnostic scenario `phase14-4-1-lock-house-qualification`.
 
 ### Phase 14.4.2 - Ball Capture And Safe Hold
 
