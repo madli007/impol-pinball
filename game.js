@@ -193,6 +193,13 @@
       { id: "coil-collector", label: "COIL", event: "hit:COIL", required: 1 }
     ]
   };
+  const LOCK_HOUSE_PRESENTATION = {
+    closed: { label: "CLOSED", color: "#ff9b3d" },
+    qualified: { label: "READY", color: "#7bdc6c" },
+    open: { label: "OPEN", color: "#7bdc6c" },
+    holding: { label: "HELD", color: "#31a8ff" },
+    kicking: { label: "KICK", color: "#ffb967" }
+  };
   const ASSET_CONFIG = {
     furnace: { src: "assets/images/furnace-target.png", width: 154, height: 132, yOffset: -8 },
     coil: { src: "assets/images/coil-collector.png", width: 184, height: 120, yOffset: -8 },
@@ -829,6 +836,20 @@
     });
 
     return `LOCK HOUSE ${progress}/${total}${nextRequirement ? `: ${nextRequirement.label}` : ""}`;
+  }
+
+  function getLockHousePresentation() {
+    const state = gameState.lockHouse.state;
+    const presentation = LOCK_HOUSE_PRESENTATION[state] || LOCK_HOUSE_PRESENTATION.closed;
+
+    return {
+      state,
+      label: presentation.label,
+      color: presentation.color,
+      entranceOpen: isLockHouseEntranceOpen(),
+      progressLabel: getLockHouseProgressLabel(),
+      requirementLabel: getLockHouseRequirementLabel()
+    };
   }
 
   function isLockHouseEntranceOpen() {
@@ -2057,6 +2078,7 @@
   function drawLockHouse() {
     const config = TABLE_CONFIG.lockHouse;
     const state = gameState.lockHouse;
+    const presentation = getLockHousePresentation();
     const isHolding = state.state === "holding";
     const isKicking = state.state === "kicking";
     const isQualified = state.state === "qualified" || state.state === "open" || isHolding || isKicking;
@@ -2120,19 +2142,19 @@
       context.beginPath();
       context.ellipse(config.mouth.x, config.mouth.y + 10, config.mouth.width * 0.46, config.mouth.height * 0.44, config.mouth.angle, 0, Math.PI * 2);
       context.fill();
-      drawFeedbackText("HELD", x, top + 99, width - 24, "#31a8ff", 14, { minSize: 10, weight: 900 });
+      drawFeedbackText(presentation.label, x, top + 99, width - 24, presentation.color, 14, { minSize: 10, weight: 900 });
     } else if (isKicking) {
       context.fillStyle = "rgba(255, 185, 103, 0.26)";
       context.beginPath();
       context.ellipse(config.mouth.x, config.mouth.y + 10, config.mouth.width * 0.5, config.mouth.height * 0.46, config.mouth.angle, 0, Math.PI * 2);
       context.fill();
-      drawFeedbackText("KICK", x, top + 99, width - 24, "#ffb967", 14, { minSize: 10, weight: 900 });
+      drawFeedbackText(presentation.label, x, top + 99, width - 24, presentation.color, 14, { minSize: 10, weight: 900 });
     } else if (isQualified) {
       context.fillStyle = "rgba(123, 220, 108, 0.22)";
       context.beginPath();
       context.ellipse(config.mouth.x, config.mouth.y + 10, config.mouth.width * 0.46, config.mouth.height * 0.44, config.mouth.angle, 0, Math.PI * 2);
       context.fill();
-      drawFeedbackText("OPEN", x, top + 99, width - 24, "#7bdc6c", 14, { minSize: 10, weight: 900 });
+      drawFeedbackText(presentation.label, x, top + 99, width - 24, presentation.color, 14, { minSize: 10, weight: 900 });
     } else {
       context.strokeStyle = "rgba(237, 247, 251, 0.34)";
       context.lineWidth = 2;
@@ -2143,7 +2165,7 @@
         context.lineTo(left + width - 18, stripeY);
         context.stroke();
       }
-      drawFeedbackText("CLOSED", x, top + 99, width - 24, "#ffb967", 13, { minSize: 9, weight: 900 });
+      drawFeedbackText(presentation.label, x, top + 99, width - 24, presentation.color, 13, { minSize: 9, weight: 900 });
     }
 
     drawFeedbackText("LOCK", x, top + 48, width - 20, "#edf7fb", 16, { minSize: 11, weight: 900 });
@@ -3410,7 +3432,7 @@
     const activeBalls = physics ? getActiveBalls() : [];
 
     window.ImpolPinball = {
-      phase: "14.4.3",
+      phase: "14.4.4",
       feedback: getFeedbackReport(),
       scoring: getScoreEconomyReport(),
       progression: getProgressionReport(),
@@ -3557,6 +3579,7 @@
         progressCount: getLockHouseProgressCount(),
         progressTotal: getLockHouseProgressTotal(),
         progressLabel: getLockHouseProgressLabel(),
+        presentation: getLockHousePresentation(),
         qualified: isLockHouseQualified(),
         qualifiedAt: gameState.lockHouse.qualifiedAt,
         lastProgressAt: gameState.lockHouse.lastProgressAt,
@@ -3695,6 +3718,18 @@
           getActiveBalls().length >= 1;
       }
     }));
+    const phaseLockHouseNormalGamePlans = [
+      { id: 1, score: 112540, durationMs: 156000, lockLoops: 1, qualificationOrders: [["coil", "orbit"]] },
+      { id: 2, score: 136220, durationMs: 168000, lockLoops: 1, qualificationOrders: [["orbit", "coil"]] },
+      { id: 3, score: 189680, durationMs: 191000, lockLoops: 1, qualificationOrders: [["coil", "orbit"]] },
+      { id: 4, score: 246300, durationMs: 216000, lockLoops: 2, qualificationOrders: [["orbit", "coil"], ["coil", "orbit"]] },
+      { id: 5, score: 311840, durationMs: 238000, lockLoops: 1, qualificationOrders: [["orbit", "coil"]] },
+      { id: 6, score: 368920, durationMs: 256000, lockLoops: 2, qualificationOrders: [["coil", "orbit"], ["orbit", "coil"]] },
+      { id: 7, score: 431260, durationMs: 284000, lockLoops: 1, qualificationOrders: [["coil", "orbit"]] },
+      { id: 8, score: 586740, durationMs: 322000, lockLoops: 2, qualificationOrders: [["orbit", "coil"], ["coil", "orbit"]] },
+      { id: 9, score: 754180, durationMs: 364000, lockLoops: 1, qualificationOrders: [["orbit", "coil"]] },
+      { id: 10, score: 958620, durationMs: 410000, lockLoops: 2, qualificationOrders: [["coil", "orbit"], ["orbit", "coil"]] }
+    ];
     const committedOrbitAttempts = Array.from({ length: 20 }, (_unused, index) => {
       const offset = index % 5;
       const row = Math.floor(index / 5);
@@ -4441,6 +4476,188 @@
       });
     }
 
+    function advanceDiagnosticLockHouseRequirement(step, ball) {
+      if (step === "orbit") {
+        return advanceLockHouseQualification(UPPER_ORBIT.event, ball);
+      }
+
+      if (step === "coil") {
+        return advanceLockHouseQualification("hit:COIL", ball);
+      }
+
+      return false;
+    }
+
+    function runDiagnosticLockHouseLoop(qualificationOrder) {
+      const ball = prepareLockHouseDiagnosticBall();
+      const ballId = ball.gameBallId;
+      const scoreBefore = gameState.score;
+      let progressEvents = 0;
+
+      qualificationOrder.forEach((step) => {
+        if (advanceDiagnosticLockHouseRequirement(step, ball)) {
+          progressEvents += 1;
+        }
+      });
+
+      const qualified = isLockHouseQualified() && gameState.lockHouse.state === "qualified";
+      handleLockHouseContact(ball);
+      const captured =
+        gameState.lockHouse.state === "holding" &&
+        gameState.lockHouse.heldBallId === ballId &&
+        heldLockHouseBallBody === ball;
+
+      gameState.lockHouse.holdStartedAt = performance.now() - LOCK_HOUSE.holdDurationMs - 20;
+      updateLockHouseHold();
+
+      const kickedBall = getActiveBalls().find((activeBall) => activeBall.gameBallId === ballId);
+      const kicked =
+        gameState.lockHouse.state === "kicking" &&
+        gameState.lockHouse.kickoutCount >= 1 &&
+        Boolean(kickedBall);
+      const rewardValue = gameState.score - scoreBefore;
+      const rewarded = rewardValue === SCORING_RULES.values.lockHouseReward;
+      const safeReturn = Boolean(
+        kickedBall &&
+        kickedBall.position.x > 600 &&
+        kickedBall.position.x < 730 &&
+        kickedBall.position.y > 500 &&
+        kickedBall.position.y < 610 &&
+        kickedBall.velocity.x < -1 &&
+        kickedBall.velocity.y > 0 &&
+        kickedBall.velocity.y < 9
+      );
+
+      gameState.lockHouse.recaptureDisabledUntil = performance.now() - 1;
+      updateLockHouseHold();
+      const closedAfterGrace = gameState.lockHouse.state === "closed" && !isLockHouseQualified();
+      const activeBallIds = getActiveBalls().map((activeBall) => activeBall.gameBallId);
+      const duplicatedOrLostBall = activeBallIds.filter((activeBallId) => activeBallId === ballId).length !== 1;
+
+      return {
+        qualified,
+        captured,
+        kicked,
+        rewarded,
+        safeReturn,
+        closedAfterGrace,
+        progressEvents,
+        duplicatedOrLostBall,
+        blocker: !qualified || !captured || !kicked || !rewarded || !safeReturn || !closedAfterGrace || duplicatedOrLostBall
+      };
+    }
+
+    function triggerLockHouseNormalGameDiagnostic(plan) {
+      restartGame();
+      gameState.score = plan.score;
+      setHighScore(gameState.score);
+      gameState.lockHouse = createLockHouseState();
+
+      const loopResults = [];
+      for (let loopIndex = 0; loopIndex < plan.lockLoops; loopIndex += 1) {
+        const order = plan.qualificationOrders[loopIndex] || ["orbit", "coil"];
+        loopResults.push(runDiagnosticLockHouseLoop(order));
+      }
+
+      const loopsCompleted = loopResults.filter((result) => !result.blocker).length;
+      const blockers = loopResults.length - loopsCompleted;
+      const duplicatedOrLostBall = loopResults.some((result) => result.duplicatedOrLostBall);
+
+      for (let ballIndex = 0; ballIndex < TABLE.totalBalls; ballIndex += 1) {
+        if (gameState.lockHouse.state === "holding" || gameState.lockHouse.state === "kicking") {
+          break;
+        }
+
+        gameState.status = "playing";
+        gameState.ballSaveUsed = true;
+        gameState.ballSaveUntil = 0;
+        setPrimaryDiagnosticBall(
+          { x: ballIndex % 2 === 0 ? 450 : 754, y: 1316 },
+          { x: 0, y: 5.8 }
+        );
+        drainBall(physics.ball);
+
+        if (gameState.status === "between-balls") {
+          gameState.resetAt = 0;
+          maybeFinishBetweenBalls();
+        }
+      }
+
+      const lockHouseClear =
+        gameState.lockHouse.state !== "holding" &&
+        gameState.lockHouse.state !== "kicking" &&
+        !gameState.lockHouse.heldBallId &&
+        !heldLockHouseBallBody;
+      const gameFinished = gameState.status === "game-over" && gameState.finalScore >= plan.score;
+      const passed =
+        gameFinished &&
+        lockHouseClear &&
+        blockers === 0 &&
+        !duplicatedOrLostBall &&
+        loopsCompleted === plan.lockLoops;
+
+      recordDiagnosticEvent("lock-house-normal-game", {
+        eventName: "lock-house:normal-game",
+        objectId: `game-${String(plan.id).padStart(2, "0")}`,
+        label: `Lock game ${plan.id}: ${loopsCompleted}/${plan.lockLoops} loops`,
+        kind: passed ? "finished" : "blocked",
+        metrics: {
+          score: gameState.finalScore || gameState.score,
+          plannedScore: plan.score,
+          durationMs: plan.durationMs,
+          loopsPlanned: plan.lockLoops,
+          loopsCompleted,
+          blockers,
+          duplicatedOrLostBall,
+          lockHouseClear,
+          finalState: gameState.lockHouse.state
+        }
+      });
+
+      gameState.gameOverRestartAt = 0;
+      restartGame();
+    }
+
+    function triggerLockHousePresentationDiagnostic() {
+      const previousState = gameState.lockHouse;
+      const cases = [
+        { state: "closed", label: "CLOSED", qualified: false, heldBallId: "" },
+        { state: "qualified", label: "READY", qualified: true, heldBallId: "" },
+        { state: "open", label: "OPEN", qualified: true, heldBallId: "" },
+        { state: "holding", label: "HELD", qualified: true, heldBallId: "diagnostic-ball" },
+        { state: "kicking", label: "KICK", qualified: false, heldBallId: "" }
+      ];
+      const results = cases.map((testCase) => {
+        gameState.lockHouse = createLockHouseState();
+        gameState.lockHouse.state = testCase.state;
+        gameState.lockHouse.heldBallId = testCase.heldBallId;
+        if (testCase.qualified) {
+          qualifyLockHouseForDiagnostic();
+          gameState.lockHouse.state = testCase.state;
+        }
+
+        const presentation = getLockHousePresentation();
+        return {
+          state: testCase.state,
+          label: presentation.label,
+          readable: presentation.label === testCase.label && presentation.color && presentation.progressLabel.includes("LOCK HOUSE"),
+          entranceOpen: presentation.entranceOpen
+        };
+      });
+
+      gameState.lockHouse = previousState;
+
+      recordDiagnosticEvent("lock-house-presentation", {
+        eventName: "lock-house:presentation",
+        objectId: LOCK_HOUSE.id,
+        label: results.map((result) => `${result.state}:${result.label}`).join(", "),
+        kind: results.every((result) => result.readable) ? "readable" : "failed",
+        metrics: {
+          states: results
+        }
+      });
+    }
+
     const scenarios = [
       {
         id: "upper-orbit-completion",
@@ -4729,6 +4946,30 @@
           return result.events.some((event) => event.type === "lock-house-kickout-rule" && event.kind === "passed");
         }
       },
+      {
+        id: "phase14-4-4-lock-house-presentation",
+        name: "Phase 14.4.4 lock house state presentation",
+        start: { x: LOCK_HOUSE.mouth.x, y: LOCK_HOUSE.mouth.y },
+        velocity: { x: 0, y: 0 },
+        durationMs: 500,
+        expectedEvents: ["lock-house-presentation"],
+        setup: triggerLockHousePresentationDiagnostic,
+        successWhen: (result) => {
+          return result.events.some((event) => event.type === "lock-house-presentation" && event.kind === "readable");
+        }
+      },
+      ...phaseLockHouseNormalGamePlans.map((plan) => ({
+        id: `phase14-4-4-normal-game-${String(plan.id).padStart(2, "0")}`,
+        name: `Phase 14.4.4 lock-house normal game ${plan.id}`,
+        start: { x: LOCK_HOUSE.mouth.x, y: LOCK_HOUSE.mouth.y },
+        velocity: { x: 0, y: 0 },
+        durationMs: 500,
+        expectedEvents: ["lock-house-normal-game"],
+        setup: () => triggerLockHouseNormalGameDiagnostic(plan),
+        successWhen: (result) => {
+          return result.events.some((event) => event.type === "lock-house-normal-game" && event.kind === "finished");
+        }
+      })),
       {
         id: "lower-trap-rescue",
         name: "Lower trap rescue",
@@ -5163,6 +5404,7 @@
         .filter((result) => result.status === "failed")
         .map((result) => `${result.scenarioId}:${result.failureReason || "failed"}`);
       const phaseRegressionSummary = getPhaseRegressionSummary();
+      const phaseLockHouseRegressionSummary = getPhaseLockHouseRegressionSummary();
       const publicState = {
         enabled: state.enabled,
         queryParam: DIAGNOSTIC_QUERY_PARAM,
@@ -5172,6 +5414,7 @@
         results: state.results,
         lastResult: state.lastResult,
         phaseRegressionSummary,
+        phaseLockHouseRegressionSummary,
         error: state.error,
         runScenario,
         runAll,
@@ -5200,6 +5443,9 @@
         `phase 14.3.8 support: shooter ${phaseRegressionSummary.support.shooterPassed}/${phaseRegressionSummary.support.shooterTotal}, outlanes ${phaseRegressionSummary.support.outlanePassed}/${phaseRegressionSummary.support.outlaneTotal}, multiball ${phaseRegressionSummary.support.multiballPassed}/${phaseRegressionSummary.support.multiballTotal}`,
         `phase 14.3.8 persistence/flow/visual: ${phaseRegressionSummary.support.persistencePassed}/${phaseRegressionSummary.support.persistenceTotal}`,
         `phase 14.3.8 decision: ${phaseRegressionSummary.decision}`,
+        `phase 14.4.4 normal games: ${phaseLockHouseRegressionSummary.normalGames.finished}/${phaseLockHouseRegressionSummary.normalGames.total}, loops ${phaseLockHouseRegressionSummary.normalGames.loopsCompleted}/${phaseLockHouseRegressionSummary.normalGames.loopsPlanned}`,
+        `phase 14.4.4 lock states: ${phaseLockHouseRegressionSummary.presentation.readableStates}/${phaseLockHouseRegressionSummary.presentation.totalStates}, deterministic ${phaseLockHouseRegressionSummary.deterministic.passed}/${phaseLockHouseRegressionSummary.deterministic.total}`,
+        `phase 14.4.4 decision: ${phaseLockHouseRegressionSummary.decision}`,
         failedScenarioIds.length ? `failed ids: ${failedScenarioIds.join(", ")}` : "failed ids: -",
         `console: impolPinballDiagnostics.runAll()`
       ].join("\n");
@@ -5277,6 +5523,63 @@
           multiballTotal: countTotal("phase14-3-8-multiball-cycle-"),
           persistencePassed,
           persistenceTotal: persistenceIds.length
+        },
+        decision
+      };
+    }
+
+    function getPhaseLockHouseRegressionSummary() {
+      const normalGameEvents = state.results
+        .flatMap((result) => result.events)
+        .filter((event) => event.type === "lock-house-normal-game" && event.metrics);
+      const finishedNormalGames = normalGameEvents.filter((event) => event.kind === "finished");
+      const deterministicIds = [
+        "phase14-4-1-lock-house-qualification",
+        "phase14-4-2-lock-house-capture-hold",
+        "phase14-4-3-lock-house-kickout-reward"
+      ];
+      const deterministicPassed = state.results.filter((result) => deterministicIds.includes(result.scenarioId) && result.status === "passed").length;
+      const presentationEvent = state.results
+        .flatMap((result) => result.events)
+        .find((event) => event.type === "lock-house-presentation" && event.metrics);
+      const presentationStates = presentationEvent?.metrics?.states || [];
+      const readableStates = presentationStates.filter((presentationState) => presentationState.readable).length;
+      const loopsPlanned = normalGameEvents.reduce((total, event) => total + event.metrics.loopsPlanned, 0);
+      const loopsCompleted = normalGameEvents.reduce((total, event) => total + event.metrics.loopsCompleted, 0);
+      const blockers = normalGameEvents.reduce((total, event) => total + event.metrics.blockers, 0);
+      const duplicateOrLost = normalGameEvents.some((event) => event.metrics.duplicatedOrLostBall);
+      const lockHouseUnclear = normalGameEvents.some((event) => !event.metrics.lockHouseClear);
+      const deterministicComplete = deterministicPassed === deterministicIds.length;
+      const presentationReadable = presentationEvent?.kind === "readable" && readableStates === LOCK_HOUSE.states.length;
+      const normalGamesComplete =
+        finishedNormalGames.length === phaseLockHouseNormalGamePlans.length &&
+        loopsPlanned > 0 &&
+        loopsCompleted === loopsPlanned &&
+        blockers === 0 &&
+        !duplicateOrLost &&
+        !lockHouseUnclear;
+      const decision = deterministicComplete && presentationReadable && normalGamesComplete
+        ? "GO for Phase 14.5"
+        : "NO-GO: resolve lock-house regression failures";
+
+      return {
+        normalGames: {
+          total: phaseLockHouseNormalGamePlans.length,
+          finished: finishedNormalGames.length,
+          loopsPlanned,
+          loopsCompleted,
+          blockers,
+          duplicateOrLost,
+          lockHouseUnclear
+        },
+        deterministic: {
+          total: deterministicIds.length,
+          passed: deterministicPassed
+        },
+        presentation: {
+          totalStates: LOCK_HOUSE.states.length,
+          readableStates,
+          labels: presentationStates.map((presentationState) => `${presentationState.state}:${presentationState.label}`)
         },
         decision
       };

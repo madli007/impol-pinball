@@ -994,7 +994,12 @@ The remaining Phase 14 work is split into agent-sized phases in `docs/phase14_fu
   - Added lock-house closed/opening/locked/reward/kickout synthesized sounds and kickout presentation text.
   - Exposed kickout config/runtime state through `window.ImpolPinball.lockHouse` and added diagnostic scenario `phase14-4-3-lock-house-kickout-reward`.
   - Verification: `node --check game.js` passed. Browser diagnostic testing was stopped per user request before a passing browser result was recorded.
-- [ ] Phase 14.4.4 - Lock house regression and presentation - Status: planned
+- [x] Phase 14.4.4 - Lock house regression and presentation - Status: completed
+  - Added Phase 14.4.4 diagnostics for ten deterministic normal-game samples, 14 total lock-house loops, all five lock-house presentation states, and a summarized go/no-go result exposed through `window.impolPinballDiagnostics.phaseLockHouseRegressionSummary`.
+  - Tuned lock-house presentation copy so `qualified` is visibly `READY`, explicit `open` remains `OPEN`, and `holding`/`kicking` stay compact and readable in the house mouth.
+  - Exposed `window.ImpolPinball.lockHouse.presentation` for browser verification of state label, color, entrance-open status, progress label, and requirement label.
+  - Verification: `node --check game.js` passed; browser `?pinballDiagnostics=all` passed `116/116`; responsive no-overflow checks passed at `390x844`, `768x1024`, `800x1024`, `1024x900`, `1440x900`, and `1440x1080`.
+  - Report: `docs/phase14_4_4_lock_house_regression_report.md`; decision: GO for Phase 14.5.
 
 #### Phase 14.5: Bonus Mini-Game Program
 

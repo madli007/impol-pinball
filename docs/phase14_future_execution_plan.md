@@ -163,7 +163,7 @@ Implementation notes:
 
 ### Phase 14.4.4 - Lock House Regression And Presentation
 
-Status: planned
+Status: completed
 
 Depends on: Phases 14.4.1 through 14.4.3
 
@@ -192,6 +192,16 @@ Acceptance criteria:
 Deliverable:
 
 - Lock-house regression report and go/no-go decision.
+
+Implementation notes:
+
+- Added Phase 14.4.4 diagnostics for ten deterministic normal-game samples, 14 total lock-house qualify/capture/hold/reward/kickout loops, and readable presentation coverage for `closed`, `qualified`, `open`, `holding`, and `kicking`.
+- Tuned lock-house presentation copy so `qualified` reads as `READY`, explicit `open` reads as `OPEN`, and held/kickout states remain compact inside the physical house art.
+- Exposed `window.ImpolPinball.lockHouse.presentation` with current state label, color, entrance-open status, progress label, and requirement label.
+- Ran browser diagnostics with `?pinballDiagnostics=all`: `116/116` passed, including `10/10` Phase 14.4.4 normal games, `14/14` lock-house loops, `5/5` readable lock-house states, and the three deterministic Phase 14.4 mechanism checks.
+- Checked responsive readability/no horizontal overflow at `390x844`, `768x1024`, `800x1024`, `1024x900`, `1440x900`, and `1440x1080`; all passed.
+- Documented remaining limitations and GO decision in `docs/phase14_4_4_lock_house_regression_report.md`.
+- Decision: GO for Phase 14.5.
 
 ## Phase 14.5 - Bonus Mini-Game Program
 
