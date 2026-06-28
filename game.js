@@ -54,7 +54,6 @@
       rolloverSet: 2500,
       laneSet: 1600,
       upperOrbit: 6500,
-      skillShot: 8000,
       bomSuccess: 45000,
       lockHouseReward: 22000,
       jackpotNormal: 35000,
@@ -205,6 +204,18 @@
     holding: { label: "HELD", color: "#31a8ff" },
     kicking: { label: "KICK", color: "#ffb967" }
   };
+  const LOCK_HOUSE_VISUAL = {
+    assetId: "lock-house-alcad",
+    width: 96,
+    height: 142,
+    lampOffsetY: 67
+  };
+  const LOCK_RELEASE_INDICATOR = {
+    x: 646,
+    y: 286,
+    width: 188,
+    height: 84
+  };
   const ASSET_CONFIG = {
     furnace: { src: "assets/images/furnace-target.png", width: 154, height: 132, yOffset: -8 },
     coil: { src: "assets/images/coil-collector.png", width: 184, height: 120, yOffset: -8 },
@@ -234,6 +245,11 @@
     "kosovnica": { src: "assets/images/kosovnica-terminal-target.png", width: 128, height: 160, yOffset: -20 },
     "mission-stage-lamps": { src: "assets/images/mission-stage-lamps.png", width: 282, height: 50 },
     "multiball-lock-release": { src: "assets/images/multiball-lock-release.png", width: 300, height: 134 },
+    "multiball-lock-release-0": { src: "assets/images/multiball-lock-release-0.png", width: 300, height: 134 },
+    "multiball-lock-release-1": { src: "assets/images/multiball-lock-release-1.png", width: 300, height: 134 },
+    "multiball-lock-release-2": { src: "assets/images/multiball-lock-release-2.png", width: 300, height: 134 },
+    "multiball-lock-release-3": { src: "assets/images/multiball-lock-release-3.png", width: 300, height: 134 },
+    "lock-house-alcad": { src: "assets/images/alcad-lock-house.png", width: 96, height: 142 },
     "jackpot-coil-insert": { src: "assets/images/jackpot-coil-insert.png", width: 116, height: 102 },
     "jackpot-furnace-insert": { src: "assets/images/jackpot-furnace-insert.png", width: 116, height: 102 },
     "jackpot-final-insert": { src: "assets/images/jackpot-final-insert.png", width: 116, height: 102 },
@@ -404,7 +420,7 @@
     {
       id: "rondal",
       label: "RONDAL",
-      events: ["hit:SKILL_SHOT", "hit:KOSOVNICA"],
+      events: ["hit:ROLLOVER", "hit:KOSOVNICA"],
       missions: ["kosovnica"]
     }
   ];
@@ -518,8 +534,6 @@
     lowerTrapSince: 0,
     upperTrapSince: 0,
     upperTrapBallId: "",
-    skillShotAvailableUntil: 0,
-    skillShotAwarded: false,
     ballSaveUntil: 0,
     ballSaveUsed: false,
     multiball: createMultiballState(),
@@ -1138,7 +1152,6 @@
   function getScoreEconomySamples() {
     const values = SCORING_RULES.values;
     const beginnerParts = {
-      skillShot: values.skillShot,
       passiveContacts: values.slingshot * 10 + values.rollover * 6 + values.inlane * 4 + values.outlane * 2,
       setBonuses: values.rolloverSet + values.laneSet,
       routes: values.upperOrbit * 3,
@@ -1146,7 +1159,6 @@
       missionCompletion: values.missions.measurement + values.missions.mes
     };
     const competentParts = {
-      skillShot: values.skillShot,
       passiveContacts: values.slingshot * 18 + values.rollover * 10 + values.inlane * 8 + values.outlane * 3,
       setBonuses: values.rolloverSet * 2 + values.laneSet,
       routes: values.upperOrbit * 8,
@@ -1168,7 +1180,6 @@
       jackpots: values.jackpotNormal * 2
     };
     const strongParts = {
-      skillShot: values.skillShot,
       passiveContacts: values.slingshot * 28 + values.rollover * 16 + values.inlane * 12 + values.outlane * 4,
       setBonuses: values.rolloverSet * 3 + values.laneSet * 2,
       routes: values.upperOrbit * 12,
@@ -1647,7 +1658,6 @@
         launch: 120,
         drain: 350,
         reset: 350,
-        "skill-shot": 500,
         combo: 180,
         "mission-progress": 220,
         "mission-complete": 650,
@@ -1685,10 +1695,6 @@
       } else if (effectName === "reset") {
         playTone({ frequency: 360, endFrequency: 540, duration: 0.09, type: "sine", volume: 0.035 });
         playTone({ frequency: 540, endFrequency: 720, duration: 0.09, type: "sine", volume: 0.026, startOffset: 0.08 });
-      } else if (effectName === "skill-shot") {
-        playTone({ frequency: 680, endFrequency: 1020, duration: 0.11, type: "triangle", volume: 0.052 });
-        playTone({ frequency: 1020, endFrequency: 1360, duration: 0.12, type: "sine", volume: 0.04, startOffset: 0.08 });
-        playNoise({ duration: 0.055, volume: 0.018, filterFrequency: 2400, startOffset: 0.02 });
       } else if (effectName === "combo") {
         playTone({ frequency: 620, endFrequency: 930, duration: 0.07, type: "triangle", volume: 0.042 });
         playTone({ frequency: 930, endFrequency: 1240, duration: 0.07, type: "triangle", volume: 0.034, startOffset: 0.055 });
@@ -2124,6 +2130,80 @@
     });
   }
 
+  function getLockHouseLockedCount() {
+    return Math.max(0, Math.min(LOCK_HOUSE.maxLockedBalls, gameState.lockHouse.lockedCount || 0));
+  }
+
+  function drawLockHouseQualificationLamps(startX, lampY, spacing = 36) {
+    LOCK_HOUSE.qualificationEvents.forEach((requirement, index) => {
+      const lampX = startX + index * spacing;
+      const lit = (gameState.lockHouse.progress[requirement.id] || 0) >= requirement.required;
+      context.fillStyle = lit ? requirement.id === "alu-flow-orbit" ? "#31a8ff" : "#7bdc6c" : "rgba(8, 18, 25, 0.9)";
+      context.beginPath();
+      context.arc(lampX, lampY, lit ? 8 : 6, 0, Math.PI * 2);
+      context.fill();
+      context.strokeStyle = lit ? "#edf7fb" : "rgba(126, 147, 156, 0.8)";
+      context.lineWidth = 2;
+      context.stroke();
+    });
+  }
+
+  function drawLockReleaseFallback(x, y, width, height, lockedCount, isLit) {
+    fillRoundedRect(x - width / 2, y - height / 2, width, height, 8, "rgba(5, 14, 18, 0.88)");
+    strokeRoundedRect(x - width / 2, y - height / 2, width, height, 8, isLit ? "#7bdc6c" : "rgba(126, 147, 156, 0.72)", isLit ? 3 : 2);
+    drawFeedbackText("MULTIBALL LOCK", x, y - height * 0.24, width - 24, isLit ? "#7bdc6c" : "#9ab3bf", 11, {
+      minSize: 8,
+      weight: 900
+    });
+
+    const ballSpacing = Math.min(width * 0.22, 34);
+    const startX = x - ballSpacing;
+    for (let index = 0; index < LOCK_HOUSE.maxLockedBalls; index += 1) {
+      const ballX = startX + index * ballSpacing;
+      const filled = index < lockedCount;
+      context.fillStyle = filled ? "#edf7fb" : "rgba(8, 18, 25, 0.92)";
+      context.beginPath();
+      context.arc(ballX, y + height * 0.16, 12, 0, Math.PI * 2);
+      context.fill();
+      context.strokeStyle = filled ? "#31a8ff" : "rgba(49, 168, 255, 0.56)";
+      context.lineWidth = 3;
+      context.stroke();
+    }
+  }
+
+  function drawLockReleaseIndicator() {
+    const lockedCount = getLockHouseLockedCount();
+    const isLit = lockedCount > 0 || isLockHouseQualified() || gameState.lockHouse.state === "holding" || gameState.lockHouse.state === "kicking";
+    const pulse = isLit ? 0.52 + Math.sin(performance.now() / 170) * 0.18 : 0;
+    const indicator = LOCK_RELEASE_INDICATOR;
+    const assetId = `multiball-lock-release-${lockedCount}`;
+
+    context.save();
+    if (pulse > 0) {
+      const glow = context.createRadialGradient(indicator.x, indicator.y, 18, indicator.x, indicator.y, 104);
+      glow.addColorStop(0, `rgba(123, 220, 108, ${0.18 + pulse * 0.22})`);
+      glow.addColorStop(0.58, `rgba(49, 168, 255, ${0.08 + pulse * 0.14})`);
+      glow.addColorStop(1, "rgba(0, 0, 0, 0)");
+      context.fillStyle = glow;
+      context.beginPath();
+      context.ellipse(indicator.x, indicator.y, indicator.width * 0.58, indicator.height * 0.72, 0, 0, Math.PI * 2);
+      context.fill();
+    }
+
+    const drewAsset = drawDecorAsset(assetId, indicator.x, indicator.y, indicator.width, indicator.height, {
+      alpha: isLit ? 0.9 : 0.52,
+      shadowColor: isLit ? "rgba(49, 168, 255, 0.28)" : "rgba(0, 0, 0, 0.34)",
+      shadowBlur: isLit ? 12 : 5,
+      shadowOffsetY: 4
+    });
+
+    if (!drewAsset) {
+      drawLockReleaseFallback(indicator.x, indicator.y, indicator.width, indicator.height, lockedCount, isLit);
+    }
+
+    context.restore();
+  }
+
   function drawLockHouse() {
     const config = TABLE_CONFIG.lockHouse;
     const state = gameState.lockHouse;
@@ -2158,6 +2238,31 @@
     context.beginPath();
     context.ellipse(x + 6, y + 58, width * 0.55, 20, 0, 0, Math.PI * 2);
     context.fill();
+
+    const drewLockHouseAsset = drawDecorAsset(LOCK_HOUSE_VISUAL.assetId, x, y, LOCK_HOUSE_VISUAL.width, LOCK_HOUSE_VISUAL.height, {
+      shadowColor: isQualified ? "rgba(123, 220, 108, 0.32)" : "rgba(0, 0, 0, 0.42)",
+      shadowBlur: isQualified ? 16 : 10,
+      shadowOffsetY: 7
+    });
+
+    if (drewLockHouseAsset) {
+      if (isHolding || isKicking || isQualified) {
+        context.fillStyle = isHolding ? "rgba(49, 168, 255, 0.22)" : isKicking ? "rgba(255, 185, 103, 0.26)" : "rgba(123, 220, 108, 0.22)";
+        context.beginPath();
+        context.ellipse(config.mouth.x, config.mouth.y + 10, config.mouth.width * 0.46, config.mouth.height * 0.44, config.mouth.angle, 0, Math.PI * 2);
+        context.fill();
+      }
+
+      fillRoundedRect(x - 36, config.mouth.y - 3, 72, 24, 5, "rgba(5, 11, 16, 0.9)");
+      strokeRoundedRect(x - 36, config.mouth.y - 3, 72, 24, 5, presentation.color, 2);
+      drawFeedbackText(presentation.label, x, config.mouth.y + 9, 62, presentation.color, 15, {
+        minSize: 10,
+        weight: 900
+      });
+      drawLockHouseQualificationLamps(x - 18, y + LOCK_HOUSE_VISUAL.lampOffsetY);
+      context.restore();
+      return;
+    }
 
     const bodyGradient = context.createLinearGradient(left, top, left + width, top + height);
     bodyGradient.addColorStop(0, "rgba(194, 207, 212, 0.9)");
@@ -2217,29 +2322,8 @@
       drawFeedbackText(presentation.label, x, top + 99, width - 24, presentation.color, 13, { minSize: 9, weight: 900 });
     }
 
-    drawFeedbackText("LOCK", x, top + 48, width - 20, "#edf7fb", 16, { minSize: 11, weight: 900 });
-    drawFeedbackText(`${state.lockedCount || 0}/${LOCK_HOUSE.maxLockedBalls} LOCKED`, x, top + 64, width - 16, accent, 11, {
-      minSize: 8,
-      weight: 900
-    });
-    drawFeedbackText(`${getLockHouseProgressCount()}/${getLockHouseProgressTotal()}`, x, top + 76, width - 20, accent, 10, {
-      minSize: 9,
-      weight: 900
-    });
-
-    const lampStartX = x - 18;
-    LOCK_HOUSE.qualificationEvents.forEach((requirement, index) => {
-      const lampX = lampStartX + index * 36;
-      const lampY = top + 116;
-      const lit = (state.progress[requirement.id] || 0) >= requirement.required;
-      context.fillStyle = lit ? requirement.id === "alu-flow-orbit" ? "#31a8ff" : "#7bdc6c" : "rgba(8, 18, 25, 0.9)";
-      context.beginPath();
-      context.arc(lampX, lampY, lit ? 8 : 6, 0, Math.PI * 2);
-      context.fill();
-      context.strokeStyle = lit ? "#edf7fb" : "rgba(126, 147, 156, 0.8)";
-      context.lineWidth = 2;
-      context.stroke();
-    });
+    drawFeedbackText("ALCAD", x, top + 52, width - 18, "#edf7fb", 16, { minSize: 11, weight: 900 });
+    drawLockHouseQualificationLamps(x - 18, top + 116);
     context.restore();
   }
 
@@ -2982,12 +3066,6 @@
   function drawFutureGameplayAssetHints() {
     const litTargetIds = new Set(gameState.jackpot.active ? gameState.jackpot.litTargetIds : []);
     const isSuperLit = gameState.jackpot.active && gameState.jackpot.superLit && !gameState.jackpot.superCollected;
-    drawDecorAsset("multiball-lock-release", 450, 300, 260, 116, {
-      alpha: 0.08,
-      shadowColor: "rgba(49, 168, 255, 0.12)",
-      shadowBlur: 5,
-      shadowOffsetY: 4
-    });
     drawDecorAsset("jackpot-furnace-insert", 568, 662, 102, 90, {
       alpha: litTargetIds.has("furnace") ? 0.7 : 0.11,
       rotation: 0.08,
@@ -3106,26 +3184,6 @@
       drawLabel("LAUNCH", plungerCenterX - 48, lane.bottomY - 36, "#ff9b3d", 16);
     }
 
-    context.restore();
-  }
-
-  function drawSkillShotMarker() {
-    const isLit = wasRecentlyHit("skill-shot");
-    const x = 686;
-    const y = 278;
-
-    context.save();
-    context.globalAlpha = isLit ? 1 : 0.86;
-    fillRoundedRect(x - 52, y - 22, 104, 44, 12, isLit ? "rgba(255, 155, 61, 0.34)" : "rgba(5, 11, 16, 0.58)");
-    strokeRoundedRect(x - 52, y - 22, 104, 44, 12, isLit ? "#ffb967" : "rgba(255, 155, 61, 0.76)", isLit ? 5 : 3);
-    drawLabel("SKILL", x, y - 4, "#ffb967", 16);
-
-    context.fillStyle = isLit ? "#ffb967" : "#31a8ff";
-    context.beginPath();
-    context.arc(x - 34, y + 16, 7, 0, Math.PI * 2);
-    context.arc(x, y + 16, 7, 0, Math.PI * 2);
-    context.arc(x + 34, y + 16, 7, 0, Math.PI * 2);
-    context.fill();
     context.restore();
   }
 
@@ -3704,7 +3762,6 @@
         holdingBodyPresent: Boolean(heldLockHouseBallBody),
         multiballPolicy: LOCK_HOUSE.multiballPolicy
       },
-      skillShotAwarded: gameState.skillShotAwarded,
       gameOver: {
         startedAt: gameState.gameOverStartedAt,
         restartReady: canRestartGameOver(),
@@ -5842,6 +5899,7 @@
     drawMechanicalDetailAssets();
     drawLowerLanePolish();
     drawUpperOrbit();
+    drawLockReleaseIndicator();
 
     if (!hasSideTargetArt) {
       context.fillStyle = "#1b3541";
@@ -5874,7 +5932,6 @@
     drawConfiguredSlingshots();
 
     drawShooterChannel();
-    drawSkillShotMarker();
     drawDrainAssembly();
     drawMissionLights();
 
@@ -5945,11 +6002,6 @@
         restitution: 0.18,
         label: "launch-lane-top-exit",
         angle: -0.72
-      }),
-      Bodies.rectangle(686, 278, 104, 44, {
-        isStatic: true,
-        isSensor: true,
-        label: "skill-shot-sensor"
       }),
       Bodies.rectangle(450, 1354, 270, 54, {
         isStatic: true,
@@ -6119,10 +6171,6 @@
           guideBallOutOfShooterLane(pairBall, "top-exit-sensor");
         }
 
-        if (labels.includes("skill-shot-sensor") && labels.includes("pinball")) {
-          awardSkillShot();
-        }
-
         if (pairBall && labels.includes("upper-orbit-entry")) {
           startUpperOrbit(pairBall);
         }
@@ -6250,8 +6298,6 @@
       y: -25 - power * 15
     });
     gameState.status = "playing";
-    gameState.skillShotAvailableUntil = performance.now() + 2600;
-    gameState.skillShotAwarded = false;
     gameState.ballSaveUntil = gameState.ballSaveUsed ? 0 : performance.now() + BALL_SAVE_DURATION;
     armSideShield();
     gameState.plungerPower = 0;
@@ -6297,8 +6343,6 @@
     MatterLib.Body.setStatic(ball, false);
     gameState.status = "playing";
     gameState.plungerPower = 0;
-    gameState.skillShotAvailableUntil = 0;
-    gameState.skillShotAwarded = false;
     gameState.ballSaveUsed = false;
     gameState.ballSaveUntil = Math.max(gameState.ballSaveUntil, now + BALL_SAVE_DURATION);
     gameState.resetAt = 0;
@@ -6867,33 +6911,6 @@
       x: -6.4,
       y: 2.2
     });
-    awardSkillShot();
-  }
-
-  function awardSkillShot() {
-    if (gameState.status !== "playing" || gameState.skillShotAwarded || performance.now() > gameState.skillShotAvailableUntil) {
-      return;
-    }
-
-    const points = SCORING_RULES.values.skillShot * getActiveMultiplier();
-    gameState.skillShotAwarded = true;
-    gameState.score += points;
-    setHighScore(gameState.score);
-    gameState.lastEvent = "hit:SKILL_SHOT";
-    setFeedback(`SKILL SHOT +${points.toLocaleString("sl-SI")}`, 1100, "progress");
-    gameState.hitCounts["skill-shot"] = performance.now();
-    updateCompanyForEvent(gameState.lastEvent);
-    addHitFeedback({
-      id: "skill-shot",
-      x: 686,
-      y: 278,
-      accent: "#ff9b3d",
-      label: `SKILL +${points.toLocaleString("sl-SI")}`,
-      color: "#ffb967"
-    });
-    audio.play("skill-shot");
-    updateHud();
-    syncInspectableState(physics);
   }
 
   function getHitObject(pair) {
@@ -8722,8 +8739,6 @@
     gameState.lowerTrapSince = 0;
     gameState.upperTrapSince = 0;
     gameState.upperTrapBallId = "";
-    gameState.skillShotAvailableUntil = 0;
-    gameState.skillShotAwarded = false;
     gameState.ballSaveUntil = 0;
     gameState.ballSaveUsed = false;
     gameState.multiball = createMultiballState();

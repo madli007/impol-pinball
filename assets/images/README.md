@@ -43,6 +43,8 @@ Supporting files:
 - `kosovnica-terminal-target.png` - dedicated KOSOVNICA terminal target asset.
 - `mission-stage-lamps.png` - mission-stage insert row for the active mission sequence.
 - `multiball-lock-release.png` - multiball lock / ball-release visual.
+- `multiball-lock-release-0.png` through `multiball-lock-release-3.png` - lock-release variants showing zero to three locked balls.
+- `alcad-lock-house.png` - ALCAD lock house sprite used for the lock-house capture visual.
 - `jackpot-coil-insert.png`, `jackpot-furnace-insert.png`, `jackpot-final-insert.png` - jackpot insert candidates for future shot rules.
 - `innovation-label-plate.png` - cropped label plate from the secondary visual sheet, used on the lower playfield.
 
@@ -67,5 +69,7 @@ Phase 9.3 adds lower playfield mechanical details, shooter lane housing art, and
 Phase 9.4 adds low-contrast industrial decals such as route curves, warning stripe plates, LED strips, circuit plates, and roller symbols. These remain decorative and should not read as scoring targets.
 
 Phase 12.5 adds a missing-visual-assets pack for upcoming rules work. `kosovnica-terminal-target.png` is integrated as a real target sprite; the mission-stage and multiball assets are integrated as low-alpha visual-only hints until Phase 13 gives them gameplay contracts. Phase 13.5 turns the jackpot insert assets into lit gameplay indicators during multiball.
+
+Phase 14.4 replaces the drawn lock house with `alcad-lock-house.png` while keeping the existing Matter.js mouth sensor unchanged. The lock-release variants provide the locked-ball state on the playfield instead of drawing a numeric counter on the lock house.
 
 Phase 12.6 crops the useful `INNOVATION` label plate from `secondary-visual-asset-sheet-transparent.png`. The remaining rails, pipes, LEDs, and label plates stay in the source sheet until a rule or layout pass gives them a clear purpose.
