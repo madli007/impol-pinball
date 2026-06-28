@@ -40,8 +40,12 @@ Controls:
 - `D` or `ArrowRight`: right flipper
 - hold/release `Space`: charge and launch the ball
 - `Restart`: start a new game
+- `Ctrl+Shift+D`: toggle dev mode for testing
+- `+`: in dev mode, add 1 to the remaining-balls counter
 
 The right-side control buttons can also be clicked or held with a pointer.
+
+After dev mode is enabled in a game, high-score recording stays disabled until the next restart, so test games do not overwrite the local high score.
 
 ## Local Run
 

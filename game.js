@@ -92,6 +92,7 @@
     progressRequirements: [2, 3, 4],
     requirementStep: 1,
     maxRequirement: 5,
+    preStartDelayMs: 1400,
     launchVelocity: { x: 0, y: -36 }
   };
   const JACKPOT = {
@@ -461,6 +462,7 @@
     ballsLeft: document.getElementById("balls-left-value"),
     multiplier: document.getElementById("multiplier-value"),
     highScore: document.getElementById("high-score-value"),
+    devMode: document.getElementById("dev-mode-value"),
     restartButton: document.getElementById("restart-button"),
     leftControl: document.getElementById("left-control"),
     rightControl: document.getElementById("right-control"),
@@ -487,6 +489,8 @@
     multiplier: 1,
     highScore: loadHighScore(),
     previousHighScore: 0,
+    devMode: false,
+    devModeUsed: false,
     status: "ready",
     resetAt: 0,
     drainCount: 0,
@@ -606,6 +610,11 @@
       endedAt: 0,
       graceUntil: 0,
       peakBalls: 1,
+      pending: false,
+      pendingStartAt: 0,
+      pendingSourceLabel: "",
+      pendingKind: "",
+      pendingOptions: null,
       progress: 0,
       starts: 0,
       nextRequirement: MULTIBALL.progressRequirements[0],
@@ -875,6 +884,7 @@
     return Boolean(
       state.captureEnabled &&
       !gameState.multiball.active &&
+      !gameState.multiball.pending &&
       (state.lockedCount || 0) < LOCK_HOUSE.maxLockedBalls &&
       performance.now() >= state.recaptureDisabledUntil &&
       (state.state === "qualified" || state.state === "open") &&
@@ -902,6 +912,7 @@
     if (
       gameState.status !== "playing" ||
       gameState.multiball.active ||
+      gameState.multiball.pending ||
       (gameState.lockHouse.lockedCount || 0) >= LOCK_HOUSE.maxLockedBalls ||
       isLockHouseQualified()
     ) {
@@ -1018,7 +1029,7 @@
     const status = COMPANY_STATUS[statusKey];
     const state = gameState.companies[companyId];
 
-    if (gameState.multiball.active) {
+    if (gameState.multiball.active || gameState.multiball.pending) {
       return false;
     }
 
@@ -1312,7 +1323,6 @@
       color: reward.color
     });
     startMultiball(reward.label);
-    audio.play("multiball-start");
   }
 
   function maybeAwardMissionMetaReward() {
@@ -1622,6 +1632,13 @@
       playNoise({ duration: 0.12, volume: 0.018, filterFrequency: 2600, type: "bandpass", q: 3.2, startOffset: 0.08 });
     }
 
+    function playMultiballWarning() {
+      playTone({ frequency: 98, endFrequency: 196, duration: 0.72, type: "sawtooth", volume: 0.035 });
+      playTone({ frequency: 147, endFrequency: 294, duration: 0.68, type: "triangle", volume: 0.03, startOffset: 0.16 });
+      playTone({ frequency: 220, endFrequency: 440, duration: 0.56, type: "sine", volume: 0.026, startOffset: 0.42 });
+      playNoise({ duration: 0.36, volume: 0.014, filterFrequency: 520, type: "bandpass", q: 1.8, startOffset: 0.12 });
+    }
+
     function play(effectName, options = {}) {
       const throttles = {
         flipper: 55,
@@ -1635,6 +1652,7 @@
         "mission-progress": 220,
         "mission-complete": 650,
         multiplier: 650,
+        "multiball-warning": 1000,
         "multiball-start": 900,
         jackpot: 360,
         "super-jackpot": 750,
@@ -1684,6 +1702,8 @@
       } else if (effectName === "multiplier") {
         playTone({ frequency: 520, endFrequency: 1040, duration: 0.16, type: "sawtooth", volume: 0.038 });
         playTone({ frequency: 1040, endFrequency: 1560, duration: 0.12, type: "triangle", volume: 0.032, startOffset: 0.12 });
+      } else if (effectName === "multiball-warning") {
+        playMultiballWarning();
       } else if (effectName === "multiball-start") {
         playMultiballStart();
       } else if (effectName === "jackpot") {
@@ -1761,6 +1781,10 @@
   }
 
   function setHighScore(candidate) {
+    if (gameState.devMode || gameState.devModeUsed) {
+      return;
+    }
+
     if (candidate <= gameState.highScore) {
       return;
     }
@@ -2641,6 +2665,19 @@
   }
 
   function drawMultiballBadge() {
+    if (gameState.multiball.pending) {
+      const remaining = Math.max(0, gameState.multiball.pendingStartAt - performance.now());
+      const label = gameState.multiball.pendingKind === "lock-house" ? "Lock House multiball ready" : "Multiball ready";
+      drawFeedbackZone("multiball", label, {
+        color: "#ffb967",
+        fontSize: 16,
+        progress: 1 - Math.min(1, remaining / MULTIBALL.preStartDelayMs),
+        progressColor: "rgba(255, 155, 61, 0.9)",
+        background: "rgba(5, 11, 16, 0.82)"
+      });
+      return;
+    }
+
     if (!gameState.multiball.active) {
       return;
     }
@@ -3265,6 +3302,10 @@
     ui.ballsLeft.textContent = String(gameState.ballsLeft);
     ui.multiplier.textContent = `${getActiveMultiplier()}x`;
     ui.highScore.textContent = gameState.highScore.toLocaleString("sl-SI");
+    if (ui.devMode) {
+      ui.devMode.textContent = gameState.devMode ? "On" : gameState.devModeUsed ? "Locked" : "Off";
+      ui.devMode.classList.toggle("is-dev-enabled", gameState.devMode || gameState.devModeUsed);
+    }
     updateMissionUi();
     updateTableQuickStatus();
     updateCompanyUi();
@@ -3382,7 +3423,9 @@
         : gameState.lanes.sideShieldOpenReason
           ? "Shield open"
           : "";
-      const multiballStatus = gameState.multiball.active
+      const multiballStatus = gameState.multiball.pending
+        ? "MB ready"
+        : gameState.multiball.active
         ? `MB ${getActiveBalls().length} balls active`
         : `MB ${gameState.multiball.progress}/${gameState.multiball.nextRequirement}`;
       const orbitStatus = gameState.upperOrbit.active
@@ -3415,7 +3458,7 @@
       zones.push("status");
     }
 
-    if (gameState.multiball.active) {
+    if (gameState.multiball.active || gameState.multiball.pending) {
       zones.push("multiball");
     } else if (getMetaMultiplierRemainingMs() > 0) {
       zones.push("meta");
@@ -3488,6 +3531,11 @@
       drainCount: gameState.drainCount,
       plungerPower: Number(gameState.plungerPower.toFixed(2)),
       score: gameState.score,
+      devMode: {
+        active: gameState.devMode,
+        usedThisGame: gameState.devModeUsed,
+        highScoreRecording: !gameState.devMode && !gameState.devModeUsed
+      },
       lastEvent: gameState.lastEvent,
       comboCount: gameState.comboCount,
       comboUntil: gameState.comboUntil,
@@ -3521,9 +3569,12 @@
       },
       multiball: {
         active: gameState.multiball.active,
+        pending: gameState.multiball.pending,
+        pendingKind: gameState.multiball.pendingKind,
+        pendingRemainingMs: Math.max(0, Math.round(gameState.multiball.pendingStartAt - performance.now())),
         multiplier: gameState.multiball.active ? MULTIBALL.multiplier : 1,
-        missionProgressPaused: gameState.multiball.active,
-        companyProgressPaused: gameState.multiball.active,
+        missionProgressPaused: gameState.multiball.active || gameState.multiball.pending,
+        companyProgressPaused: gameState.multiball.active || gameState.multiball.pending,
         peakBalls: gameState.multiball.peakBalls,
         progress: gameState.multiball.progress,
         nextRequirement: gameState.multiball.nextRequirement,
@@ -4344,6 +4395,20 @@
         gameState.lockHouse.lastCaptureBlockedReason === "not-qualified" &&
         getActiveBalls().length === closedActiveCount;
 
+      clearHeldLockHouseBall("diagnostic-reset");
+      clearLockedLockHouseBalls("diagnostic-reset");
+      gameState.lockHouse = createLockHouseState();
+      qualifyLockHouseForDiagnostic();
+      const slowApproachBall = prepareLockHouseDiagnosticBall();
+      MatterLib.Body.setVelocity(slowApproachBall, { x: 0, y: 0.2 });
+      handleLockHouseContact(slowApproachBall);
+      const slowApproachCaptured =
+        gameState.lockHouse.lockedCount === 1 &&
+        gameState.lockHouse.lockedBallIds.includes(slowApproachBall.gameBallId) &&
+        gameState.lockHouse.lastCaptureBlockedReason === "";
+
+      clearHeldLockHouseBall("diagnostic-reset");
+      clearLockedLockHouseBalls("diagnostic-reset");
       gameState.lockHouse = createLockHouseState();
       qualifyLockHouseForDiagnostic();
       const multiballBall = prepareLockHouseDiagnosticBall();
@@ -4359,10 +4424,37 @@
       gameState.multiball.graceUntil = 0;
       clearJackpots();
       removeExtraBalls();
+      gameState.lockHouse = createLockHouseState();
+      qualifyLockHouseForDiagnostic();
+      const stalePrimaryBall = prepareLockHouseDiagnosticBall();
+      const staleExtraBall = addActiveBall({ x: 380, y: 720 }, { x: 1.2, y: -0.4 });
+      const staleActiveCountBefore = getActiveBalls().length;
+      handleLockHouseContact(stalePrimaryBall);
+      const staleActiveBallIds = getActiveBalls().map((activeBall) => activeBall.gameBallId);
+      const staleExtraRecovered =
+        staleActiveCountBefore === 2 &&
+        gameState.lockHouse.lockedCount === 1 &&
+        gameState.lockHouse.lockedBallIds.includes(stalePrimaryBall.gameBallId) &&
+        !staleActiveBallIds.includes(stalePrimaryBall.gameBallId) &&
+        !staleActiveBallIds.includes(staleExtraBall.gameBallId) &&
+        getActiveBalls().length === 1;
+
+      gameState.multiball.active = false;
+      gameState.multiball.graceUntil = 0;
+      clearJackpots();
+      removeExtraBalls();
       resetBall(physics.ball, true);
       gameState.status = "ready";
 
-      const passed = locks === 20 && autoLaunches === 20 && lifeCountersPreserved === 20 && closedBlocked && multiballBlocked && !duplicateOrLostBall;
+      const passed =
+        locks === 20 &&
+        autoLaunches === 20 &&
+        lifeCountersPreserved === 20 &&
+        closedBlocked &&
+        slowApproachCaptured &&
+        multiballBlocked &&
+        staleExtraRecovered &&
+        !duplicateOrLostBall;
 
       recordDiagnosticEvent("lock-house-capture-rule", {
         eventName: "lock-house:capture-rule",
@@ -4374,7 +4466,9 @@
           autoLaunches,
           lifeCountersPreserved,
           closedBlocked,
+          slowApproachCaptured,
           multiballBlocked,
+          staleExtraRecovered,
           duplicateOrLostBall,
           finalActiveBallCount: getActiveBalls().length,
           multiballPolicy: LOCK_HOUSE.multiballPolicy
@@ -4667,6 +4761,68 @@
           states: results
         }
       });
+    }
+
+    function triggerMultiballLifeCounterDiagnostic() {
+      clearHeldLockHouseBall("diagnostic-reset");
+      clearLockedLockHouseBalls("diagnostic-reset");
+      gameState.lockHouse = createLockHouseState();
+      gameState.status = "playing";
+      gameState.ballNumber = 1;
+      gameState.ballsLeft = TABLE.totalBalls;
+      gameState.drainCount = 0;
+      gameState.ballSaveUsed = true;
+      gameState.ballSaveUntil = 0;
+      gameState.multiball = createMultiballState();
+      gameState.multiball.active = true;
+      gameState.multiball.startedAt = performance.now();
+      gameState.multiball.graceUntil = 0;
+      gameState.multiball.peakBalls = 2;
+      clearJackpots();
+      removeExtraBalls();
+
+      const firstBall = ensurePrimaryBallBody();
+      MatterLib.Body.setStatic(firstBall, false);
+      MatterLib.Body.setPosition(firstBall, { x: 420, y: 760 });
+      MatterLib.Body.setVelocity(firstBall, { x: 0, y: 0 });
+      const secondBall = addActiveBall({ x: 480, y: 760 }, { x: 0, y: 0 });
+      const ballsLeftBefore = gameState.ballsLeft;
+      const ballNumberBefore = gameState.ballNumber;
+      const activeBefore = getActiveBalls().length;
+
+      drainBall(secondBall);
+      const firstDrainPreservedLife =
+        gameState.ballsLeft === ballsLeftBefore &&
+        gameState.ballNumber === ballNumberBefore &&
+        getActiveBalls().length === activeBefore - 1 &&
+        !gameState.multiball.active;
+
+      gameState.status = "playing";
+      gameState.ballSaveUsed = true;
+      gameState.ballSaveUntil = 0;
+      const remainingBall = getActiveBalls()[0];
+      drainBall(remainingBall);
+      const finalDrainConsumedLife =
+        gameState.ballsLeft === ballsLeftBefore - 1 &&
+        gameState.ballNumber === ballNumberBefore + 1 &&
+        gameState.status === "between-balls";
+
+      recordDiagnosticEvent("multiball-life-counter", {
+        eventName: "multiball:life-counter",
+        objectId: "multiball",
+        label: "Multiball drains preserve life until final ball",
+        kind: firstDrainPreservedLife && finalDrainConsumedLife ? "passed" : "failed",
+        metrics: {
+          activeBefore,
+          ballsLeftBefore,
+          ballsLeftAfterFinalDrain: gameState.ballsLeft,
+          firstDrainPreservedLife,
+          finalDrainConsumedLife
+        }
+      });
+
+      gameState.gameOverRestartAt = 0;
+      restartGame();
     }
 
     const scenarios = [
@@ -5013,6 +5169,18 @@
           setPrimaryDiagnosticBall({ x: 450, y: 1310 }, { x: 0, y: 5.6 });
         },
         successWhen: (result) => result.events.some((event) => event.type === "multiball-save")
+      },
+      {
+        id: "multiball-life-counter",
+        name: "Multiball life counter",
+        start: { x: 450, y: 760 },
+        velocity: { x: 0, y: 0 },
+        durationMs: 500,
+        expectedEvents: ["multiball-life-counter"],
+        setup: triggerMultiballLifeCounterDiagnostic,
+        successWhen: (result) => {
+          return result.events.some((event) => event.type === "multiball-life-counter" && event.kind === "passed");
+        }
       },
       ...phaseRegressionGamePlans.map((plan) => ({
         id: `phase14-3-8-game-${String(plan.id).padStart(2, "0")}`,
@@ -6289,6 +6457,38 @@
     physics.ball = primaryBall;
   }
 
+  function removeInactiveExtraBalls(preferredBall, reason = "single-ball-recovery") {
+    if (!physics || gameState.multiball.active) {
+      return 0;
+    }
+
+    const activeBalls = getActiveBalls();
+
+    if (activeBalls.length <= 1) {
+      return 0;
+    }
+
+    const primaryBall = activeBalls.includes(preferredBall) ? preferredBall : activeBalls[0];
+    const extras = activeBalls.filter((ball) => ball !== primaryBall);
+
+    extras.forEach((ball) => removeActiveBall(ball));
+    physics.ball = primaryBall;
+    syncPrimaryBall();
+
+    recordDiagnosticEvent("single-ball-recovery", {
+      eventName: "single-ball:recovery",
+      objectId: "active-balls",
+      label: "Removed stale extra balls outside multiball",
+      kind: reason,
+      metrics: {
+        removedCount: extras.length,
+        activeBallCount: getActiveBalls().length,
+        preferredBallId: primaryBall?.gameBallId || ""
+      }
+    });
+    return extras.length;
+  }
+
   function getMultiballRequirement() {
     const starts = gameState.multiball.starts || 0;
     const configuredRequirement = MULTIBALL.progressRequirements[starts];
@@ -6308,6 +6508,7 @@
 
   function resetMultiballState() {
     gameState.multiball.active = false;
+    clearPendingMultiballStart();
     gameState.multiball.startedAt = 0;
     gameState.multiball.endedAt = 0;
     gameState.multiball.graceUntil = 0;
@@ -6400,9 +6601,72 @@
     return true;
   }
 
+  function clearPendingMultiballStart() {
+    gameState.multiball.pending = false;
+    gameState.multiball.pendingStartAt = 0;
+    gameState.multiball.pendingSourceLabel = "";
+    gameState.multiball.pendingKind = "";
+    gameState.multiball.pendingOptions = null;
+  }
+
+  function getMultiballStartDelay(options = {}) {
+    if (typeof options.delayMs === "number") {
+      return Math.max(0, options.delayMs);
+    }
+
+    return diagnosticHarness ? 0 : MULTIBALL.preStartDelayMs;
+  }
+
+  function scheduleMultiballStart(sourceLabel, options = {}) {
+    if (!physics || gameState.status !== "playing" || gameState.multiball.active || gameState.multiball.pending) {
+      return false;
+    }
+
+    const delayMs = getMultiballStartDelay(options);
+
+    if (delayMs <= 0) {
+      return options.kind === "lock-house" ? beginLockHouseMultiball(options) : beginMultiball(sourceLabel, options);
+    }
+
+    const now = performance.now();
+    gameState.multiball.pending = true;
+    gameState.multiball.pendingStartAt = now + delayMs;
+    gameState.multiball.pendingSourceLabel = sourceLabel;
+    gameState.multiball.pendingKind = options.kind || "standard";
+    gameState.multiball.pendingOptions = { ...options, delayMs: 0 };
+
+    const message = options.kind === "lock-house" ? "Lock House multiball ready" : "Multiball ready";
+    setFeedback(message, delayMs + 900, "multiball", now);
+    addHitFeedback({
+      id: "multiball-ready",
+      x: options.kind === "lock-house" ? LOCK_HOUSE.mouth.x : 450,
+      y: options.kind === "lock-house" ? LOCK_HOUSE.mouth.y : 300,
+      accent: "#ffb967",
+      label: "MULTIBALL READY",
+      color: "#ffb967"
+    });
+    audio.play("multiball-warning");
+    recordDiagnosticEvent("multiball-pending", {
+      eventName: "multiball:pending",
+      objectId: "multiball",
+      label: sourceLabel,
+      kind: gameState.multiball.pendingKind,
+      metrics: {
+        delayMs
+      }
+    });
+    updateHud();
+    syncInspectableState(physics);
+    return true;
+  }
+
   function startMultiball(sourceLabel, options = {}) {
+    return scheduleMultiballStart(sourceLabel, options);
+  }
+
+  function beginMultiball(sourceLabel, options = {}) {
     if (!physics || gameState.status !== "playing") {
-      return;
+      return false;
     }
 
     const wasActive = gameState.multiball.active;
@@ -6414,6 +6678,7 @@
     }
 
     const now = performance.now();
+    clearPendingMultiballStart();
     gameState.multiball.active = true;
     gameState.multiball.startedAt = now;
     gameState.multiball.endedAt = 0;
@@ -6445,12 +6710,40 @@
       label: "TWO-BALL MULTIBALL",
       color: "#edf7fb"
     });
+    audio.play("multiball-start");
     updateHud();
     syncInspectableState(physics);
+    return true;
+  }
+
+  function updatePendingMultiballStart() {
+    if (!gameState.multiball.pending) {
+      return;
+    }
+
+    if (gameState.status !== "playing") {
+      clearPendingMultiballStart();
+      updateHud();
+      syncInspectableState(physics);
+      return;
+    }
+
+    if (performance.now() < gameState.multiball.pendingStartAt) {
+      return;
+    }
+
+    const sourceLabel = gameState.multiball.pendingSourceLabel;
+    const options = gameState.multiball.pendingOptions || {};
+
+    if (gameState.multiball.pendingKind === "lock-house") {
+      beginLockHouseMultiball(options);
+    } else {
+      beginMultiball(sourceLabel, options);
+    }
   }
 
   function advanceMultiballProgressFromMission(mission) {
-    if (gameState.status !== "playing" || gameState.multiball.active) {
+    if (gameState.status !== "playing" || gameState.multiball.active || gameState.multiball.pending) {
       return;
     }
 
@@ -6459,7 +6752,6 @@
 
     if (gameState.multiball.progress >= gameState.multiball.nextRequirement) {
       startMultiball(`${mission.label} REWARD`);
-      audio.play("multiball-start");
       return;
     }
 
@@ -6470,6 +6762,10 @@
   }
 
   function endMultiball() {
+    if (gameState.multiball.pending) {
+      clearPendingMultiballStart();
+    }
+
     if (!gameState.multiball.active) {
       return;
     }
@@ -6493,6 +6789,31 @@
       label: "MULTIBALL ENDED",
       color: "#ffb967"
     });
+  }
+
+  function reconcileExpiredSingleBallMultiball(reason = "state-check") {
+    if (!gameState.multiball.active || gameState.status !== "playing") {
+      return false;
+    }
+
+    const activeBallCount = getActiveBalls().length;
+    const graceActive = performance.now() <= gameState.multiball.graceUntil;
+
+    if (activeBallCount > 1 || graceActive) {
+      return false;
+    }
+
+    recordDiagnosticEvent("multiball-recovery", {
+      eventName: "multiball:recovery",
+      objectId: "multiball",
+      label: "Expired single-ball multiball recovered",
+      kind: reason,
+      metrics: {
+        activeBallCount
+      }
+    });
+    endMultiball();
+    return true;
   }
 
   function tryMultiballSave(ball) {
@@ -6600,8 +6921,12 @@
       return "capture-disabled";
     }
 
-    if (gameState.multiball.active || getActiveBalls().length !== 1) {
+    if (gameState.multiball.active || gameState.multiball.pending) {
       return LOCK_HOUSE.multiballPolicy;
+    }
+
+    if (getActiveBalls().length !== 1) {
+      return "extra-ball-active";
     }
 
     if (performance.now() < gameState.lockHouse.recaptureDisabledUntil) {
@@ -6633,11 +6958,15 @@
     }
 
     const mouth = LOCK_HOUSE.mouth;
-    const lowerEdge = mouth.y + mouth.height * 0.12;
-    return ball.velocity.y <= LOCK_HOUSE.minimumUpwardLockVelocity && ball.position.y >= lowerEdge;
+    const lowerEntryEdge = mouth.y - mouth.height * 0.05;
+    const notFallingFromAbove = ball.velocity.y <= 0.8;
+    return notFallingFromAbove && ball.position.y >= lowerEntryEdge;
   }
 
   function captureLockHouseBall(ball) {
+    reconcileExpiredSingleBallMultiball("lock-house-capture");
+    removeInactiveExtraBalls(ball, "lock-house-capture");
+
     const blockedReason = getLockHouseCaptureBlockedReason(ball);
     const now = performance.now();
     const state = gameState.lockHouse;
@@ -7078,13 +7407,15 @@
     return ball;
   }
 
-  function startLockHouseMultiball() {
-    if (!physics || gameState.status !== "playing" || gameState.multiball.active) {
+  function startLockHouseMultiball(options = {}) {
+    if (!physics || gameState.status !== "playing" || gameState.multiball.active || gameState.multiball.pending) {
       return false;
     }
 
     const state = gameState.lockHouse;
     const now = performance.now();
+    const delayMs = getMultiballStartDelay({ ...options, kind: "lock-house" });
+    const startAt = now + delayMs;
     lockHouseReleaseQueue = lockedLockHouseBallBodies.splice(0, LOCK_HOUSE.maxLockedBalls);
 
     while (lockHouseReleaseQueue.length < LOCK_HOUSE.maxLockedBalls) {
@@ -7094,8 +7425,8 @@
 
     state.state = "kicking";
     state.kickoutStartedAt = now;
-    state.lockMultiballStartedAt = now;
-    state.nextReleaseAt = now;
+    state.lockMultiballStartedAt = 0;
+    state.nextReleaseAt = startAt;
     state.releaseCount = 0;
     state.lockedBallIds = [];
     state.lockedCount = 0;
@@ -7105,15 +7436,35 @@
     state.lastCaptureBlockedReason = "";
     clearLockHouseQualificationProgress();
 
+    if (delayMs > 0) {
+      return scheduleMultiballStart(LOCK_HOUSE.label, { ...options, kind: "lock-house" });
+    }
+
+    return beginLockHouseMultiball({ ...options, delayMs: 0 });
+  }
+
+  function beginLockHouseMultiball(options = {}) {
+    if (!physics || gameState.status !== "playing" || gameState.multiball.active || !lockHouseReleaseQueue.length) {
+      return false;
+    }
+
+    const state = gameState.lockHouse;
+    const now = performance.now();
+    clearPendingMultiballStart();
+    state.state = "kicking";
+    state.lockMultiballStartedAt = now;
+    state.nextReleaseAt = Math.min(state.nextReleaseAt || now, now);
     gameState.multiball.active = true;
     gameState.multiball.startedAt = now;
     gameState.multiball.endedAt = 0;
     gameState.multiball.graceUntil = now + MULTIBALL.graceMs;
     gameState.multiball.peakBalls = LOCK_HOUSE.maxLockedBalls;
     gameState.multiball.lastStartSource = LOCK_HOUSE.label;
-    gameState.multiball.starts += 1;
-    gameState.multiball.progress = 0;
-    syncMultiballRequirement();
+    if (options.advanceDifficulty !== false) {
+      gameState.multiball.starts += 1;
+      gameState.multiball.progress = 0;
+      syncMultiballRequirement();
+    }
     lightJackpots();
     gameState.ballSaveUsed = false;
     gameState.ballSaveUntil = Math.max(gameState.ballSaveUntil, gameState.multiball.graceUntil);
@@ -8042,7 +8393,7 @@
   }
 
   function advanceMissions(eventName) {
-    if (gameState.multiball.active) {
+    if (gameState.multiball.active || gameState.multiball.pending) {
       return false;
     }
 
@@ -8329,7 +8680,7 @@
     gameState.gameOverRestartAt = now + GAME_OVER_RESTART_DELAY_MS;
     gameState.finalScore = gameState.score;
     gameState.finalHighScore = gameState.highScore;
-    gameState.finalWasRecord = gameState.score > gameState.previousHighScore;
+    gameState.finalWasRecord = !gameState.devMode && !gameState.devModeUsed && gameState.score > gameState.previousHighScore;
     clearFeedback();
     inputState.space = false;
     inputState.chargingSince = 0;
@@ -8352,6 +8703,7 @@
     gameState.ballNumber = 1;
     gameState.ballsLeft = TABLE.totalBalls;
     gameState.multiplier = 1;
+    gameState.devModeUsed = gameState.devMode;
     gameState.status = "ready";
     gameState.resetAt = 0;
     gameState.drainCount = 0;
@@ -8573,7 +8925,37 @@
     setControlActive(ui.spaceControl, inputState.space);
   }
 
+  function toggleDevMode() {
+    gameState.devMode = !gameState.devMode;
+    if (gameState.devMode) {
+      gameState.devModeUsed = true;
+      gameState.finalWasRecord = false;
+    }
+    setFeedback(gameState.devMode ? "DEV MODE ON: HIGHSCORE OFF" : "DEV MODE OFF", 1600, "system");
+    updateHud();
+    syncInspectableState(physics);
+  }
+
+  function addDevBallCredit() {
+    gameState.ballsLeft += 1;
+    setFeedback(`DEV +1 BALL (${gameState.ballsLeft})`, 1200, "system");
+    updateHud();
+    syncInspectableState(physics);
+  }
+
   function handleKeyDown(event) {
+    if (event.ctrlKey && event.shiftKey && event.code === "KeyD") {
+      event.preventDefault();
+      toggleDevMode();
+      return;
+    }
+
+    if (gameState.devMode && !event.repeat && (event.key === "+" || event.code === "NumpadAdd")) {
+      event.preventDefault();
+      addDevBallCredit();
+      return;
+    }
+
     if (event.code === "ArrowLeft" || event.code === "KeyA") {
       unlockAudio();
       if (!inputState.left) {
@@ -9010,6 +9392,7 @@
       updateBallSaveTimeout();
       updateSideShieldTimeout();
       updateMetaRewardTimeout();
+      updatePendingMultiballStart();
       updateLockHouseHold();
       holdBallInLaunchLane();
       MatterLib.Engine.update(physics.engine, physicsClock.step * physicsClock.simulationScale);
@@ -9018,6 +9401,7 @@
       updateUpperOrbitGuide();
       maybeGuideShooterLaneExit();
       maybeCatchLostBall();
+      reconcileExpiredSingleBallMultiball("physics-step");
       maybeRescueLowerFlipperTrap();
       maybeRescueUpperPlayfieldTrap();
       maybeFinishBetweenBalls();
