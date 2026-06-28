@@ -79,17 +79,17 @@ Status: completed
 
 Depends on: Phase 14.4.1
 
-Goal: capture one eligible ball reliably and hold it without corrupting physics state.
+Goal: capture one eligible ball reliably, store it as a persistent lock, and keep physics/life counters valid.
 
 Scope:
 
 - Open the entrance only when qualified.
-- Detect a valid ball entry.
-- Transition the captured ball into a controlled held state.
-- Pause or neutralize its physics safely.
+- Detect a valid bottom-to-top ball entry.
+- Transition the captured ball into controlled persistent lock storage.
+- Remove the locked ball from active physics safely.
 - Handle multiball explicitly: document whether capture is disabled, captures one ball, or ends the feature.
-- Add timeout and recovery handling if capture state becomes inconsistent.
-- Expose held ball ID, hold start, and recovery reason.
+- Auto-launch a replacement ball without spending a normal ball.
+- Expose locked ball IDs, locked count, and blocked-capture reasons.
 
 Out of scope:
 
@@ -101,65 +101,64 @@ Acceptance criteria:
 
 - 20 deterministic eligible entries produce 20 safe captures.
 - Closed or unqualified entries do not capture.
-- Holding cannot duplicate, remove, or permanently freeze a ball.
-- Restart, drain, ball save, and game over clear holding state safely.
+- Locking cannot duplicate, lose, or permanently freeze a ball.
+- Restart and game over clear locked state safely; ordinary drains preserve locked balls.
 
 Deliverable:
 
-- Reliable single-ball capture and hold behavior.
+- Reliable single-ball capture and persistent lock behavior.
 
 Implementation notes:
 
 - Enabled lock-house capture after qualification only; closed or unqualified contacts now record a blocked capture reason and leave the active ball untouched.
 - Implemented the Phase 14.4.2 multiball policy as `capture-disabled-during-multiball`, so a qualified house remains readable but does not capture while multiball is active or while more than one ball is in play.
-- A captured ball is removed from Matter active play, held by original ball ID, and exposed through `window.ImpolPinball.lockHouse.heldBallId`, `holdStartedAt`, `holdRemainingMs`, `holdPosition`, and `holdingBodyPresent`.
-- Added safety recovery: inconsistent holds or the 9-second hold timeout restore the same ball body to the shooter lane, close the house, clear qualification progress, and expose `recoveryReason`/`recoveryAt`.
-- Restart, drain interruption, ball save, and game-over cleanup clear lock-house holding state; restart also guarantees a primary ball body exists if the held ball was the only ball.
-- Added diagnostic scenario `phase14-4-2-lock-house-capture-hold`, including 20 deterministic eligible captures, recovery checks, closed-entry rejection, and multiball-disabled rejection.
+- Lock-house capture now requires a qualified open house, exactly one active ball, and a bottom-to-top hit into the mouth; wrong-direction contacts are rejected with a blocked reason.
+- A captured ball is removed from Matter active play and stored persistently by original ball ID; `window.ImpolPinball.lockHouse` exposes `lockedBallIds`, `lockedCount`, and blocked-capture state.
+- Non-final locks auto-launch a replacement ball from the shooter lane without advancing `ballNumber` or decrementing `ballsLeft`; locked balls persist across later drains until game over or restart.
+- Added diagnostic scenario `phase14-4-2-lock-house-capture-hold`, including 20 deterministic persistent captures, replacement launches, preserved life counters, closed-entry rejection, and multiball-disabled rejection.
 
-### Phase 14.4.3 - Kickout, Reward, And Requalification
+### Phase 14.4.3 - Persistent Locks And Three-Ball Multiball
 
 Status: completed
 
 Depends on: Phase 14.4.2
 
-Goal: return the held ball to useful play and complete the mechanism loop.
+Goal: turn three persistent lock-house captures into a readable three-ball multiball.
 
 Scope:
 
-- Define hold duration and kickout direction.
-- Tune a safe kickout that returns the ball toward a controllable playfield area.
-- Award a documented score or progression reward.
-- Add closed, opening, locked, reward, and kickout sounds.
-- Reset or increase the next qualification requirement.
-- Prevent immediate recapture loops.
+- Require three qualified bottom-to-top lock-house captures.
+- Auto-launch a replacement ball after the first and second locks without consuming a normal ball.
+- Release the three locked balls from the house mouth one by one with a tuned delay.
+- Keep ball save active for the lock-house multiball start.
+- Reset lock count after the multiball begins.
+- Prevent qualification and capture during multiball.
 
 Out of scope:
 
 - Bonus mini-game.
-- New missions or multiball modes.
 - Large score-economy redesign.
 
 Acceptance criteria:
 
-- 20 kickouts return the ball without instant drain or repeated recapture.
-- The reward is visible and follows the current scoring ruleset.
-- The house returns to a valid state after every kickout.
-- Multiball, restart, and game-over transitions remain safe.
+- Wrong-direction house contacts do not lock.
+- Locked balls persist across drains and do not alter normal life counters.
+- Three locks start a 3-ball lock-house multiball with staged releases.
+- Qualification and capture are blocked during multiball.
+- Restart and game-over clear locked and queued balls safely.
 
 Deliverable:
 
-- A complete qualify-capture-reward-kickout loop.
+- A complete qualify-capture-lock-counter-to-multiball loop.
 
 Implementation notes:
 
-- Normal lock-house holds now last 1.6 seconds before a controlled kickout; the existing 9-second hold timeout remains a recovery-only path back to the shooter lane.
-- Kickout restores the held ball at the lock-house mouth and sends it left/down toward the controllable mid/lower playfield with a temporary 1.2-second no-recapture grace window while the visible state is `kicking`.
-- Awarded a documented `22,000 x multiplier` lock-house reward exactly once per normal kickout through the current `14.3.4-score-economy-1` scoring ruleset, with score feedback and inspectable reward timing/value.
-- Added synthesized closed-contact, opening/qualified, locked-hold, reward, and kickout sounds.
-- After kickout, the house closes, clears ALU FLOW/COIL qualification progress, increments an inspectable requalification loop counter, and requires the same documented ALU FLOW plus COIL sequence again.
-- Exposed hold duration, kickout velocity/position, reward value, kickout counts, no-recapture timing, and requalification level through `window.ImpolPinball.lockHouse`.
-- Added diagnostic scenario `phase14-4-3-lock-house-kickout-reward`; `node --check game.js` passed. Browser diagnostic rerun was stopped per user request before a green result was recorded.
+- The former temporary hold/reward/kickout loop has been replaced by persistent stored locks.
+- The first and second locks close the house, clear ALU FLOW/COIL qualification progress, increment the inspectable lock counter, and auto-launch a replacement ball with ball save.
+- The third lock starts lock-house multiball, resets `lockedCount`, and releases the three stored balls from the house mouth with `multiballReleaseDelayMs`.
+- Exposed `maxLockedBalls`, `lockedBallIds`, `lockedCount`, `lockMultiballStartedAt`, `releaseCount`, queued release count, next release timing, and release delay through `window.ImpolPinball.lockHouse`.
+- Added deterministic coverage in `phase14-4-3-lock-house-kickout-reward` for wrong-direction blocking, lock persistence across drain, staged three-ball release, lock-count reset, and multiball capture/progress blocking.
+- Verification: `node --check game.js` passed; browser `?pinballDiagnostics=all` passed `116/116`.
 
 ### Phase 14.4.4 - Lock House Regression And Presentation
 
@@ -171,7 +170,7 @@ Goal: prove the mechanism is fair, readable, and ready to trigger later content.
 
 Scope:
 
-- Run deterministic and normal-play qualification, capture, hold, and kickout tests.
+- Run deterministic and normal-play qualification, bottom-to-top capture, persistent lock, replacement launch, and three-ball release tests.
 - Verify all state transitions and interruption paths.
 - Tune only measured geometry, timing, feedback, and reward issues.
 - Check desktop, tablet, and mobile readability.
@@ -186,7 +185,7 @@ Acceptance criteria:
 
 - Ten normal games complete without a lock-house blocker.
 - No stuck, duplicated, or lost ball occurs.
-- Players can identify closed, qualified, open, holding, and kickout states.
+- Players can identify closed, qualified, open, holding/locked, and kickout/release states.
 - The final report recommends proceeding to Phase 14.5 or identifies blockers.
 
 Deliverable:
@@ -195,7 +194,7 @@ Deliverable:
 
 Implementation notes:
 
-- Added Phase 14.4.4 diagnostics for ten deterministic normal-game samples, 14 total lock-house qualify/capture/hold/reward/kickout loops, and readable presentation coverage for `closed`, `qualified`, `open`, `holding`, and `kicking`.
+- Added Phase 14.4.4 diagnostics for ten deterministic normal-game samples, 14 total lock-house qualify/capture/lock loops, and readable presentation coverage for `closed`, `qualified`, `open`, `holding`, and `kicking`.
 - Tuned lock-house presentation copy so `qualified` reads as `READY`, explicit `open` reads as `OPEN`, and held/kickout states remain compact inside the physical house art.
 - Exposed `window.ImpolPinball.lockHouse.presentation` with current state label, color, entrance-open status, progress label, and requirement label.
 - Ran browser diagnostics with `?pinballDiagnostics=all`: `116/116` passed, including `10/10` Phase 14.4.4 normal games, `14/14` lock-house loops, `5/5` readable lock-house states, and the three deterministic Phase 14.4 mechanism checks.

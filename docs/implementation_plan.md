@@ -980,24 +980,23 @@ The remaining Phase 14 work is split into agent-sized phases in `docs/phase14_fu
   - Documented qualification as one `ALU FLOW ORBIT` completion plus one `COIL COLLECTOR` hit, in either order; lock-house contact and unrelated events do not advance progress.
   - Exposed placement, qualification config, runtime progress, contact counts, and capture-disabled state through `window.ImpolPinball.lockHouse`.
   - Added diagnostic scenario `phase14-4-1-lock-house-qualification`.
-- [x] Phase 14.4.2 - Ball capture and safe hold - Status: completed
+- [x] Phase 14.4.2 - Ball capture and persistent lock - Status: completed
   - Enabled qualified-only lock-house capture; closed/unqualified entries record blocked reasons and never capture.
-  - Documented and implemented multiball behavior as `capture-disabled-during-multiball`, so lock-house capture requires exactly one active ball.
-  - Captured balls are removed from Matter active play, held by original ball ID, and exposed through `window.ImpolPinball.lockHouse` with hold timing, position, timeout, recovery, capture, and blocked-capture fields.
-  - Added a 9-second safety timeout plus inconsistent-hold recovery that restores the same ball body to the shooter lane, closes the house, and clears qualification progress without awarding a kickout reward.
-  - Restart, drain interruption, ball save, and game-over cleanup clear holding state safely, with restart ensuring a primary ball body exists if the held ball was the only active ball.
-  - Added diagnostic scenario `phase14-4-2-lock-house-capture-hold` for 20 deterministic captures, safe recoveries, closed-entry rejection, and multiball-disabled rejection.
-- [x] Phase 14.4.3 - Kickout, reward, and requalification - Status: completed
-  - Added the normal lock-house loop after capture: 1.6-second hold, `kicking` state, controlled left/down kickout from the house mouth, and a 1.2-second no-recapture grace window.
-  - Awarded `22,000 x multiplier` through the current scoring ruleset on normal kickout only, with visible score feedback and inspectable `lastRewardValue`/`lastRewardAt`.
-  - Closed the house after kickout, cleared ALU FLOW/COIL qualification progress, and exposed a requalification loop counter while keeping the same documented qualification sequence.
-  - Added lock-house closed/opening/locked/reward/kickout synthesized sounds and kickout presentation text.
-  - Exposed kickout config/runtime state through `window.ImpolPinball.lockHouse` and added diagnostic scenario `phase14-4-3-lock-house-kickout-reward`.
-  - Verification: `node --check game.js` passed. Browser diagnostic testing was stopped per user request before a passing browser result was recorded.
+  - Lock-house capture requires a single active ball, an open qualified house, and a bottom-to-top hit into the house mouth; wrong-direction contacts are rejected with an inspectable blocked reason.
+  - Captured balls are removed from Matter active play, stored as persistent locked balls by original ball ID, and exposed through `window.ImpolPinball.lockHouse.lockedBallIds` / `lockedCount`.
+  - Each successful non-final lock auto-launches a replacement ball from the shooter lane without advancing `ballNumber` or decrementing `ballsLeft`; locked balls persist across later drains until game over or restart.
+  - Added diagnostic scenario `phase14-4-2-lock-house-capture-hold` for 20 deterministic persistent captures, replacement launches, preserved life counters, closed-entry rejection, and multiball-disabled rejection.
+- [x] Phase 14.4.3 - Persistent locks and three-ball multiball - Status: completed
+  - Replaced the former hold/reward/kickout loop with a three-lock counter: after three locked balls, the house starts a dedicated 3-ball multiball.
+  - Lock-house multiball releases the three stored balls from the house mouth one at a time with a configured delay, keeps ball save active, and resets the lock count after the start.
+  - Lock qualification and capture remain disabled while multiball is active, so players cannot relock or refill conditions during the multiball mode.
+  - Exposed max locked balls, locked IDs, lock multiball timing, queued releases, release counts, and release delay through `window.ImpolPinball.lockHouse`.
+  - Updated diagnostic scenario `phase14-4-3-lock-house-kickout-reward` to verify wrong-direction blocking, lock persistence across drain, 3-ball release cadence, lock-count reset, and multiball capture/progress blocking.
+  - Verification: `node --check game.js` passed; browser `?pinballDiagnostics=all` passed `116/116`.
 - [x] Phase 14.4.4 - Lock house regression and presentation - Status: completed
-  - Added Phase 14.4.4 diagnostics for ten deterministic normal-game samples, 14 total lock-house loops, all five lock-house presentation states, and a summarized go/no-go result exposed through `window.impolPinballDiagnostics.phaseLockHouseRegressionSummary`.
+  - Added Phase 14.4.4 diagnostics for ten deterministic normal-game samples, 14 total qualify/capture/lock loops, all five lock-house presentation states, and a summarized go/no-go result exposed through `window.impolPinballDiagnostics.phaseLockHouseRegressionSummary`.
   - Tuned lock-house presentation copy so `qualified` is visibly `READY`, explicit `open` remains `OPEN`, and `holding`/`kicking` stay compact and readable in the house mouth.
-  - Exposed `window.ImpolPinball.lockHouse.presentation` for browser verification of state label, color, entrance-open status, progress label, and requirement label.
+  - Exposed `window.ImpolPinball.lockHouse.presentation` plus persistent lock counter/release state for browser verification.
   - Verification: `node --check game.js` passed; browser `?pinballDiagnostics=all` passed `116/116`; responsive no-overflow checks passed at `390x844`, `768x1024`, `800x1024`, `1024x900`, `1440x900`, and `1440x1080`.
   - Report: `docs/phase14_4_4_lock_house_regression_report.md`; decision: GO for Phase 14.5.
 

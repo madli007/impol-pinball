@@ -177,6 +177,10 @@
     holdDurationMs: 1600,
     holdTimeoutMs: 9000,
     kickoutGraceMs: 1200,
+    maxLockedBalls: 3,
+    autoLaunchVelocity: { x: 0, y: -37 },
+    multiballReleaseDelayMs: 620,
+    minimumUpwardLockVelocity: -1.15,
     kickoutVelocity: { x: -6.4, y: 5.2 },
     kickoutPosition: { x: 676, y: 552 },
     multiballPolicy: "capture-disabled-during-multiball",
@@ -555,6 +559,8 @@
   const audio = createAudioManager();
   let diagnosticHarness = null;
   let heldLockHouseBallBody = null;
+  let lockedLockHouseBallBodies = [];
+  let lockHouseReleaseQueue = [];
 
   function createMissionState() {
     const firstStageMissionIds = new Set(MISSION_STAGES[0]);
@@ -693,6 +699,11 @@
       heldBallId: "",
       holdStartedAt: 0,
       holdPosition: null,
+      lockedBallIds: [],
+      lockedCount: 0,
+      lockMultiballStartedAt: 0,
+      nextReleaseAt: 0,
+      releaseCount: 0,
       recoveryReason: "",
       recoveryAt: 0,
       lastRewardAt: 0,
@@ -818,6 +829,11 @@
   function getLockHouseProgressLabel() {
     const progress = getLockHouseProgressCount();
     const total = getLockHouseProgressTotal();
+    const lockedCount = gameState.lockHouse.lockedCount || 0;
+
+    if (gameState.multiball.active && gameState.multiball.lastStartSource === LOCK_HOUSE.label) {
+      return "LOCK HOUSE MULTIBALL";
+    }
 
     if (gameState.lockHouse.state === "holding") {
       return gameState.lockHouse.heldBallId ? `LOCK HOUSE HOLDING ${gameState.lockHouse.heldBallId}` : "LOCK HOUSE HOLDING";
@@ -828,14 +844,14 @@
     }
 
     if (isLockHouseQualified()) {
-      return "LOCK HOUSE QUALIFIED";
+      return `LOCK HOUSE READY ${lockedCount}/${LOCK_HOUSE.maxLockedBalls}`;
     }
 
     const nextRequirement = LOCK_HOUSE.qualificationEvents.find((requirement) => {
       return (gameState.lockHouse.progress[requirement.id] || 0) < requirement.required;
     });
 
-    return `LOCK HOUSE ${progress}/${total}${nextRequirement ? `: ${nextRequirement.label}` : ""}`;
+    return `LOCK HOUSE ${lockedCount}/${LOCK_HOUSE.maxLockedBalls} LOCKED ${progress}/${total}${nextRequirement ? `: ${nextRequirement.label}` : ""}`;
   }
 
   function getLockHousePresentation() {
@@ -848,7 +864,9 @@
       color: presentation.color,
       entranceOpen: isLockHouseEntranceOpen(),
       progressLabel: getLockHouseProgressLabel(),
-      requirementLabel: getLockHouseRequirementLabel()
+      requirementLabel: getLockHouseRequirementLabel(),
+      lockedCount: gameState.lockHouse.lockedCount || 0,
+      maxLockedBalls: LOCK_HOUSE.maxLockedBalls
     };
   }
 
@@ -856,6 +874,8 @@
     const state = gameState.lockHouse;
     return Boolean(
       state.captureEnabled &&
+      !gameState.multiball.active &&
+      (state.lockedCount || 0) < LOCK_HOUSE.maxLockedBalls &&
       performance.now() >= state.recaptureDisabledUntil &&
       (state.state === "qualified" || state.state === "open") &&
       isLockHouseQualified()
@@ -879,7 +899,12 @@
   }
 
   function advanceLockHouseQualification(eventName, ball) {
-    if (gameState.status !== "playing" || isLockHouseQualified()) {
+    if (
+      gameState.status !== "playing" ||
+      gameState.multiball.active ||
+      (gameState.lockHouse.lockedCount || 0) >= LOCK_HOUSE.maxLockedBalls ||
+      isLockHouseQualified()
+    ) {
       return false;
     }
 
@@ -2169,7 +2194,11 @@
     }
 
     drawFeedbackText("LOCK", x, top + 48, width - 20, "#edf7fb", 16, { minSize: 11, weight: 900 });
-    drawFeedbackText(`${getLockHouseProgressCount()}/${getLockHouseProgressTotal()}`, x, top + 66, width - 20, accent, 12, {
+    drawFeedbackText(`${state.lockedCount || 0}/${LOCK_HOUSE.maxLockedBalls} LOCKED`, x, top + 64, width - 16, accent, 11, {
+      minSize: 8,
+      weight: 900
+    });
+    drawFeedbackText(`${getLockHouseProgressCount()}/${getLockHouseProgressTotal()}`, x, top + 76, width - 20, accent, 10, {
       minSize: 9,
       weight: 900
     });
@@ -3354,14 +3383,14 @@
           ? "Shield open"
           : "";
       const multiballStatus = gameState.multiball.active
-        ? "MB 2x active"
+        ? `MB ${getActiveBalls().length} balls active`
         : `MB ${gameState.multiball.progress}/${gameState.multiball.nextRequirement}`;
       const orbitStatus = gameState.upperOrbit.active
         ? `ALU ${gameState.upperOrbit.stage}`
         : gameState.upperOrbit.completedRuns
           ? `ALU runs ${gameState.upperOrbit.completedRuns}`
           : "";
-      const lockHouseStatus = getLockHouseProgressLabel().replace("LOCK HOUSE", "Lock");
+      const lockHouseStatus = `Lock ${gameState.lockHouse.lockedCount || 0}/${LOCK_HOUSE.maxLockedBalls}`;
       const jackpotStatus = litJackpots.length ? `JP ${litJackpots.join("/")}` : "";
       const metaLabel = gameState.metaRewards.lastAwardLabel ? `Reward ${gameState.metaRewards.lastAwardLabel}` : "";
       const segments = [
@@ -3567,6 +3596,10 @@
           holdDurationMs: LOCK_HOUSE.holdDurationMs,
           holdTimeoutMs: LOCK_HOUSE.holdTimeoutMs,
           kickoutGraceMs: LOCK_HOUSE.kickoutGraceMs,
+          maxLockedBalls: LOCK_HOUSE.maxLockedBalls,
+          autoLaunchVelocity: { ...LOCK_HOUSE.autoLaunchVelocity },
+          multiballReleaseDelayMs: LOCK_HOUSE.multiballReleaseDelayMs,
+          minimumUpwardLockVelocity: LOCK_HOUSE.minimumUpwardLockVelocity,
           kickoutVelocity: { ...LOCK_HOUSE.kickoutVelocity },
           kickoutPosition: { ...LOCK_HOUSE.kickoutPosition },
           rewardValue: SCORING_RULES.values.lockHouseReward,
@@ -3590,6 +3623,14 @@
         captureEnabled: gameState.lockHouse.captureEnabled,
         entranceOpen: isLockHouseEntranceOpen(),
         heldBallId: gameState.lockHouse.heldBallId,
+        lockedBallIds: [...gameState.lockHouse.lockedBallIds],
+        lockedCount: gameState.lockHouse.lockedCount,
+        maxLockedBalls: LOCK_HOUSE.maxLockedBalls,
+        lockMultiballStartedAt: gameState.lockHouse.lockMultiballStartedAt,
+        releaseCount: gameState.lockHouse.releaseCount,
+        queuedReleaseCount: lockHouseReleaseQueue.length,
+        nextReleaseAt: gameState.lockHouse.nextReleaseAt,
+        nextReleaseRemainingMs: Math.max(0, Math.round(gameState.lockHouse.nextReleaseAt - performance.now())),
         holdStartedAt: gameState.lockHouse.holdStartedAt,
         holdRemainingMs: gameState.lockHouse.state === "holding"
           ? Math.max(0, Math.round(LOCK_HOUSE.holdTimeoutMs - (performance.now() - gameState.lockHouse.holdStartedAt)))
@@ -4244,47 +4285,56 @@
       MatterLib.Body.setStatic(ball, false);
       MatterLib.Body.setPosition(ball, {
         x: LOCK_HOUSE.mouth.x,
-        y: LOCK_HOUSE.mouth.y
+        y: LOCK_HOUSE.mouth.y + LOCK_HOUSE.mouth.height * 0.55
       });
-      MatterLib.Body.setVelocity(ball, { x: 0, y: 0 });
+      MatterLib.Body.setVelocity(ball, { x: 0, y: -6.2 });
       MatterLib.Body.setAngularVelocity(ball, 0);
       return ball;
     }
 
     function triggerLockHouseCaptureDiagnostic() {
-      let captures = 0;
-      let recoveries = 0;
+      let locks = 0;
+      let autoLaunches = 0;
+      let lifeCountersPreserved = 0;
       let duplicateOrLostBall = false;
 
       for (let attempt = 0; attempt < 20; attempt += 1) {
         clearHeldLockHouseBall("diagnostic-reset");
+        clearLockedLockHouseBalls("diagnostic-reset");
         gameState.lockHouse = createLockHouseState();
         qualifyLockHouseForDiagnostic();
         const ball = prepareLockHouseDiagnosticBall();
         const ballId = ball.gameBallId;
+        const ballNumberBefore = gameState.ballNumber;
+        const ballsLeftBefore = gameState.ballsLeft;
         handleLockHouseContact(ball);
 
-        const captured =
-          gameState.lockHouse.state === "holding" &&
-          gameState.lockHouse.heldBallId === ballId &&
-          getActiveBalls().length === 0 &&
-          heldLockHouseBallBody === ball;
+        const activeBallIds = getActiveBalls().map((activeBall) => activeBall.gameBallId);
+        const locked =
+          gameState.lockHouse.lockedCount === 1 &&
+          gameState.lockHouse.lockedBallIds.includes(ballId) &&
+          lockedLockHouseBallBodies.includes(ball) &&
+          !activeBallIds.includes(ballId);
 
-        if (captured) {
-          captures += 1;
+        if (locked) {
+          locks += 1;
         }
 
-        recoverLockHouseHold("diagnostic-reset", { silent: true });
-        const recoveredBallIds = getActiveBalls().map((activeBall) => activeBall.gameBallId);
-        const recovered = gameState.status === "ready" && recoveredBallIds.length === 1 && recoveredBallIds[0] === ballId;
+        if (getActiveBalls().length === 1 && !getActiveBalls().includes(ball)) {
+          autoLaunches += 1;
+        }
 
-        if (recovered) {
-          recoveries += 1;
-        } else {
+        if (gameState.ballNumber === ballNumberBefore && gameState.ballsLeft === ballsLeftBefore) {
+          lifeCountersPreserved += 1;
+        }
+
+        if (!locked || getActiveBalls().filter((activeBall) => activeBall.gameBallId === ballId).length > 0) {
           duplicateOrLostBall = true;
         }
       }
 
+      clearHeldLockHouseBall("diagnostic-reset");
+      clearLockedLockHouseBalls("diagnostic-reset");
       gameState.lockHouse = createLockHouseState();
       const closedBall = prepareLockHouseDiagnosticBall();
       const closedActiveCount = getActiveBalls().length;
@@ -4312,16 +4362,17 @@
       resetBall(physics.ball, true);
       gameState.status = "ready";
 
-      const passed = captures === 20 && recoveries === 20 && closedBlocked && multiballBlocked && !duplicateOrLostBall;
+      const passed = locks === 20 && autoLaunches === 20 && lifeCountersPreserved === 20 && closedBlocked && multiballBlocked && !duplicateOrLostBall;
 
       recordDiagnosticEvent("lock-house-capture-rule", {
         eventName: "lock-house:capture-rule",
         objectId: LOCK_HOUSE.id,
-        label: "Phase 14.4.2 capture and hold",
+        label: "Phase 14.4.2 persistent capture and replacement launch",
         kind: passed ? "passed" : "failed",
         metrics: {
-          captures,
-          recoveries,
+          locks,
+          autoLaunches,
+          lifeCountersPreserved,
           closedBlocked,
           multiballBlocked,
           duplicateOrLostBall,
@@ -4332,148 +4383,127 @@
     }
 
     function triggerLockHouseKickoutDiagnostic() {
-      let kickouts = 0;
-      let rewards = 0;
-      let recaptureBlocks = 0;
-      let safeReturns = 0;
-      let invalidStates = 0;
-      let duplicatedOrLostBall = false;
+      clearHeldLockHouseBall("diagnostic-reset");
+      clearLockedLockHouseBalls("diagnostic-reset");
+      gameState.lockHouse = createLockHouseState();
+      qualifyLockHouseForDiagnostic();
+      const wrongDirectionBall = prepareLockHouseDiagnosticBall();
+      MatterLib.Body.setPosition(wrongDirectionBall, {
+        x: LOCK_HOUSE.mouth.x,
+        y: LOCK_HOUSE.mouth.y - LOCK_HOUSE.mouth.height * 0.25
+      });
+      MatterLib.Body.setVelocity(wrongDirectionBall, { x: 0, y: 4.8 });
+      handleLockHouseContact(wrongDirectionBall);
+      const directionBlocked =
+        gameState.lockHouse.lastCaptureBlockedReason === "wrong-direction" &&
+        gameState.lockHouse.lockedCount === 0 &&
+        getActiveBalls().includes(wrongDirectionBall);
 
-      for (let attempt = 0; attempt < 20; attempt += 1) {
-        gameState.lockHouse = createLockHouseState();
+      clearHeldLockHouseBall("diagnostic-reset");
+      clearLockedLockHouseBalls("diagnostic-reset");
+      gameState.lockHouse = createLockHouseState();
+      qualifyLockHouseForDiagnostic();
+      gameState.ballsLeft = TABLE.totalBalls;
+      gameState.ballNumber = 1;
+      const persistentBall = prepareLockHouseDiagnosticBall();
+      handleLockHouseContact(persistentBall);
+      const replacementBall = getActiveBalls()[0];
+      gameState.ballSaveUsed = true;
+      gameState.ballSaveUntil = 0;
+      drainBall(replacementBall);
+      const lockPersistedAfterDrain =
+        gameState.lockHouse.lockedCount === 1 &&
+        gameState.lockHouse.lockedBallIds.includes(persistentBall.gameBallId) &&
+        gameState.ballsLeft === TABLE.totalBalls - 1;
+
+      clearHeldLockHouseBall("diagnostic-reset");
+      clearLockedLockHouseBalls("diagnostic-reset");
+      gameState.lockHouse = createLockHouseState();
+      gameState.multiball = createMultiballState();
+      gameState.status = "playing";
+      gameState.ballSaveUsed = true;
+      gameState.ballSaveUntil = 0;
+
+      const lockedIds = [];
+      for (let lockIndex = 0; lockIndex < LOCK_HOUSE.maxLockedBalls; lockIndex += 1) {
         qualifyLockHouseForDiagnostic();
         const ball = prepareLockHouseDiagnosticBall();
-        const ballId = ball.gameBallId;
-        const scoreBefore = gameState.score;
+        lockedIds.push(ball.gameBallId);
+        gameState.lockHouse.recaptureDisabledUntil = 0;
         handleLockHouseContact(ball);
-
-        if (gameState.lockHouse.state !== "holding" || gameState.lockHouse.heldBallId !== ballId) {
-          invalidStates += 1;
-          continue;
-        }
-
-        gameState.lockHouse.holdStartedAt = performance.now() - LOCK_HOUSE.holdDurationMs - 20;
-        updateLockHouseHold();
-
-        const kickedBall = getActiveBalls().find((activeBall) => activeBall.gameBallId === ballId);
-        const rewardValue = gameState.score - scoreBefore;
-        const kicked =
-          gameState.lockHouse.state === "kicking" &&
-          gameState.lockHouse.heldBallId === "" &&
-          gameState.lockHouse.kickoutCount === 1 &&
-          Boolean(kickedBall);
-
-        if (kicked) {
-          kickouts += 1;
-        }
-
-        if (rewardValue === SCORING_RULES.values.lockHouseReward && gameState.lockHouse.lastRewardValue === SCORING_RULES.values.lockHouseReward) {
-          rewards += 1;
-        }
-
-        if (kickedBall && kickedBall.position.y < 780 && kickedBall.velocity.x < -1 && kickedBall.velocity.y > 0 && kickedBall.velocity.y < 9) {
-          safeReturns += 1;
-        }
-
-        const activeBeforeRecapture = getActiveBalls().length;
-        handleLockHouseContact(kickedBall);
-        if (
-          gameState.lockHouse.lastCaptureBlockedReason === "recapture-disabled" &&
-          gameState.lockHouse.state === "kicking" &&
-          getActiveBalls().length === activeBeforeRecapture
-        ) {
-          recaptureBlocks += 1;
-        }
-
-        gameState.lockHouse.recaptureDisabledUntil = performance.now() - 1;
-        updateLockHouseHold();
-        if (gameState.lockHouse.state !== "closed" || isLockHouseQualified()) {
-          invalidStates += 1;
-        }
-
-        const activeBallIds = getActiveBalls().map((activeBall) => activeBall.gameBallId);
-        if (activeBallIds.filter((activeBallId) => activeBallId === ballId).length !== 1) {
-          duplicatedOrLostBall = true;
-        }
       }
 
-      gameState.lockHouse = createLockHouseState();
-      qualifyLockHouseForDiagnostic();
-      const restartBall = prepareLockHouseDiagnosticBall();
-      handleLockHouseContact(restartBall);
-      restartGame();
-      const restartSafe =
-        gameState.status === "ready" &&
-        gameState.lockHouse.state === "closed" &&
-        !gameState.lockHouse.heldBallId &&
-        getActiveBalls().length === 1;
+      for (let releaseIndex = 1; releaseIndex < LOCK_HOUSE.maxLockedBalls; releaseIndex += 1) {
+        gameState.lockHouse.nextReleaseAt = performance.now() - 1;
+        updateLockHouseHold();
+      }
 
-      gameState.lockHouse = createLockHouseState();
-      qualifyLockHouseForDiagnostic();
-      const gameOverBall = prepareLockHouseDiagnosticBall();
-      handleLockHouseContact(gameOverBall);
-      gameState.lockHouse.holdStartedAt = performance.now() - LOCK_HOUSE.holdDurationMs - 20;
-      updateLockHouseHold();
-      const kickedGameOverBall = getActiveBalls()[0] || gameOverBall;
-      startGameOver(kickedGameOverBall);
-      const gameOverSafe =
-        gameState.status === "game-over" &&
-        gameState.lockHouse.state !== "holding" &&
-        gameState.lockHouse.state !== "kicking" &&
-        !gameState.lockHouse.heldBallId;
+      const releasedIds = getActiveBalls().map((activeBall) => activeBall.gameBallId);
+      const multiballStarted =
+        gameState.multiball.active &&
+        gameState.multiball.lastStartSource === LOCK_HOUSE.label &&
+        gameState.lockHouse.lockedCount === 0 &&
+        gameState.lockHouse.releaseCount === LOCK_HOUSE.maxLockedBalls &&
+        lockHouseReleaseQueue.length === 0;
+      const threeReleased =
+        getActiveBalls().length === LOCK_HOUSE.maxLockedBalls &&
+        lockedIds.every((lockedId) => releasedIds.includes(lockedId));
+      const releaseCadence =
+        gameState.lockHouse.kickoutCount >= LOCK_HOUSE.maxLockedBalls &&
+        gameState.lockHouse.lockMultiballStartedAt > 0;
+      const progressBlockedDuringMultiball = !advanceLockHouseQualification("hit:COIL", getActiveBalls()[0]);
+      const captureBlockedDuringMultiball = (() => {
+        gameState.lockHouse.state = "qualified";
+        LOCK_HOUSE.qualificationEvents.forEach((requirement) => {
+          gameState.lockHouse.progress[requirement.id] = requirement.required;
+        });
+        const activeBefore = getActiveBalls().length;
+        handleLockHouseContact(getActiveBalls()[0]);
+        return gameState.lockHouse.lastCaptureBlockedReason === LOCK_HOUSE.multiballPolicy &&
+          getActiveBalls().length === activeBefore;
+      })();
 
-      gameState.gameOverRestartAt = 0;
-      restartGame();
-      const multiballBall = prepareLockHouseDiagnosticBall();
-      gameState.lockHouse = createLockHouseState();
-      qualifyLockHouseForDiagnostic();
-      startMultiball("lock-house kickout diagnostic", { advanceDifficulty: false });
-      const multiballActiveCount = getActiveBalls().length;
-      handleLockHouseContact(multiballBall);
-      const multiballSafe =
-        gameState.lockHouse.state === "qualified" &&
-        gameState.lockHouse.lastCaptureBlockedReason === LOCK_HOUSE.multiballPolicy &&
-        getActiveBalls().length === multiballActiveCount;
+      const duplicatedOrLostBall = new Set(releasedIds).size !== releasedIds.length;
+      const passed =
+        directionBlocked &&
+        lockPersistedAfterDrain &&
+        multiballStarted &&
+        threeReleased &&
+        releaseCadence &&
+        progressBlockedDuringMultiball &&
+        captureBlockedDuringMultiball &&
+        !duplicatedOrLostBall;
+
+      recordDiagnosticEvent("lock-house-kickout-rule", {
+        eventName: "lock-house:kickout-rule",
+        objectId: LOCK_HOUSE.id,
+        label: "Phase 14.4.3 persistent lock and three-ball multiball",
+        kind: passed ? "passed" : "failed",
+        metrics: {
+          directionBlocked,
+          lockPersistedAfterDrain,
+          multiballStarted,
+          threeReleased,
+          releaseCadence,
+          progressBlockedDuringMultiball,
+          captureBlockedDuringMultiball,
+          duplicatedOrLostBall,
+          lockedIds,
+          releasedIds,
+          maxLockedBalls: LOCK_HOUSE.maxLockedBalls,
+          releaseDelayMs: LOCK_HOUSE.multiballReleaseDelayMs
+        }
+      });
 
       gameState.multiball.active = false;
       gameState.multiball.graceUntil = 0;
       clearJackpots();
       removeExtraBalls();
       resetBall(physics.ball, true);
+      clearHeldLockHouseBall("diagnostic-reset");
+      clearLockedLockHouseBalls("diagnostic-reset");
+      gameState.lockHouse = createLockHouseState();
       gameState.status = "ready";
-
-      const passed =
-        kickouts === 20 &&
-        rewards === 20 &&
-        safeReturns === 20 &&
-        recaptureBlocks === 20 &&
-        invalidStates === 0 &&
-        !duplicatedOrLostBall &&
-        restartSafe &&
-        gameOverSafe &&
-        multiballSafe;
-
-      recordDiagnosticEvent("lock-house-kickout-rule", {
-        eventName: "lock-house:kickout-rule",
-        objectId: LOCK_HOUSE.id,
-        label: "Phase 14.4.3 kickout reward loop",
-        kind: passed ? "passed" : "failed",
-        metrics: {
-          kickouts,
-          rewards,
-          safeReturns,
-          recaptureBlocks,
-          invalidStates,
-          duplicatedOrLostBall,
-          restartSafe,
-          gameOverSafe,
-          multiballSafe,
-          rewardValue: SCORING_RULES.values.lockHouseReward,
-          holdDurationMs: LOCK_HOUSE.holdDurationMs,
-          kickoutVelocityX: LOCK_HOUSE.kickoutVelocity.x,
-          kickoutVelocityY: LOCK_HOUSE.kickoutVelocity.y
-        }
-      });
     }
 
     function advanceDiagnosticLockHouseRequirement(step, ball) {
@@ -4491,7 +4521,9 @@
     function runDiagnosticLockHouseLoop(qualificationOrder) {
       const ball = prepareLockHouseDiagnosticBall();
       const ballId = ball.gameBallId;
-      const scoreBefore = gameState.score;
+      const lockedBefore = gameState.lockHouse.lockedCount || 0;
+      const ballNumberBefore = gameState.ballNumber;
+      const ballsLeftBefore = gameState.ballsLeft;
       let progressEvents = 0;
 
       qualificationOrder.forEach((step) => {
@@ -4501,49 +4533,28 @@
       });
 
       const qualified = isLockHouseQualified() && gameState.lockHouse.state === "qualified";
+      gameState.lockHouse.recaptureDisabledUntil = 0;
       handleLockHouseContact(ball);
-      const captured =
-        gameState.lockHouse.state === "holding" &&
-        gameState.lockHouse.heldBallId === ballId &&
-        heldLockHouseBallBody === ball;
-
-      gameState.lockHouse.holdStartedAt = performance.now() - LOCK_HOUSE.holdDurationMs - 20;
-      updateLockHouseHold();
-
-      const kickedBall = getActiveBalls().find((activeBall) => activeBall.gameBallId === ballId);
-      const kicked =
-        gameState.lockHouse.state === "kicking" &&
-        gameState.lockHouse.kickoutCount >= 1 &&
-        Boolean(kickedBall);
-      const rewardValue = gameState.score - scoreBefore;
-      const rewarded = rewardValue === SCORING_RULES.values.lockHouseReward;
-      const safeReturn = Boolean(
-        kickedBall &&
-        kickedBall.position.x > 600 &&
-        kickedBall.position.x < 730 &&
-        kickedBall.position.y > 500 &&
-        kickedBall.position.y < 610 &&
-        kickedBall.velocity.x < -1 &&
-        kickedBall.velocity.y > 0 &&
-        kickedBall.velocity.y < 9
-      );
-
-      gameState.lockHouse.recaptureDisabledUntil = performance.now() - 1;
-      updateLockHouseHold();
-      const closedAfterGrace = gameState.lockHouse.state === "closed" && !isLockHouseQualified();
       const activeBallIds = getActiveBalls().map((activeBall) => activeBall.gameBallId);
-      const duplicatedOrLostBall = activeBallIds.filter((activeBallId) => activeBallId === ballId).length !== 1;
+      const captured = gameState.multiball.active
+        ? gameState.lockHouse.lockedCount === 0 && gameState.lockHouse.lockMultiballStartedAt > 0
+        : gameState.lockHouse.lockedCount === lockedBefore + 1 && gameState.lockHouse.lockedBallIds.includes(ballId);
+      const replacementLaunched = gameState.multiball.active || (getActiveBalls().length === 1 && !activeBallIds.includes(ballId));
+      const lifeCountersPreserved = gameState.ballNumber === ballNumberBefore && gameState.ballsLeft === ballsLeftBefore;
+      const closedAfterLock = gameState.multiball.active || (gameState.lockHouse.state === "closed" && !isLockHouseQualified());
+      const duplicatedOrLostBall = gameState.multiball.active
+        ? new Set(activeBallIds).size !== activeBallIds.length
+        : activeBallIds.includes(ballId);
 
       return {
         qualified,
         captured,
-        kicked,
-        rewarded,
-        safeReturn,
-        closedAfterGrace,
+        replacementLaunched,
+        lifeCountersPreserved,
+        closedAfterLock,
         progressEvents,
         duplicatedOrLostBall,
-        blocker: !qualified || !captured || !kicked || !rewarded || !safeReturn || !closedAfterGrace || duplicatedOrLostBall
+        blocker: !qualified || !captured || !replacementLaunched || !lifeCountersPreserved || !closedAfterLock || duplicatedOrLostBall
       };
     }
 
@@ -4924,7 +4935,7 @@
       },
       {
         id: "phase14-4-2-lock-house-capture-hold",
-        name: "Phase 14.4.2 lock house capture and hold",
+        name: "Phase 14.4.2 lock house persistent capture",
         start: { x: LOCK_HOUSE.mouth.x, y: LOCK_HOUSE.mouth.y },
         velocity: { x: 0, y: 0 },
         durationMs: 500,
@@ -4936,7 +4947,7 @@
       },
       {
         id: "phase14-4-3-lock-house-kickout-reward",
-        name: "Phase 14.4.3 lock house kickout reward",
+        name: "Phase 14.4.3 lock house three-ball multiball",
         start: { x: LOCK_HOUSE.mouth.x, y: LOCK_HOUSE.mouth.y },
         velocity: { x: 0, y: 0 },
         durationMs: 500,
@@ -6107,6 +6118,43 @@
     return ball;
   }
 
+  function autoLaunchLockHouseReplacementBall() {
+    const ball = addActiveBall(getBallStartPosition(), LOCK_HOUSE.autoLaunchVelocity);
+    const now = performance.now();
+
+    if (!ball) {
+      return null;
+    }
+
+    MatterLib.Body.setStatic(ball, false);
+    gameState.status = "playing";
+    gameState.plungerPower = 0;
+    gameState.skillShotAvailableUntil = 0;
+    gameState.skillShotAwarded = false;
+    gameState.ballSaveUsed = false;
+    gameState.ballSaveUntil = Math.max(gameState.ballSaveUntil, now + BALL_SAVE_DURATION);
+    gameState.resetAt = 0;
+    gameState.upperOrbit.active = false;
+    gameState.upperOrbit.stage = "idle";
+    gameState.upperOrbit.ballId = "";
+    armSideShield();
+
+    recordDiagnosticEvent("lock-house-auto-launch", {
+      ball,
+      eventName: "lock-house:auto-launch",
+      objectId: LOCK_HOUSE.id,
+      label: "Lock house replacement ball",
+      kind: "launched",
+      metrics: {
+        ballsLeft: gameState.ballsLeft,
+        ballNumber: gameState.ballNumber,
+        lockedCount: gameState.lockHouse.lockedCount
+      }
+    });
+    audio.play("launch", { power: 1 });
+    return ball;
+  }
+
   function removeActiveBall(ball) {
     if (!physics || !ball) {
       return;
@@ -6185,6 +6233,27 @@
     if (gameState.lockHouse.state === "holding" || gameState.lockHouse.state === "kicking") {
       gameState.lockHouse.state = isLockHouseQualified() ? "qualified" : "closed";
     }
+  }
+
+  function clearLockedLockHouseBalls(reason = "cleared") {
+    if (!lockedLockHouseBallBodies.length && !lockHouseReleaseQueue.length && !(gameState.lockHouse.lockedCount || 0)) {
+      return;
+    }
+
+    [...lockedLockHouseBallBodies, ...lockHouseReleaseQueue].forEach((ball) => {
+      if (ball && physics) {
+        MatterLib.Composite.remove(physics.engine.world, ball);
+      }
+    });
+    lockedLockHouseBallBodies = [];
+    lockHouseReleaseQueue = [];
+    gameState.lockHouse.lockedBallIds = [];
+    gameState.lockHouse.lockedCount = 0;
+    gameState.lockHouse.lockMultiballStartedAt = 0;
+    gameState.lockHouse.nextReleaseAt = 0;
+    gameState.lockHouse.releaseCount = 0;
+    gameState.lockHouse.recoveryReason = reason;
+    gameState.lockHouse.recoveryAt = performance.now();
   }
 
   function ensurePrimaryBallBody() {
@@ -6531,6 +6600,10 @@
       return "capture-disabled";
     }
 
+    if (gameState.multiball.active || getActiveBalls().length !== 1) {
+      return LOCK_HOUSE.multiballPolicy;
+    }
+
     if (performance.now() < gameState.lockHouse.recaptureDisabledUntil) {
       return "recapture-disabled";
     }
@@ -6543,8 +6616,8 @@
       return "already-holding";
     }
 
-    if (gameState.multiball.active || getActiveBalls().length !== 1) {
-      return LOCK_HOUSE.multiballPolicy;
+    if (!isLockHouseContactFromBelow(ball)) {
+      return "wrong-direction";
     }
 
     if (!getActiveBalls().includes(ball)) {
@@ -6552,6 +6625,16 @@
     }
 
     return "";
+  }
+
+  function isLockHouseContactFromBelow(ball) {
+    if (!ball) {
+      return false;
+    }
+
+    const mouth = LOCK_HOUSE.mouth;
+    const lowerEdge = mouth.y + mouth.height * 0.12;
+    return ball.velocity.y <= LOCK_HOUSE.minimumUpwardLockVelocity && ball.position.y >= lowerEdge;
   }
 
   function captureLockHouseBall(ball) {
@@ -6573,6 +6656,7 @@
     }
 
     const heldBallId = ball.gameBallId || "ball";
+    const lockedCountAfterCapture = Math.min(LOCK_HOUSE.maxLockedBalls, (state.lockedCount || 0) + 1);
     const removed = removeBallFromActivePlayForHold(ball);
 
     if (!removed) {
@@ -6602,25 +6686,74 @@
       eventName: "lock-house:capture",
       objectId: LOCK_HOUSE.id,
       label: heldBallId,
-      kind: "holding",
+      kind: "locked",
       metrics: {
         activeBallCount: getActiveBalls().length,
-        captureCount: state.captureCount
+        captureCount: state.captureCount,
+        lockedCount: lockedCountAfterCapture
       }
     });
-    setFeedback("LOCK HOUSE HOLD", 1500, "progress", now);
+    const startedLockMultiball = lockCapturedBallInHouse(now);
+    if (!startedLockMultiball) {
+      setFeedback(`BALL LOCKED ${state.lockedCount}/${LOCK_HOUSE.maxLockedBalls}`, 1500, "progress", now);
+    }
     addHitFeedback({
       id: `${LOCK_HOUSE.id}-hold`,
       x: LOCK_HOUSE.mouth.x,
       y: LOCK_HOUSE.mouth.y,
       accent: LOCK_HOUSE.qualifiedAccent,
-      label: "HELD",
+      label: startedLockMultiball ? "3-BALL" : `${state.lockedCount}/3`,
       color: "#7bdc6c"
     });
     audio.play("lock-house-locked");
     updateHud();
     syncInspectableState(physics);
     return true;
+  }
+
+  function lockCapturedBallInHouse(now = performance.now()) {
+    const state = gameState.lockHouse;
+    const ball = heldLockHouseBallBody;
+
+    if (!ball || !state.heldBallId) {
+      recoverLockHouseHold("inconsistent-lock");
+      return false;
+    }
+
+    lockedLockHouseBallBodies.push(ball);
+    state.lockedBallIds = lockedLockHouseBallBodies.map((lockedBall) => lockedBall.gameBallId || "ball");
+    state.lockedCount = state.lockedBallIds.length;
+    heldLockHouseBallBody = null;
+    state.heldBallId = "";
+    state.holdStartedAt = 0;
+    state.holdPosition = null;
+    state.lastKickoutAt = 0;
+    state.kickoutStartedAt = 0;
+    state.recoveryReason = "";
+    state.recoveryAt = 0;
+    state.requalificationLevel += 1;
+    clearLockHouseQualificationProgress();
+
+    recordDiagnosticEvent("lock-house-ball-locked", {
+      ball,
+      eventName: "lock-house:ball-locked",
+      objectId: LOCK_HOUSE.id,
+      label: ball.gameBallId || "ball",
+      kind: state.lockedCount >= LOCK_HOUSE.maxLockedBalls ? "multiball-ready" : "stored",
+      metrics: {
+        lockedCount: state.lockedCount,
+        lockedBallIds: [...state.lockedBallIds]
+      }
+    });
+
+    if (state.lockedCount >= LOCK_HOUSE.maxLockedBalls) {
+      return startLockHouseMultiball();
+    }
+
+    state.state = "closed";
+    state.recaptureDisabledUntil = now + LOCK_HOUSE.kickoutGraceMs;
+    autoLaunchLockHouseReplacementBall();
+    return false;
   }
 
   function recoverLockHouseHold(reason = "hold-timeout", options = {}) {
@@ -6803,7 +6936,10 @@
     const state = gameState.lockHouse;
 
     if (state.state === "kicking") {
-      if (performance.now() >= state.recaptureDisabledUntil) {
+      const now = performance.now();
+      releaseLockHouseQueuedBall(now);
+
+      if (!lockHouseReleaseQueue.length && now >= state.recaptureDisabledUntil) {
         state.state = "closed";
         updateHud();
         syncInspectableState(physics);
@@ -6857,13 +6993,18 @@
 
     if (isLockHouseEntranceOpen()) {
       const blockedReason = state.lastCaptureBlockedReason;
-      setFeedback(blockedReason === LOCK_HOUSE.multiballPolicy ? "LOCK DISABLED IN MULTIBALL" : "LOCK HOUSE READY", 700, "progress", now);
+      const blockedLabel = blockedReason === LOCK_HOUSE.multiballPolicy
+        ? "LOCK DISABLED IN MULTIBALL"
+        : blockedReason === "wrong-direction"
+          ? "LOCK FROM BELOW"
+          : "LOCK HOUSE READY";
+      setFeedback(blockedLabel, 700, "progress", now);
       addHitFeedback({
         id: LOCK_HOUSE.id,
         x: LOCK_HOUSE.mouth.x,
         y: LOCK_HOUSE.mouth.y,
         accent: LOCK_HOUSE.qualifiedAccent,
-        label: blockedReason === LOCK_HOUSE.multiballPolicy ? "MB OFF" : "READY",
+        label: blockedReason === LOCK_HOUSE.multiballPolicy ? "MB OFF" : blockedReason === "wrong-direction" ? "BELOW" : "READY",
         color: "#7bdc6c"
       });
       audio.play(blockedReason === LOCK_HOUSE.multiballPolicy ? "lock-house-closed" : "lock-house-opening");
@@ -6874,6 +7015,139 @@
 
     updateHud();
     syncInspectableState(physics);
+  }
+
+  function releaseLockHouseQueuedBall(now = performance.now()) {
+    const state = gameState.lockHouse;
+
+    if (!physics || state.state !== "kicking" || !lockHouseReleaseQueue.length || now < state.nextReleaseAt) {
+      return null;
+    }
+
+    const ball = lockHouseReleaseQueue.shift();
+    const releaseIndex = state.releaseCount;
+    const position = {
+      x: LOCK_HOUSE.kickoutPosition.x + releaseIndex * 7,
+      y: LOCK_HOUSE.kickoutPosition.y - releaseIndex * 9
+    };
+    const velocity = {
+      x: LOCK_HOUSE.kickoutVelocity.x + releaseIndex * 0.65,
+      y: LOCK_HOUSE.kickoutVelocity.y - releaseIndex * 0.2
+    };
+
+    ball.isRemoved = false;
+    MatterLib.Composite.add(physics.engine.world, ball);
+    if (!physics.activeBalls.includes(ball)) {
+      physics.activeBalls.push(ball);
+    }
+    MatterLib.Body.setStatic(ball, false);
+    MatterLib.Body.setPosition(ball, position);
+    MatterLib.Body.setVelocity(ball, velocity);
+    MatterLib.Body.setAngularVelocity(ball, -0.2 - releaseIndex * 0.08);
+    syncPrimaryBall();
+
+    state.releaseCount += 1;
+    state.kickoutCount += 1;
+    state.lastKickoutAt = now;
+    state.nextReleaseAt = lockHouseReleaseQueue.length ? now + LOCK_HOUSE.multiballReleaseDelayMs : 0;
+    state.recaptureDisabledUntil = Math.max(state.recaptureDisabledUntil, now + LOCK_HOUSE.kickoutGraceMs);
+    gameState.multiball.peakBalls = Math.max(gameState.multiball.peakBalls, getActiveBalls().length + lockHouseReleaseQueue.length);
+
+    recordDiagnosticEvent("lock-house-multiball-release", {
+      ball,
+      eventName: "lock-house:multiball-release",
+      objectId: LOCK_HOUSE.id,
+      label: ball.gameBallId || "locked-ball",
+      kind: "released",
+      metrics: {
+        releaseIndex: releaseIndex + 1,
+        remaining: lockHouseReleaseQueue.length,
+        activeBallCount: getActiveBalls().length
+      }
+    });
+    addHitFeedback({
+      id: `${LOCK_HOUSE.id}-release-${releaseIndex + 1}`,
+      x: LOCK_HOUSE.mouth.x,
+      y: LOCK_HOUSE.mouth.y,
+      accent: "#31a8ff",
+      label: `MB ${releaseIndex + 1}`,
+      color: "#edf7fb"
+    });
+    audio.play("lock-house-kickout");
+
+    return ball;
+  }
+
+  function startLockHouseMultiball() {
+    if (!physics || gameState.status !== "playing" || gameState.multiball.active) {
+      return false;
+    }
+
+    const state = gameState.lockHouse;
+    const now = performance.now();
+    lockHouseReleaseQueue = lockedLockHouseBallBodies.splice(0, LOCK_HOUSE.maxLockedBalls);
+
+    while (lockHouseReleaseQueue.length < LOCK_HOUSE.maxLockedBalls) {
+      lockHouseReleaseQueue.push(createBallBody(`ball-${physics.nextBallId}`, LOCK_HOUSE.kickoutPosition));
+      physics.nextBallId += 1;
+    }
+
+    state.state = "kicking";
+    state.kickoutStartedAt = now;
+    state.lockMultiballStartedAt = now;
+    state.nextReleaseAt = now;
+    state.releaseCount = 0;
+    state.lockedBallIds = [];
+    state.lockedCount = 0;
+    state.heldBallId = "";
+    state.holdStartedAt = 0;
+    state.holdPosition = null;
+    state.lastCaptureBlockedReason = "";
+    clearLockHouseQualificationProgress();
+
+    gameState.multiball.active = true;
+    gameState.multiball.startedAt = now;
+    gameState.multiball.endedAt = 0;
+    gameState.multiball.graceUntil = now + MULTIBALL.graceMs;
+    gameState.multiball.peakBalls = LOCK_HOUSE.maxLockedBalls;
+    gameState.multiball.lastStartSource = LOCK_HOUSE.label;
+    gameState.multiball.starts += 1;
+    gameState.multiball.progress = 0;
+    syncMultiballRequirement();
+    lightJackpots();
+    gameState.ballSaveUsed = false;
+    gameState.ballSaveUntil = Math.max(gameState.ballSaveUntil, gameState.multiball.graceUntil);
+
+    recordDiagnosticEvent("multiball-start", {
+      eventName: "multiball:start",
+      objectId: "multiball",
+      label: LOCK_HOUSE.label,
+      kind: "lock-house-started",
+      metrics: {
+        lockedBalls: LOCK_HOUSE.maxLockedBalls,
+        releaseDelayMs: LOCK_HOUSE.multiballReleaseDelayMs
+      }
+    });
+    recordDiagnosticEvent("lock-house-multiball-start", {
+      eventName: "lock-house:multiball-start",
+      objectId: LOCK_HOUSE.id,
+      label: "Lock house three-ball multiball",
+      kind: "started"
+    });
+    setFeedback("LOCK HOUSE: THREE-BALL MULTIBALL", 2400, "multiball", now);
+    addHitFeedback({
+      id: `${LOCK_HOUSE.id}-multiball`,
+      x: LOCK_HOUSE.mouth.x,
+      y: LOCK_HOUSE.mouth.y,
+      accent: "#31a8ff",
+      label: "3-BALL MB",
+      color: "#edf7fb"
+    });
+    audio.play("multiball-start");
+    releaseLockHouseQueuedBall(now);
+    updateHud();
+    syncInspectableState(physics);
+    return true;
   }
 
   function getScoringObjectType(object) {
@@ -8061,6 +8335,7 @@
     inputState.chargingSince = 0;
     resetMultiballState();
     clearHeldLockHouseBall("game-over");
+    clearLockedLockHouseBalls("game-over");
     removeExtraBalls();
     resetBall(ball, true);
     audio.play("game-over");
@@ -8110,6 +8385,7 @@
     gameState.lanes = createLaneState();
     gameState.upperOrbit = createUpperOrbitState();
     clearHeldLockHouseBall("restart");
+    clearLockedLockHouseBalls("restart");
     gameState.lockHouse = createLockHouseState();
     gameState.missionStageIndex = 0;
     gameState.activeMissionId = "measurement";

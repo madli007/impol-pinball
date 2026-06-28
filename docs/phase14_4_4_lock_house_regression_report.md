@@ -2,7 +2,7 @@
 
 ## Scope
 
-Phase 14.4.4 verified the completed lock-house mechanism from qualification through capture, hold, reward, kickout, requalification, interruption cleanup, and presentation readability.
+Phase 14.4.4 verified the completed lock-house mechanism from qualification through bottom-to-top capture, persistent locked-ball storage, replacement launch, three-ball multiball release, interruption cleanup, and presentation readability.
 
 No Phase 14.5 mini-game or additional table mechanism was implemented.
 
@@ -25,8 +25,8 @@ Lock-house-specific results:
 
 ```text
 Phase 14.4.1 qualification: passed
-Phase 14.4.2 capture and hold: passed
-Phase 14.4.3 kickout reward: passed
+Phase 14.4.2 persistent capture and replacement launch: passed
+Phase 14.4.3 persistent lock and three-ball multiball: passed
 Phase 14.4.4 lock states: 5/5 readable
 Phase 14.4.4 normal games: 10/10
 Phase 14.4.4 lock loops: 14/14
@@ -52,7 +52,9 @@ Ten deterministic normal-game samples completed without a lock-house blocker. Th
 - `COIL` then `ALU FLOW`
 - `ALU FLOW` then `COIL`
 
-Across those games, the lock house completed 14 qualify/capture/hold/reward/kickout loops. No sample recorded a stuck held ball, duplicated ball, lost ball, uncleared lock-house state, or failed game-over completion.
+Across those games, the lock house completed 14 qualify/capture/lock loops. No sample recorded a stuck held ball, duplicated ball, lost ball, uncleared lock-house state, or failed game-over completion.
+
+The deterministic lock-house multiball check also verified that wrong-direction contacts do not lock, locked balls persist across a later drain, the third lock starts a 3-ball lock-house multiball, the stored balls release from the house with a delay, and qualification/capture remain blocked while multiball is active.
 
 ## Presentation Readability
 
@@ -66,7 +68,7 @@ holding -> HELD
 kicking -> KICK
 ```
 
-`window.ImpolPinball.lockHouse.presentation` exposes the current presentation label, color, entrance-open status, progress label, and requirement label for browser inspection.
+`window.ImpolPinball.lockHouse.presentation` exposes the current presentation label, color, entrance-open status, progress label, requirement label, locked count, and maximum locked-ball count for browser inspection. The broader `window.ImpolPinball.lockHouse` state also exposes locked ball IDs, release queue timing, release count, and lock-house multiball start timing.
 
 ## Responsive Checks
 
@@ -101,4 +103,4 @@ Responsive overflow checks: passed at 390, 768, 800, 1024, 1440, and 1440x1080
 
 GO for Phase 14.5.
 
-The lock-house loop is fair, readable, and stable enough to become a later content trigger. No stuck, duplicated, or lost-ball blocker was found.
+The lock-house loop is fair, readable, and stable enough to become a later content trigger. No stuck, duplicated, lost-ball, or persistent-lock blocker was found.
