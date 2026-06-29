@@ -357,11 +357,20 @@ Completion notes:
 - Browser diagnostics at `http://127.0.0.1:4173/index.html?pinballDiagnostics=all&bust=phase5-render-5` passed `117/117`.
 - Visual screenshot check confirmed the playfield and diagnostics overlay render after extraction.
 
-### Phase 6 - Extract Diagnostics
+### Phase 6 - Extract Diagnostics - Completed 2026-06-29
 
 - Move diagnostic scenarios/reports first, then harness wiring.
 - Preserve all scenario IDs and public diagnostic object shapes.
 - Run full diagnostics after each split.
+
+Completion notes:
+
+- Added `js/runtime/diagnostics.js` with `window.ImpolPinballRuntime.diagnostics.createDiagnosticHarness`.
+- Moved diagnostic scenarios, reports, panel rendering, queueing, event capture, and run/stop/clear wiring out of `game.js`.
+- `game.js` now creates the diagnostic harness through an explicit dependency adapter and keeps gameplay rules/state orchestration local.
+- Updated `index.html` to load diagnostics runtime before render/game scripts.
+- `node --check game.js` and `node --check js/runtime/diagnostics.js` passed.
+- Browser diagnostics at `http://127.0.0.1:4173/index.html?pinballDiagnostics=all&bust=phase6-all-2` passed `117/117`.
 
 ### Phase 7 - Extract Physics Shell
 
