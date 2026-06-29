@@ -378,6 +378,16 @@ Completion notes:
 - Keep collision routing to existing rule handlers.
 - Do not retune geometry, restitution, friction, gravity, velocity, or timing.
 
+Completion notes:
+
+- Added `js/runtime/physics.js` with `window.ImpolPinballRuntime.physics.createMatterWorld`, `createBallBody`, and `positionFlipper`.
+- Moved Matter engine/world creation, static body construction, table object body construction, flipper body positioning, ball body creation, and collision event subscription out of `game.js`.
+- `game.js` now creates the physics shell through an explicit dependency adapter and keeps collision routing in existing gameplay rule handlers.
+- Updated `index.html` to load `js/runtime/physics.js` before diagnostics/render/game scripts.
+- `node --check game.js`, `node --check js/runtime/physics.js`, and `node --check js/runtime/diagnostics.js` passed.
+- Local HTTP preview checks through a Node static server returned `200` for `/`, `game.js`, `js/runtime/physics.js`, and the diagnostics URL.
+- Browser diagnostics at `http://127.0.0.1:4173/index.html?pinballDiagnostics=all&bust=phase7-node-check` passed `117/117`.
+
 ### Phase 8 - Add Focused Tests
 
 - Add pure unit-style tests only after helpers are extracted.
