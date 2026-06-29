@@ -388,11 +388,19 @@ Completion notes:
 - Local HTTP preview checks through a Node static server returned `200` for `/`, `game.js`, `js/runtime/physics.js`, and the diagnostics URL.
 - Browser diagnostics at `http://127.0.0.1:4173/index.html?pinballDiagnostics=all&bust=phase7-node-check` passed `117/117`.
 
-### Phase 8 - Add Focused Tests
+### Phase 8 - Add Focused Tests - Completed 2026-06-29
 
 - Add pure unit-style tests only after helpers are extracted.
 - Prefer tests that do not require Matter.js or browser layout.
 - Keep browser diagnostics as the end-to-end regression suite.
+
+Completion notes:
+
+- Added `tests/run-focused-tests.js`, a no-dependency Node runner that loads browser scripts in a VM with a small `window`, `localStorage`, and `Image` shim.
+- Covered scoring-derived config wiring, mission/company map derivation, configured asset file existence, high-score storage separation, storage fallback behavior, audio mute persistence, and asset readiness.
+- Updated README with the focused test command and clarified that these tests complement, not replace, browser diagnostics.
+- `node tests/run-focused-tests.js` passed `7/7`.
+- `node --check tests/run-focused-tests.js` and `node --check game.js` passed.
 
 ## Acceptance Criteria For The Refactor Program
 

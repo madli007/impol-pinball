@@ -116,6 +116,16 @@ In the current Codex desktop environment, browser smoke testing is limited:
 
 When that happens, avoid retrying the same browser path. Use `node --check game.js`, `git diff --check`, and the local server HTTP status check above, then verify visual/gameplay changes manually in a normal browser.
 
+### Focused Unit Checks
+
+Run the focused Node checks for extracted config and runtime helpers:
+
+```powershell
+node tests\run-focused-tests.js
+```
+
+These tests use a small VM browser shim and do not require Matter.js, a real browser, npm, or a build step. They complement the full browser diagnostics; they do not replace `?pinballDiagnostics=all` for end-to-end gameplay regression checks.
+
 ### Agent Local Preview And Responsive Checks
 
 For agent handoffs, use this exact local preview flow before claiming layout or gameplay verification:
