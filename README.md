@@ -40,6 +40,8 @@ Controls:
 - `D` or `ArrowRight`: right flipper
 - hold/release `Space`: charge and launch the ball
 - `Restart`: start a new game
+- `Ctrl+Alt+D`: reload with `pinballDiagnostics=all` and run diagnostics
+- `Ctrl+Alt+G`: reload without diagnostics and return to the game
 - `Ctrl+Shift+D`: toggle dev mode for testing
 - `+`: in dev mode, add 1 to the remaining-balls counter
 

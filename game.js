@@ -4376,10 +4376,64 @@
     syncInspectableState(physics);
   }
 
+  function reloadWithQueryParamUpdates(updates, removals = [], shouldBustCache = false) {
+    const nextUrl = new URL(window.location.href);
+    updates.forEach(([key, value]) => {
+      nextUrl.searchParams.set(key, value);
+    });
+    removals.forEach((key) => {
+      nextUrl.searchParams.delete(key);
+    });
+    if (shouldBustCache) {
+      nextUrl.searchParams.set("bust", `shortcut-${Date.now()}`);
+    }
+    window.location.assign(nextUrl);
+  }
+
+  function runDiagnosticsFromShortcut() {
+    reloadWithQueryParamUpdates([[DIAGNOSTIC_QUERY_PARAM, "all"]], [], true);
+  }
+
+  function returnToGameFromShortcut() {
+    reloadWithQueryParamUpdates([], [DIAGNOSTIC_QUERY_PARAM, "bust"]);
+  }
+
+  function isShortcutCombo(event, code) {
+    return event.ctrlKey && event.altKey && !event.shiftKey && event.code === code;
+  }
+
+  function handleShortcutCombo(event) {
+    if (event.repeat) {
+      return false;
+    }
+
+    if (isShortcutCombo(event, "KeyD")) {
+      event.preventDefault();
+      runDiagnosticsFromShortcut();
+      return true;
+    }
+
+    if (isShortcutCombo(event, "KeyG")) {
+      event.preventDefault();
+      returnToGameFromShortcut();
+      return true;
+    }
+
+    return false;
+  }
+
   function handleKeyDown(event) {
+    if (handleShortcutCombo(event)) {
+      return;
+    }
+
     if (event.ctrlKey && event.shiftKey && event.code === "KeyD") {
       event.preventDefault();
       toggleDevMode();
+      return;
+    }
+
+    if (event.ctrlKey || event.altKey || event.metaKey) {
       return;
     }
 
