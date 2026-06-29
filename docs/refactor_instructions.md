@@ -323,11 +323,23 @@ Completion notes:
 - `git diff --check` passed with only normal Windows LF-to-CRLF warnings for edited text files.
 - Browser diagnostics loaded from `http://127.0.0.1:4173/index.html?pinballDiagnostics=all&bust=phase3-config-rerun` and passed `117/117`.
 
-### Phase 4 - Extract Storage, Assets, Audio
+### Phase 4 - Extract Storage, Assets, Audio - Completed 2026-06-29
 
 - Move small runtime services into `js/runtime/`.
 - Keep public behavior and localStorage keys unchanged.
 - Keep procedural audio sounds and mute persistence unchanged.
+
+Completion notes:
+
+- Added runtime scripts under `js/runtime/`: `storage.js`, `assets.js`, and `audio.js`.
+- Moved high-score, legacy high-score, audio mute persistence, asset loading/readiness, procedural audio manager, and audio UI controls out of `game.js`.
+- Updated `index.html` to load runtime scripts after config scripts and before `game.js`.
+- `game.js` now imports runtime helpers from `window.ImpolPinballRuntime` and remains responsible for gameplay orchestration.
+- `node --check game.js` passed.
+- `node --check` passed for all runtime scripts.
+- `git diff --check` passed with only normal Windows LF-to-CRLF warnings for edited text files.
+- Local static preview returned HTTP `200`.
+- Browser diagnostics loaded from `http://127.0.0.1:4173/index.html?pinballDiagnostics=all&bust=phase4-runtime-final` and passed `117/117`.
 
 ### Phase 5 - Extract Rendering
 
