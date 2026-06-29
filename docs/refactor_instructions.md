@@ -347,6 +347,16 @@ Completion notes:
 - Inject dependencies instead of reading broad globals where possible.
 - Keep all coordinates, colors, font sizes, timing, and fallback art unchanged.
 
+Completion notes:
+
+- Added `js/render/canvas.js` with `window.ImpolPinballRender.createRenderer`.
+- Moved Canvas primitives, table art drawing, badges, physics overlay drawing, flippers, ball rendering, and playfield frame rendering out of `game.js`.
+- `game.js` now creates a renderer with explicit config/state/helper dependencies and remains responsible for gameplay orchestration.
+- Updated `index.html` to load `js/render/canvas.js` before `game.js`.
+- `node --check game.js` and `node --check js/render/canvas.js` passed.
+- Browser diagnostics at `http://127.0.0.1:4173/index.html?pinballDiagnostics=all&bust=phase5-render-5` passed `117/117`.
+- Visual screenshot check confirmed the playfield and diagnostics overlay render after extraction.
+
 ### Phase 6 - Extract Diagnostics
 
 - Move diagnostic scenarios/reports first, then harness wiring.
