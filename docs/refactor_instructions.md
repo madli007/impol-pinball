@@ -372,7 +372,7 @@ Completion notes:
 - `node --check game.js` and `node --check js/runtime/diagnostics.js` passed.
 - Browser diagnostics at `http://127.0.0.1:4173/index.html?pinballDiagnostics=all&bust=phase6-all-2` passed `117/117`.
 
-### Phase 7 - Extract Physics Shell
+### Phase 7 - Extract Physics Shell - Completed 2026-06-29
 
 - Move Matter world creation and generic body helpers.
 - Keep collision routing to existing rule handlers.
