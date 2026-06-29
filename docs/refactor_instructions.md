@@ -341,7 +341,7 @@ Completion notes:
 - Local static preview returned HTTP `200`.
 - Browser diagnostics loaded from `http://127.0.0.1:4173/index.html?pinballDiagnostics=all&bust=phase4-runtime-final` and passed `117/117`.
 
-### Phase 5 - Extract Rendering
+### Phase 5 - Extract Rendering - Completed 2026-06-29
 
 - Move Canvas primitives and draw functions into `js/render/`.
 - Inject dependencies instead of reading broad globals where possible.
