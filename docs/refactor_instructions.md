@@ -287,12 +287,23 @@ Completion notes:
 - Phase 14.3.8 diagnostic summary remained GO for Phase 14.4; Phase 14.4.4 diagnostic summary remained GO for Phase 14.5.
 - No game logic was edited in this phase.
 
-### Phase 2 - Vendor Matter.js
+### Phase 2 - Vendor Matter.js - Completed 2026-06-29
 
 - Add `lib/matter.min.js` at version `0.20.0`.
 - Replace the CDN script in `index.html`.
 - Update README local run notes.
 - Verify Matter loads from local file and diagnostics still pass.
+
+Completion notes:
+
+- Added `lib/matter.min.js` from Matter.js `0.20.0`.
+- Updated `index.html` to load `lib/matter.min.js?v=0.20.0` before `game.js`.
+- Updated README local run notes: physics no longer requires internet access.
+- Local server log confirmed `GET /lib/matter.min.js?v=0.20.0` returned HTTP `200`.
+- `node --check game.js` passed.
+- `node --check lib/matter.min.js` passed.
+- `git diff --check` passed with only normal Windows LF-to-CRLF warnings for edited text files.
+- Browser diagnostics loaded from `http://127.0.0.1:4173/index.html?pinballDiagnostics=all&bust=phase2-vendor-matter` and passed `117/117`.
 
 ### Phase 3 - Extract Configuration
 

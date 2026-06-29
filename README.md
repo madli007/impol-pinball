@@ -83,7 +83,7 @@ Invoke-WebRequest -UseBasicParsing http://127.0.0.1:4173/ | Select-Object -Expan
 
 Opening `index.html` directly can still work for quick checks, but the local server path is the reliable preview path.
 
-Matter.js is loaded from CDN, so internet access is currently required for physics.
+Matter.js is vendored at `lib/matter.min.js`, so physics works without internet access.
 
 ### Cache Busting During Local Tuning
 
