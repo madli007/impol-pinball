@@ -2,476 +2,51 @@
   const canvas = document.getElementById("game-canvas");
   const context = canvas.getContext("2d");
   const MatterLib = window.Matter;
-  const TABLE = {
-    width: canvas.width,
-    height: canvas.height,
-    wall: 60,
-    ballStart: { x: 806, y: 1066 },
-    shooterLane: {
-      innerX: 756,
-      outerX: 842,
-      bottomY: 1190,
-      topY: 160,
-      exitY: 214,
-      plungerCenterX: 800
-    },
-    totalBalls: 3,
-    flippers: {
-      left: { pivotX: 254, pivotY: 1218, length: 166, height: 32, restAngle: 0.22, activeAngle: -0.58 },
-      right: { pivotX: 646, pivotY: 1218, length: 166, height: 32, restAngle: Math.PI - 0.22, activeAngle: Math.PI + 0.58 }
-    }
-  };
-  const DEBUG_PHYSICS = false;
-  const DIAGNOSTIC_QUERY_PARAM = "pinballDiagnostics";
+  const {
+    TABLE,
+    DEBUG_PHYSICS,
+    DIAGNOSTIC_QUERY_PARAM,
+    HIGH_SCORE_BASE_KEY,
+    AUDIO_MUTED_KEY,
+    SCORING_RULES,
+    COMBO_WINDOW_MS,
+    GAME_OVER_RESTART_DELAY_MS,
+    MULTIBALL,
+    JACKPOT,
+    FLIPPER_TIP_EXTENSION,
+    COMBO_BONUS_BY_COUNT,
+    MAX_COMBO_BONUS,
+    COMBO_MAX_COUNT,
+    COMBO_MAX_SAME_ZONE_STREAK,
+    COMBO_HISTORY_LIMIT,
+    COMBO_PASSIVE_TYPES,
+    COMBO_TIERS,
+    FEEDBACK_PRIORITIES,
+    FEEDBACK_ZONES,
+    SENSOR_REHIT_RULES,
+    ROLLOVER_COMPLETE_BONUS,
+    LANE_SET_BONUS,
+    SIDE_SHIELD_DURATION,
+    UPPER_ORBIT,
+    LOCK_HOUSE,
+    LOCK_HOUSE_PRESENTATION,
+    LOCK_HOUSE_VISUAL,
+    LOCK_RELEASE_INDICATOR,
+    ASSET_CONFIG,
+    TABLE_CONFIG,
+    MISSION_CONFIG,
+    MISSION_STAGES,
+    COMPANY_STATUS,
+    COMPANY_CONFIG,
+    COMPANY_BY_EVENT,
+    COMPANY_BY_MISSION,
+    MISSION_TARGET_LABELS,
+    BOM_MODE,
+    META_REWARDS,
+    BALL_SAVE_DURATION
+  } = window.ImpolPinballConfig;
   const diagnosticQuery = new URLSearchParams(window.location.search);
   const DIAGNOSTICS_ENABLED = diagnosticQuery.has(DIAGNOSTIC_QUERY_PARAM);
-  const HIGH_SCORE_BASE_KEY = "impol-pinball.high-score";
-  const AUDIO_MUTED_KEY = "impol-pinball.audio-muted";
-  const SCORING_RULES = {
-    version: "14.3.4-score-economy-1",
-    highScorePolicy: "live-current-ruleset",
-    legacyHighScoreKey: `${HIGH_SCORE_BASE_KEY}.legacy-pre-14.3.4`,
-    targetBands: {
-      beginner: { min: 75000, max: 200000 },
-      competent: { min: 200000, max: 500000 },
-      strong: { min: 500000, max: 1000000 }
-    },
-    values: {
-      bumpers: { mes: 600, erp: 750, co2: 600 },
-      targets: {
-        "measurement-left": 1200,
-        "measurement-right": 1200,
-        furnace: 2600,
-        coil: 2600,
-        alcad: 2100,
-        "e-odprema": 2300,
-        kosovnica: 3200
-      },
-      slingshot: 140,
-      rollover: 160,
-      inlane: 220,
-      outlane: 100,
-      rolloverSet: 2500,
-      laneSet: 1600,
-      upperOrbit: 6500,
-      bomSuccess: 45000,
-      lockHouseReward: 22000,
-      jackpotNormal: 35000,
-      jackpotSuper: 90000,
-      comboByCount: {
-        2: 1200,
-        3: 3000,
-        4: 5200,
-        5: 8000
-      },
-      comboMediumSix: 11000,
-      comboMax: 14000,
-      missions: {
-        measurement: 18000,
-        mes: 25000,
-        erp: 35000,
-        green: 28000,
-        coil: 30000,
-        eodprema: 22000,
-        alcad: 22000,
-        furnace: 32000,
-        kosovnica: 40000
-      },
-      metaMissions: 120000,
-      metaCompanies: 90000
-    }
-  };
-  SCORING_RULES.highScoreKey = `${HIGH_SCORE_BASE_KEY}.${SCORING_RULES.version}`;
-  const COMBO_WINDOW_MS = 1800;
-  const GAME_OVER_RESTART_DELAY_MS = 1400;
-  const MULTIBALL = {
-    maxBalls: 2,
-    multiplier: 2,
-    graceMs: 9000,
-    progressRequirements: [2, 3, 4],
-    requirementStep: 1,
-    maxRequirement: 5,
-    preStartDelayMs: 1400,
-    launchVelocity: { x: 0, y: -36 }
-  };
-  const JACKPOT = {
-    normalTargetIds: ["coil", "furnace"],
-    superTargetId: "kosovnica",
-    normalValue: SCORING_RULES.values.jackpotNormal,
-    superValue: SCORING_RULES.values.jackpotSuper
-  };
-  const FLIPPER_TIP_EXTENSION = 0.16;
-  const COMBO_BONUS_BY_COUNT = {
-    2: SCORING_RULES.values.comboByCount[2],
-    3: SCORING_RULES.values.comboByCount[3],
-    4: SCORING_RULES.values.comboByCount[4],
-    5: SCORING_RULES.values.comboByCount[5]
-  };
-  const MAX_COMBO_BONUS = SCORING_RULES.values.comboMax;
-  const COMBO_MAX_COUNT = 10;
-  const COMBO_MAX_SAME_ZONE_STREAK = 2;
-  const COMBO_HISTORY_LIMIT = 10;
-  const COMBO_PASSIVE_TYPES = new Set(["lane", "rollover", "slingshot"]);
-  const COMBO_TIERS = {
-    none: { label: "None", minCount: 0, maxCount: 1, requiredZones: 0, requiredObjects: 0 },
-    small: { label: "Small", minCount: 2, maxCount: 3, requiredZones: 2, requiredObjects: 2 },
-    medium: { label: "Medium", minCount: 4, maxCount: 6, requiredZones: 2, requiredObjects: 3 },
-    max: { label: "Max", minCount: 7, maxCount: COMBO_MAX_COUNT, requiredZones: 3, requiredObjects: 4 }
-  };
-  const FEEDBACK_PRIORITIES = {
-    idle: 0,
-    hit: 20,
-    combo: 35,
-    progress: 45,
-    mode: 55,
-    save: 65,
-    jackpot: 75,
-    multiball: 85,
-    meta: 90,
-    system: 100
-  };
-  const FEEDBACK_ZONES = {
-    status: { x: 590, y: 96, width: 220, height: 42, radius: 6, priority: FEEDBACK_PRIORITIES.system },
-    multiball: { x: 92, y: 96, width: 270, height: 46, radius: 8, priority: FEEDBACK_PRIORITIES.multiball },
-    meta: { x: 92, y: 150, width: 270, height: 44, radius: 8, priority: FEEDBACK_PRIORITIES.meta },
-    jackpot: { x: 282, y: 150, width: 336, height: 44, radius: 8, priority: FEEDBACK_PRIORITIES.jackpot },
-    ballSave: { x: 92, y: 258, width: 228, height: 38, radius: 8, priority: FEEDBACK_PRIORITIES.save },
-    sideShield: { x: 580, y: 258, width: 228, height: 38, radius: 8, priority: FEEDBACK_PRIORITIES.save },
-    bom: { x: 292, y: 204, width: 316, height: 48, radius: 8, priority: FEEDBACK_PRIORITIES.mode },
-    combo: { x: 332, y: 258, width: 236, height: 40, radius: 8, priority: FEEDBACK_PRIORITIES.combo }
-  };
-  const SENSOR_REHIT_RULES = {
-    default: { objectCooldownMs: 620, ballObjectCooldownMs: 980 },
-    bumper: { objectCooldownMs: 520, ballObjectCooldownMs: 820 },
-    target: { objectCooldownMs: 760, ballObjectCooldownMs: 1120 },
-    slingshot: { objectCooldownMs: 680, ballObjectCooldownMs: 980 },
-    rollover: { objectCooldownMs: 820, ballObjectCooldownMs: 1200 },
-    lane: { objectCooldownMs: 760, ballObjectCooldownMs: 1200 },
-    route: { objectCooldownMs: 1400, ballObjectCooldownMs: 2200 }
-  };
-  const ROLLOVER_COMPLETE_BONUS = SCORING_RULES.values.rolloverSet;
-  const LANE_SET_BONUS = SCORING_RULES.values.laneSet;
-  const SIDE_SHIELD_DURATION = 6500;
-  const UPPER_ORBIT = {
-    id: "upper-orbit",
-    label: "ALU FLOW ORBIT",
-    event: "hit:UPPER_ORBIT",
-    points: SCORING_RULES.values.upperOrbit,
-    accent: "#31a8ff",
-    timeoutMs: 4400,
-    committedX: 258,
-    committedY: 920,
-    entrySensor: { x: 194, y: 832, width: 196, height: 188, angle: -0.22 },
-    returnSensor: { x: 224, y: 304, width: 106, height: 100, angle: 0.04 },
-    rails: [
-      { x: 232, y: 570, width: 14, height: 438, angle: 0 }
-    ]
-  };
-  const LOCK_HOUSE = {
-    id: "lock-house",
-    label: "LOCK HOUSE",
-    placement: "right-mid playfield beside the CO2 bumper and above the E-ODPREMA lane, clear of the shooter lane",
-    states: ["closed", "qualified", "open", "holding", "kicking"],
-    initialState: "closed",
-    captureEnabled: true,
-    holdDurationMs: 1600,
-    holdTimeoutMs: 9000,
-    kickoutGraceMs: 1200,
-    maxLockedBalls: 3,
-    autoLaunchVelocity: { x: 0, y: -37 },
-    multiballReleaseDelayMs: 620,
-    minimumUpwardLockVelocity: -1.15,
-    kickoutVelocity: { x: -6.4, y: 5.2 },
-    kickoutPosition: { x: 676, y: 552 },
-    multiballPolicy: "capture-disabled-during-multiball",
-    x: 704,
-    y: 502,
-    width: 88,
-    height: 122,
-    mouth: { x: 704, y: 540, width: 68, height: 54, angle: -0.08 },
-    accent: "#ff9b3d",
-    qualifiedAccent: "#7bdc6c",
-    event: "lock-house:contact",
-    qualificationEvents: [
-      { id: "alu-flow-orbit", label: "ALU FLOW", event: UPPER_ORBIT.event, required: 1 },
-      { id: "coil-collector", label: "COIL", event: "hit:COIL", required: 1 }
-    ]
-  };
-  const LOCK_HOUSE_PRESENTATION = {
-    closed: { label: "CLOSED", color: "#ff9b3d" },
-    qualified: { label: "READY", color: "#7bdc6c" },
-    open: { label: "OPEN", color: "#7bdc6c" },
-    holding: { label: "HELD", color: "#31a8ff" },
-    kicking: { label: "KICK", color: "#ffb967" }
-  };
-  const LOCK_HOUSE_VISUAL = {
-    assetId: "lock-house-alcad",
-    width: 96,
-    height: 142,
-    lampOffsetY: 67
-  };
-  const LOCK_RELEASE_INDICATOR = {
-    x: 646,
-    y: 286,
-    width: 188,
-    height: 84
-  };
-  const ASSET_CONFIG = {
-    furnace: { src: "assets/images/furnace-target.png", width: 154, height: 132, yOffset: -8 },
-    coil: { src: "assets/images/coil-collector.png", width: 184, height: 120, yOffset: -8 },
-    mes: { src: "assets/images/mes-bumper.png", width: 124, height: 118, yOffset: -4 },
-    erp: { src: "assets/images/erp-core-bumper.png", width: 126, height: 126, yOffset: -6 },
-    co2: { src: "assets/images/green-aluminium-bumper.png", width: 124, height: 110, yOffset: -4 },
-    "measurement-left": { src: "assets/images/measurement-target.png", width: 116, height: 116, yOffset: -12 },
-    "measurement-right": { src: "assets/images/measurement-target.png", width: 116, height: 116, yOffset: -12 },
-    "e-odprema": { src: "assets/images/e-odprema-truck.png", width: 138, height: 116, yOffset: -10 },
-    alcad: { src: "assets/images/alcad-marker.png", width: 104, height: 96, yOffset: -8 },
-    "flipper-left": { src: "assets/images/flipper-left.png", width: 178, height: 83 },
-    "flipper-right": { src: "assets/images/flipper-right.png", width: 178, height: 83 },
-    "lamp-post-red": { src: "assets/images/lamp-post-red.png", width: 34, height: 68 },
-    "lamp-post-orange": { src: "assets/images/lamp-post-orange.png", width: 34, height: 67 },
-    "lamp-post-blue": { src: "assets/images/lamp-post-blue.png", width: 34, height: 67 },
-    "lamp-post-green": { src: "assets/images/lamp-post-green.png", width: 34, height: 67 },
-    "playfield-floor-texture": { src: "assets/images/playfield-floor-texture.png", width: 900, height: 1374 },
-    "table-frame-trim": { src: "assets/images/table-frame-trim.png", width: 900, height: 1344 },
-    "drain-apron": { src: "assets/images/drain-apron.png", width: 336, height: 102 },
-    "lower-plastic-left": { src: "assets/images/lower-plastic-left.png", width: 204, height: 171 },
-    "lower-plastic-right": { src: "assets/images/lower-plastic-right.png", width: 204, height: 169 },
-    "left-slingshot": { src: "assets/images/slingshot-left.png", width: 108, height: 115 },
-    "right-slingshot": { src: "assets/images/slingshot-right.png", width: 108, height: 115 },
-    "shooter-plunger-housing": { src: "assets/images/shooter-plunger-housing.png", width: 54, height: 246 },
-    "mechanical-post-blue": { src: "assets/images/mechanical-post-blue.png", width: 32, height: 48 },
-    "mechanical-post-orange": { src: "assets/images/mechanical-post-orange.png", width: 32, height: 51 },
-    "kosovnica": { src: "assets/images/kosovnica-terminal-target.png", width: 128, height: 160, yOffset: -20 },
-    "mission-stage-lamps": { src: "assets/images/mission-stage-lamps.png", width: 282, height: 50 },
-    "multiball-lock-release": { src: "assets/images/multiball-lock-release.png", width: 300, height: 134 },
-    "multiball-lock-release-0": { src: "assets/images/multiball-lock-release-0.png", width: 300, height: 134 },
-    "multiball-lock-release-1": { src: "assets/images/multiball-lock-release-1.png", width: 300, height: 134 },
-    "multiball-lock-release-2": { src: "assets/images/multiball-lock-release-2.png", width: 300, height: 134 },
-    "multiball-lock-release-3": { src: "assets/images/multiball-lock-release-3.png", width: 300, height: 134 },
-    "lock-house-alcad": { src: "assets/images/alcad-lock-house.png", width: 96, height: 142 },
-    "jackpot-coil-insert": { src: "assets/images/jackpot-coil-insert.png", width: 116, height: 102 },
-    "jackpot-furnace-insert": { src: "assets/images/jackpot-furnace-insert.png", width: 116, height: 102 },
-    "jackpot-final-insert": { src: "assets/images/jackpot-final-insert.png", width: 116, height: 102 },
-    "decal-arrow-blue": { src: "assets/images/decal-arrow-blue.png", width: 34, height: 32 },
-    "decal-arrow-orange": { src: "assets/images/decal-arrow-orange.png", width: 34, height: 32 },
-    "decal-coil-route-blue": { src: "assets/images/decal-coil-route-blue.png", width: 126, height: 76 },
-    "decal-warning-stripe": { src: "assets/images/decal-warning-stripe.png", width: 126, height: 24 },
-    "decal-led-strip": { src: "assets/images/decal-led-strip.png", width: 132, height: 28 },
-    "decal-circuit-plate": { src: "assets/images/decal-circuit-plate.png", width: 132, height: 47 },
-    "decal-roller-symbol": { src: "assets/images/decal-roller-symbol.png", width: 74, height: 49 },
-    "innovation-label-plate": { src: "assets/images/innovation-label-plate.png", width: 232, height: 41 }
-  };
-  const TABLE_CONFIG = {
-    bumpers: [
-      { id: "mes", label: "MES", x: 300, y: 392, radius: 56, accent: "#31a8ff", event: "hit:MES", points: SCORING_RULES.values.bumpers.mes },
-      { id: "erp", label: "ERP", x: 450, y: 334, radius: 60, accent: "#ff9b3d", event: "hit:ERP", points: SCORING_RULES.values.bumpers.erp },
-      { id: "co2", label: "CO2", x: 612, y: 392, radius: 56, accent: "#7bdc6c", event: "hit:GREEN", points: SCORING_RULES.values.bumpers.co2 }
-    ],
-    targets: [
-      { id: "measurement-left", label: "MERILNI", x: 275, y: 592, width: 178, height: 52, accent: "#31a8ff", event: "hit:MEASUREMENT", points: SCORING_RULES.values.targets["measurement-left"] },
-      { id: "measurement-right", label: "PROTOKOL", x: 625, y: 592, width: 178, height: 52, accent: "#31a8ff", event: "hit:MEASUREMENT", points: SCORING_RULES.values.targets["measurement-right"] },
-      { id: "furnace", label: "FURNACE", x: 450, y: 696, width: 200, height: 56, accent: "#ff9b3d", event: "hit:FURNACE", points: SCORING_RULES.values.targets.furnace },
-      { id: "coil", label: "COIL COLLECTOR", x: 450, y: 899, width: 234, height: 58, accent: "#7bdc6c", event: "hit:COIL", points: SCORING_RULES.values.targets.coil },
-      { id: "alcad", label: "ALCAD", x: 346, y: 828, width: 104, height: 42, accent: "#9ab3bf", event: "hit:ALCAD", points: SCORING_RULES.values.targets.alcad },
-      { id: "e-odprema", label: "E-ODPREMA", x: 646, y: 784, width: 156, height: 48, accent: "#9ab3bf", event: "hit:EODPREMA", points: SCORING_RULES.values.targets["e-odprema"] },
-      { id: "kosovnica", label: "KOSOVNICA", x: 450, y: 508, width: 168, height: 34, accent: "#ff9b3d", event: "hit:KOSOVNICA", points: SCORING_RULES.values.targets.kosovnica }
-    ],
-    slingshots: [
-      { id: "left-slingshot", label: "SEVAL", x: 266, y: 1102, width: 100, height: 22, angle: 0.72, visualX: 248, visualY: 1100, visualWidth: 108, visualHeight: 115, visualAngle: 0, accent: "#31a8ff", event: "hit:LEFT_SLINGSHOT", points: SCORING_RULES.values.slingshot, impulse: { x: 6.7, y: -10.2 } },
-      { id: "right-slingshot", label: "IMPOL-PC", x: 634, y: 1102, width: 100, height: 22, angle: -0.72, visualX: 652, visualY: 1100, visualWidth: 108, visualHeight: 115, visualAngle: 0, accent: "#31a8ff", event: "hit:RIGHT_SLINGSHOT", points: SCORING_RULES.values.slingshot, impulse: { x: -6.7, y: -10.2 } }
-    ],
-    rollovers: [
-      { id: "rollover-flow", label: "FLOW", x: 348, y: 1008, radius: 22, accent: "#31a8ff", event: "hit:ROLLOVER", points: SCORING_RULES.values.rollover },
-      { id: "rollover-alloy", label: "ALLOY", x: 450, y: 986, radius: 22, accent: "#ff9b3d", event: "hit:ROLLOVER", points: SCORING_RULES.values.rollover },
-      { id: "rollover-scan", label: "SCAN", x: 552, y: 1008, radius: 22, accent: "#7bdc6c", event: "hit:ROLLOVER", points: SCORING_RULES.values.rollover }
-    ],
-    lanes: [
-      { id: "left-outlane", label: "LEFT OUT", shortLabel: "OUT", side: "left", type: "outlane", x: 142, y: 1214, width: 72, height: 150, angle: -0.42, points: SCORING_RULES.values.outlane, accent: "#ff7567", returnX: 268, returnY: 1168, returnVelocity: { x: 5.8, y: -7.4 } },
-      { id: "left-inlane", label: "LEFT RETURN", shortLabel: "IN", side: "left", type: "inlane", x: 286, y: 1200, width: 76, height: 136, angle: 0.54, points: SCORING_RULES.values.inlane, accent: "#31a8ff" },
-      { id: "right-inlane", label: "RIGHT RETURN", shortLabel: "IN", side: "right", type: "inlane", x: 614, y: 1200, width: 76, height: 136, angle: -0.54, points: SCORING_RULES.values.inlane, accent: "#31a8ff" },
-      { id: "right-outlane", label: "RIGHT OUT", shortLabel: "OUT", side: "right", type: "outlane", x: 758, y: 1214, width: 72, height: 150, angle: 0.42, points: SCORING_RULES.values.outlane, accent: "#ff7567", returnX: 632, returnY: 1168, returnVelocity: { x: -5.8, y: -7.4 } }
-    ],
-    upperOrbit: UPPER_ORBIT,
-    lockHouse: LOCK_HOUSE
-  };
-  const MISSION_CONFIG = [
-    {
-      id: "measurement",
-      label: "MERILNI PROTOKOL",
-      event: "hit:MEASUREMENT",
-      required: 3,
-      bonus: SCORING_RULES.values.missions.measurement,
-      reward: "Quality bonus"
-    },
-    {
-      id: "mes",
-      label: "MES ONLINE",
-      event: "hit:MES",
-      required: 5,
-      bonus: SCORING_RULES.values.missions.mes,
-      reward: "Real-time bonus"
-    },
-    {
-      id: "erp",
-      label: "ERP GO-LIVE",
-      event: UPPER_ORBIT.event,
-      required: 2,
-      bonus: SCORING_RULES.values.missions.erp,
-      multiplierReward: 2,
-      shotLabel: "ALU FLOW ORBIT",
-      reward: "2x multiplier"
-    },
-    {
-      id: "green",
-      label: "GREEN ALUMINIUM",
-      event: "hit:GREEN",
-      required: 3,
-      bonus: SCORING_RULES.values.missions.green,
-      reward: "CO2 bonus"
-    },
-    {
-      id: "coil",
-      label: "COIL COLLECTOR",
-      event: "hit:COIL",
-      required: 3,
-      bonus: SCORING_RULES.values.missions.coil,
-      reward: "Coil bonus"
-    },
-    {
-      id: "eodprema",
-      label: "E-ODPREMA",
-      event: "hit:EODPREMA",
-      required: 2,
-      bonus: SCORING_RULES.values.missions.eodprema,
-      reward: "Dispatch bonus"
-    },
-    {
-      id: "alcad",
-      label: "ALCAD SORTIRANJE",
-      event: "hit:ALCAD",
-      required: 2,
-      bonus: SCORING_RULES.values.missions.alcad,
-      reward: "Recycle bonus"
-    },
-    {
-      id: "furnace",
-      label: "LIVARNA READY",
-      event: "hit:FURNACE",
-      required: 3,
-      bonus: SCORING_RULES.values.missions.furnace,
-      reward: "Furnace bonus"
-    },
-    {
-      id: "kosovnica",
-      label: "KOSOVNICA MIRNA",
-      event: "hit:KOSOVNICA",
-      required: 2,
-      bonus: SCORING_RULES.values.missions.kosovnica,
-      reward: "No revision bonus"
-    }
-  ];
-  const MISSION_STAGES = [
-    ["measurement"],
-    ["mes"],
-    ["erp"],
-    ["green", "coil"],
-    ["eodprema", "alcad"],
-    ["furnace"],
-    ["kosovnica"]
-  ];
-  const COMPANY_STATUS = {
-    ready: { label: "Ready", rank: 0 },
-    online: { label: "Online", rank: 1 },
-    complete: { label: "Complete", rank: 2 },
-    bonus: { label: "Bonus", rank: 3 }
-  };
-  const COMPANY_CONFIG = [
-    {
-      id: "impol",
-      label: "IMPOL",
-      events: ["hit:MEASUREMENT", "hit:MES", "hit:ERP", UPPER_ORBIT.event],
-      missions: ["measurement", "mes", "erp"]
-    },
-    {
-      id: "seval",
-      label: "SEVAL",
-      events: ["hit:LEFT_SLINGSHOT", "hit:EODPREMA"],
-      missions: ["eodprema"]
-    },
-    {
-      id: "alcad",
-      label: "ALCAD",
-      events: ["hit:ALCAD"],
-      missions: ["alcad"]
-    },
-    {
-      id: "tlm",
-      label: "TLM",
-      events: ["hit:GREEN", "hit:FURNACE"],
-      missions: ["green", "furnace"]
-    },
-    {
-      id: "impol-pc",
-      label: "IMPOL-PC",
-      events: ["hit:RIGHT_SLINGSHOT", "hit:COIL"],
-      missions: ["coil"]
-    },
-    {
-      id: "rondal",
-      label: "RONDAL",
-      events: ["hit:ROLLOVER", "hit:KOSOVNICA"],
-      missions: ["kosovnica"]
-    }
-  ];
-  const COMPANY_BY_EVENT = COMPANY_CONFIG.reduce((companiesByEvent, company) => {
-    company.events.forEach((eventName) => {
-      companiesByEvent[eventName] = company.id;
-    });
-    return companiesByEvent;
-  }, {});
-  const COMPANY_BY_MISSION = COMPANY_CONFIG.reduce((companiesByMission, company) => {
-    company.missions.forEach((missionId) => {
-      companiesByMission[missionId] = company.id;
-    });
-    return companiesByMission;
-  }, {});
-  const MISSION_TARGET_LABELS = {
-    "hit:MEASUREMENT": "MERILNI / PROTOKOL",
-    "hit:MES": "MES",
-    "hit:GREEN": "CO2 / GREEN",
-    "hit:COIL": "COIL COLLECTOR",
-    "hit:EODPREMA": "E-ODPREMA",
-    "hit:ALCAD": "ALCAD",
-    "hit:FURNACE": "FURNACE",
-    "hit:KOSOVNICA": "KOSOVNICA",
-    [UPPER_ORBIT.event]: "ALU FLOW ORBIT"
-  };
-  const BOM_MODE = {
-    sequence: ["hit:MES", "hit:ERP", "hit:COIL"],
-    labels: ["MES", "ERP", "COIL"],
-    duration: 10000,
-    successBonus: SCORING_RULES.values.bomSuccess
-  };
-  const META_REWARDS = {
-    missions: {
-      label: "INDUSTRY 4.0 JACKPOT",
-      bonus: SCORING_RULES.values.metaMissions,
-      multiplier: 3,
-      duration: 22000,
-      ballSaveExtension: 9000,
-      color: "#ffb967"
-    },
-    companies: {
-      label: "IMPOL GROUP SYNERGY",
-      bonus: SCORING_RULES.values.metaCompanies,
-      multiplier: 4,
-      duration: 18000,
-      ballSaveExtension: 7000,
-      color: "#7bdc6c"
-    }
-  };
-  const BALL_SAVE_DURATION = 9000;
   const ui = {
     score: document.getElementById("score-value"),
     ball: document.getElementById("ball-value"),

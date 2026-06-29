@@ -305,13 +305,23 @@ Completion notes:
 - `git diff --check` passed with only normal Windows LF-to-CRLF warnings for edited text files.
 - Browser diagnostics loaded from `http://127.0.0.1:4173/index.html?pinballDiagnostics=all&bust=phase2-vendor-matter` and passed `117/117`.
 
-### Phase 3 - Extract Configuration
+### Phase 3 - Extract Configuration - Completed 2026-06-29
 
 - Create config scripts under `js/config/`.
 - Move constants and data only.
 - Add script tags before `game.js`.
 - In `game.js`, destructure from `window.ImpolPinballConfig`.
 - No behavior changes, no renaming of IDs/events/labels.
+
+Completion notes:
+
+- Added config scripts under `js/config/`: `scoring.js`, `table.js`, `assets.js`, `missions.js`, `companies.js`, and `modes.js`.
+- Updated `index.html` to load config scripts after Matter.js and before `game.js`.
+- `game.js` now destructures constants and data from `window.ImpolPinballConfig` before runtime setup.
+- `node --check game.js` passed.
+- `node --check` passed for all config scripts.
+- `git diff --check` passed with only normal Windows LF-to-CRLF warnings for edited text files.
+- Browser diagnostics loaded from `http://127.0.0.1:4173/index.html?pinballDiagnostics=all&bust=phase3-config-rerun` and passed `117/117`.
 
 ### Phase 4 - Extract Storage, Assets, Audio
 

@@ -1,0 +1,52 @@
+(function () {
+  const config = window.ImpolPinballConfig || (window.ImpolPinballConfig = {});
+  const ASSET_CONFIG = {
+    furnace: { src: "assets/images/furnace-target.png", width: 154, height: 132, yOffset: -8 },
+    coil: { src: "assets/images/coil-collector.png", width: 184, height: 120, yOffset: -8 },
+    mes: { src: "assets/images/mes-bumper.png", width: 124, height: 118, yOffset: -4 },
+    erp: { src: "assets/images/erp-core-bumper.png", width: 126, height: 126, yOffset: -6 },
+    co2: { src: "assets/images/green-aluminium-bumper.png", width: 124, height: 110, yOffset: -4 },
+    "measurement-left": { src: "assets/images/measurement-target.png", width: 116, height: 116, yOffset: -12 },
+    "measurement-right": { src: "assets/images/measurement-target.png", width: 116, height: 116, yOffset: -12 },
+    "e-odprema": { src: "assets/images/e-odprema-truck.png", width: 138, height: 116, yOffset: -10 },
+    alcad: { src: "assets/images/alcad-marker.png", width: 104, height: 96, yOffset: -8 },
+    "flipper-left": { src: "assets/images/flipper-left.png", width: 178, height: 83 },
+    "flipper-right": { src: "assets/images/flipper-right.png", width: 178, height: 83 },
+    "lamp-post-red": { src: "assets/images/lamp-post-red.png", width: 34, height: 68 },
+    "lamp-post-orange": { src: "assets/images/lamp-post-orange.png", width: 34, height: 67 },
+    "lamp-post-blue": { src: "assets/images/lamp-post-blue.png", width: 34, height: 67 },
+    "lamp-post-green": { src: "assets/images/lamp-post-green.png", width: 34, height: 67 },
+    "playfield-floor-texture": { src: "assets/images/playfield-floor-texture.png", width: 900, height: 1374 },
+    "table-frame-trim": { src: "assets/images/table-frame-trim.png", width: 900, height: 1344 },
+    "drain-apron": { src: "assets/images/drain-apron.png", width: 336, height: 102 },
+    "lower-plastic-left": { src: "assets/images/lower-plastic-left.png", width: 204, height: 171 },
+    "lower-plastic-right": { src: "assets/images/lower-plastic-right.png", width: 204, height: 169 },
+    "left-slingshot": { src: "assets/images/slingshot-left.png", width: 108, height: 115 },
+    "right-slingshot": { src: "assets/images/slingshot-right.png", width: 108, height: 115 },
+    "shooter-plunger-housing": { src: "assets/images/shooter-plunger-housing.png", width: 54, height: 246 },
+    "mechanical-post-blue": { src: "assets/images/mechanical-post-blue.png", width: 32, height: 48 },
+    "mechanical-post-orange": { src: "assets/images/mechanical-post-orange.png", width: 32, height: 51 },
+    "kosovnica": { src: "assets/images/kosovnica-terminal-target.png", width: 128, height: 160, yOffset: -20 },
+    "mission-stage-lamps": { src: "assets/images/mission-stage-lamps.png", width: 282, height: 50 },
+    "multiball-lock-release": { src: "assets/images/multiball-lock-release.png", width: 300, height: 134 },
+    "multiball-lock-release-0": { src: "assets/images/multiball-lock-release-0.png", width: 300, height: 134 },
+    "multiball-lock-release-1": { src: "assets/images/multiball-lock-release-1.png", width: 300, height: 134 },
+    "multiball-lock-release-2": { src: "assets/images/multiball-lock-release-2.png", width: 300, height: 134 },
+    "multiball-lock-release-3": { src: "assets/images/multiball-lock-release-3.png", width: 300, height: 134 },
+    "lock-house-alcad": { src: "assets/images/alcad-lock-house.png", width: 96, height: 142 },
+    "jackpot-coil-insert": { src: "assets/images/jackpot-coil-insert.png", width: 116, height: 102 },
+    "jackpot-furnace-insert": { src: "assets/images/jackpot-furnace-insert.png", width: 116, height: 102 },
+    "jackpot-final-insert": { src: "assets/images/jackpot-final-insert.png", width: 116, height: 102 },
+    "decal-arrow-blue": { src: "assets/images/decal-arrow-blue.png", width: 34, height: 32 },
+    "decal-arrow-orange": { src: "assets/images/decal-arrow-orange.png", width: 34, height: 32 },
+    "decal-coil-route-blue": { src: "assets/images/decal-coil-route-blue.png", width: 126, height: 76 },
+    "decal-warning-stripe": { src: "assets/images/decal-warning-stripe.png", width: 126, height: 24 },
+    "decal-led-strip": { src: "assets/images/decal-led-strip.png", width: 132, height: 28 },
+    "decal-circuit-plate": { src: "assets/images/decal-circuit-plate.png", width: 132, height: 47 },
+    "decal-roller-symbol": { src: "assets/images/decal-roller-symbol.png", width: 74, height: 49 },
+    "innovation-label-plate": { src: "assets/images/innovation-label-plate.png", width: 232, height: 41 }
+  };
+  Object.assign(config, {
+    ASSET_CONFIG
+  });
+})();
